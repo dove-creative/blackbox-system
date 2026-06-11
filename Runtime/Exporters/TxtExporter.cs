@@ -3,13 +3,12 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Text;
-using com.BlackThunder.BlackboxSystem;
 
 namespace com.BlackThunder.BlackboxSystem.Exporters
 {
     internal static class TxtExporter
     {
-#if BLACKBOX_TEST || BLACKBOX_TESTS || _BLACKBOX_TESTS
+#if BLACKBOX_TESTS
         internal static Action<ProcessStartInfo> OpenLogProcess = startInfo => Process.Start(startInfo);
 #endif
 
@@ -40,7 +39,7 @@ namespace com.BlackThunder.BlackboxSystem.Exporters
                 try
                 {
                     var startInfo = new ProcessStartInfo(fullPath) { UseShellExecute = true };
-#if BLACKBOX_TEST || BLACKBOX_TESTS || _BLACKBOX_TESTS
+#if BLACKBOX_TESTS
                     OpenLogProcess(startInfo);
 #else
                     Process.Start(startInfo);
