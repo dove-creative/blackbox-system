@@ -1,5 +1,7 @@
 # Blackbox
 
+[Korean README](README.ko.md)
+
 Blackbox is a Unity/C# tracing framework for recording object activity, execution scopes, and object-to-object interactions, then reading them later as connected logs.
 
 Where a normal log focuses on a message at one moment, Blackbox records both 'what process this object went through' and 'which objects were connected during that process'.
