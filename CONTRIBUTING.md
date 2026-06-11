@@ -1,0 +1,57 @@
+# Contributing
+
+Thank you for contributing to Blackbox. This document describes the basic standards for proposing changes or opening pull requests.
+
+## Basic Principles
+
+- Keep behavior and documentation in sync. Public API changes should update usage examples and wiki documentation together.
+- If a test or verification step could not be run, mention the reason in the pull request.
+
+## Development Environment
+
+Blackbox assumes a folder-based package structure inside a Unity project.
+
+Basic checklist:
+
+- The `Packages/com.blackthunder.blackboxsystem` folder exists inside a Unity project.
+- The `BLACKBOX` symbol is required to verify recording behavior.
+- The test assembly uses the `BLACKBOX`, `BLACKBOX_TESTS`, and `UNITY_INCLUDE_TESTS` symbols.
+- Tests run on Unity Test Framework and NUnit.
+
+## Code Style
+
+- C# files and documentation files use LF line endings.
+- Code comments are written in English.
+- Do not use nullable syntax for Unity compatibility.
+- Do not add new dependencies.
+- Update tests when changing shared behavior such as value-type handles, the export pipeline, or tag flow.
+
+## Documentation Style
+
+English documentation is in `Documentation~/Wiki-ENG`. Korean documentation is in `Documentation~/Wiki-KOR`. Usage examples are maintained together with the `Samples~/Usage` sample.
+
+Keep code identifiers unchanged. For example, names such as `ScopeHandle`, `TargetTypes`, and `BlackboxHandle.Export(...)` should stay as they are.
+
+## Tests
+
+Run the applicable verification for the changed area.
+
+- Documentation-only changes: check links, terminology, line endings, and trailing whitespace.
+- Code changes: run `Blackbox.Tests` in Unity Test Framework.
+- Output or file-generation changes: verify both text and HTML output.
+- Changes to the no-`BLACKBOX` path: also verify fallback behavior with the symbol disabled.
+
+Briefly include verification results in the pull request.
+
+## Pull Request
+
+A pull request should include:
+
+- Why the change was made
+- Main changes
+- Verification that was run, or verification that could not be run and why
+- Whether documentation was updated
+
+## License
+
+Contributed code is considered distributed under this repository's MIT license. When bringing in external code or materials, check the original license and notice requirements, and add a separate notice file if needed.

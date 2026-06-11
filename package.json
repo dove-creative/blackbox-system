@@ -1,0 +1,24 @@
+{
+  "name": "com.blackthunder.blackboxsystem",
+  "version": "0.1.0",
+  "displayName": "Blackbox System",
+  "description": "Object activity, scope, and interaction tracing for Unity and C#.",
+  "unity": "6000.0",
+  "license": "MIT",
+  "author": {
+    "name": "BlackThunder"
+  },
+  "keywords": [
+    "logging",
+    "tracing",
+    "debugging",
+    "blackbox"
+  ],
+  "samples": [
+    {
+      "displayName": "Usage",
+      "description": "Interactive scene for usage tutorials with HTML export.",
+      "path": "Samples~/Usage"
+    }
+  ]
+}

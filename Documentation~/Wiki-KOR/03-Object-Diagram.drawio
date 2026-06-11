@@ -1,0 +1,124 @@
+<mxfile host="Electron" agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) draw.io/29.6.1 Chrome/142.0.7444.265 Electron/39.8.0 Safari/537.36" version="29.6.1">
+  <diagram name="페이지-1" id="MvVOWYstNLJaN41D5o84">
+    <mxGraphModel dx="1828" dy="3675" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1200" pageHeight="1300" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="rBuOODIRSO2HJSoDm4xC-14" edge="1" parent="1" source="DpX3UCNjPbcBsEBKDDQN-13" style="edgeStyle=orthogonalEdgeStyle;shape=connector;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;strokeColor=default;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=11;fontColor=default;labelBackgroundColor=default;endArrow=open;endFill=0;endSize=12;exitX=0.318;exitY=1;exitDx=0;exitDy=0;exitPerimeter=0;">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="820" y="-2110" as="sourcePoint" />
+            <mxPoint x="820" y="-1920" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="rBuOODIRSO2HJSoDm4xC-13" edge="1" parent="1" source="DpX3UCNjPbcBsEBKDDQN-1" style="edgeStyle=orthogonalEdgeStyle;shape=connector;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=default;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=11;fontColor=default;labelBackgroundColor=default;endArrow=open;endFill=0;endSize=12;" target="rBuOODIRSO2HJSoDm4xC-8">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="DpX3UCNjPbcBsEBKDDQN-1" parent="1" style="swimlane;fontStyle=1;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=30;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=1;marginBottom=0;whiteSpace=wrap;html=1;" value="LogData" vertex="1">
+          <mxGeometry height="350" width="220" x="140" y="-1980" as="geometry" />
+        </mxCell>
+        <mxCell id="DpX3UCNjPbcBsEBKDDQN-2" parent="DpX3UCNjPbcBsEBKDDQN-1" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;whiteSpace=wrap;html=1;" value="&lt;div&gt;+ Blackbox Owner&lt;/div&gt;&lt;div&gt;+ bool IsValid&lt;/div&gt;&lt;div&gt;+ string Message&lt;/div&gt;&lt;div&gt;+ DateTime Time&lt;/div&gt;&lt;div&gt;+ int ScopeDepth&lt;/div&gt;&lt;div&gt;+ long Sequence&lt;/div&gt;&lt;div&gt;+ string MethodName&lt;/div&gt;&lt;div&gt;+ long ScopeId&lt;/div&gt;&lt;div&gt;+ ScopeType ScopeType&lt;/div&gt;&lt;div&gt;+ int ThreadId&lt;/div&gt;&lt;div&gt;+ string ThreadName&lt;/div&gt;&lt;div&gt;+ Blackbox ExertedBy&lt;/div&gt;&lt;div&gt;+ Blackbox ExertingTo&lt;/div&gt;&lt;div&gt;+ long InteractionId&lt;/div&gt;&lt;div&gt;+ Blackbox TaggedBy&lt;/div&gt;&lt;div&gt;+ TargetTypes TagTargetTypes&lt;/div&gt;&lt;div&gt;+ Tag[] Tags&lt;/div&gt;" vertex="1">
+          <mxGeometry height="270" width="220" y="30" as="geometry" />
+        </mxCell>
+        <mxCell id="DpX3UCNjPbcBsEBKDDQN-3" parent="DpX3UCNjPbcBsEBKDDQN-1" style="line;strokeWidth=1;fillColor=none;align=left;verticalAlign=middle;spacingTop=-1;spacingLeft=3;spacingRight=3;rotatable=0;labelPosition=right;points=[];portConstraint=eastwest;strokeColor=inherit;" value="" vertex="1">
+          <mxGeometry height="10" width="220" y="300" as="geometry" />
+        </mxCell>
+        <mxCell id="DpX3UCNjPbcBsEBKDDQN-4" parent="DpX3UCNjPbcBsEBKDDQN-1" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;whiteSpace=wrap;html=1;" value="&lt;div&gt;+ ToString(scopeDepth)&lt;/div&gt;" vertex="1">
+          <mxGeometry height="40" width="220" y="310" as="geometry" />
+        </mxCell>
+        <mxCell id="DpX3UCNjPbcBsEBKDDQN-5" parent="1" style="swimlane;fontStyle=1;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=30;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=1;marginBottom=0;whiteSpace=wrap;html=1;" value="com.BlackThunder.BlackboxSystem" vertex="1">
+          <mxGeometry height="280" width="320" x="740" y="-1920" as="geometry" />
+        </mxCell>
+        <mxCell id="DpX3UCNjPbcBsEBKDDQN-6" parent="DpX3UCNjPbcBsEBKDDQN-5" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;whiteSpace=wrap;html=1;" value="&lt;div&gt;+ object Owner&lt;/div&gt;&lt;div&gt;+ string OwnerString&lt;/div&gt;&lt;div&gt;+ long Id&lt;/div&gt;&lt;div&gt;+ IList&amp;lt;LogContext&amp;gt; LogContexts&lt;/div&gt;&lt;div&gt;- ThreadLocal&amp;lt;LogContext&amp;gt; logContext&lt;/div&gt;&lt;div&gt;- long scopeId&lt;/div&gt;" vertex="1">
+          <mxGeometry height="110" width="320" y="30" as="geometry" />
+        </mxCell>
+        <mxCell id="DpX3UCNjPbcBsEBKDDQN-7" parent="DpX3UCNjPbcBsEBKDDQN-5" style="line;strokeWidth=1;fillColor=none;align=left;verticalAlign=middle;spacingTop=-1;spacingLeft=3;spacingRight=3;rotatable=0;labelPosition=right;points=[];portConstraint=eastwest;strokeColor=inherit;" value="" vertex="1">
+          <mxGeometry height="10" width="320" y="140" as="geometry" />
+        </mxCell>
+        <mxCell id="DpX3UCNjPbcBsEBKDDQN-8" parent="DpX3UCNjPbcBsEBKDDQN-5" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;whiteSpace=wrap;html=1;" value="&lt;div&gt;+ Write(message, methodName)&lt;/div&gt;&lt;div&gt;+ Scope(message, methodName)&lt;/div&gt;&lt;div&gt;+ ExertMessage(other, message, methodName)&lt;/div&gt;&lt;div&gt;+ Exert(other, message, methodName)&lt;/div&gt;&lt;div&gt;+ GetLogsByContext(maxSequence)&lt;/div&gt;&lt;div&gt;+ GetLogs(maxSequence)&lt;/div&gt;" vertex="1">
+          <mxGeometry height="130" width="320" y="150" as="geometry" />
+        </mxCell>
+        <mxCell id="DpX3UCNjPbcBsEBKDDQN-9" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=open;endFill=0;startArrow=diamond;startFill=1;startSize=12;endSize=12;">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="710" y="-1850" />
+            </Array>
+            <mxPoint x="740" y="-1850" as="sourcePoint" />
+            <mxPoint x="699" y="-1850" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="VMSfo_ro281nzpjOfBVw-9" edge="1" parent="1" source="DpX3UCNjPbcBsEBKDDQN-13" style="edgeStyle=orthogonalEdgeStyle;shape=connector;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;strokeColor=default;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=11;fontColor=default;labelBackgroundColor=default;endArrow=open;endFill=0;endSize=12;exitX=0.591;exitY=1;exitDx=0;exitDy=0;exitPerimeter=0;">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="940" y="-2120" as="sourcePoint" />
+            <mxPoint x="940" y="-2080" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="DpX3UCNjPbcBsEBKDDQN-10" parent="1" style="swimlane;fontStyle=1;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=40;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=1;marginBottom=0;whiteSpace=wrap;html=1;" value="&lt;div&gt;&lt;i style=&quot;font-weight: normal;&quot;&gt;&amp;lt;&amp;lt;struct&amp;gt;&amp;gt;&lt;/i&gt;&lt;/div&gt;BlackboxHandle" vertex="1">
+          <mxGeometry height="320" width="440" x="680" y="-2520" as="geometry" />
+        </mxCell>
+        <mxCell id="DpX3UCNjPbcBsEBKDDQN-11" parent="DpX3UCNjPbcBsEBKDDQN-10" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;whiteSpace=wrap;html=1;" value="&lt;div&gt;+ object Owner&lt;/div&gt;&lt;div&gt;+ string OwnerString&lt;/div&gt;&lt;div&gt;+ long Id&lt;/div&gt;&lt;div&gt;+ bool IsValid&lt;/div&gt;" vertex="1">
+          <mxGeometry height="70" width="440" y="40" as="geometry" />
+        </mxCell>
+        <mxCell id="DpX3UCNjPbcBsEBKDDQN-12" parent="DpX3UCNjPbcBsEBKDDQN-10" style="line;strokeWidth=1;fillColor=none;align=left;verticalAlign=middle;spacingTop=-1;spacingLeft=3;spacingRight=3;rotatable=0;labelPosition=right;points=[];portConstraint=eastwest;strokeColor=inherit;" value="" vertex="1">
+          <mxGeometry height="10" width="440" y="110" as="geometry" />
+        </mxCell>
+        <mxCell id="DpX3UCNjPbcBsEBKDDQN-13" parent="DpX3UCNjPbcBsEBKDDQN-10" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;whiteSpace=wrap;html=1;" value="&lt;div&gt;+ Of(subject)&lt;/div&gt;&lt;div&gt;+ Configure(...)&lt;/div&gt;&lt;div&gt;+ ForceReset()&lt;/div&gt;&lt;div&gt;+ Construct(message, out handle)&lt;/div&gt;&lt;div&gt;+ When(condition)&lt;/div&gt;&lt;div&gt;+ Dispose(message)&lt;/div&gt;&lt;div&gt;+ Write(message, methodName)&lt;/div&gt;&lt;div&gt;+ Scope(message, methodName)&lt;/div&gt;&lt;div&gt;+ ExertMessage(other, message, methodName)&lt;/div&gt;&lt;div&gt;+ Exert(other, message, methodName)&lt;/div&gt;&lt;div&gt;+ WriteError(message, others)&lt;/div&gt;&lt;div&gt;+ CrashExport(message, others)&lt;/div&gt;&lt;div&gt;+ Export(...)&lt;/div&gt;" vertex="1">
+          <mxGeometry height="200" width="440" y="120" as="geometry" />
+        </mxCell>
+        <mxCell id="VMSfo_ro281nzpjOfBVw-7" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;endArrow=open;endFill=0;endSize=12;">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="940" y="-1960" as="sourcePoint" />
+            <mxPoint x="940" y="-1920" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="VMSfo_ro281nzpjOfBVw-1" parent="1" style="swimlane;fontStyle=1;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=40;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=1;marginBottom=0;whiteSpace=wrap;html=1;" value="&lt;div&gt;&lt;i style=&quot;font-weight: normal;&quot;&gt;&amp;lt;&amp;lt;static&amp;gt;&amp;gt;&lt;/i&gt;&lt;/div&gt;BlackboxRegistry" vertex="1">
+          <mxGeometry height="120" width="300" x="860" y="-2080" as="geometry" />
+        </mxCell>
+        <mxCell id="VMSfo_ro281nzpjOfBVw-2" parent="VMSfo_ro281nzpjOfBVw-1" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;whiteSpace=wrap;html=1;" value="&lt;div&gt;- ConditionalWeakTable&amp;lt;object, Blackbox&amp;gt; subjects&lt;/div&gt;" vertex="1">
+          <mxGeometry height="30" width="300" y="40" as="geometry" />
+        </mxCell>
+        <mxCell id="VMSfo_ro281nzpjOfBVw-3" parent="VMSfo_ro281nzpjOfBVw-1" style="line;strokeWidth=1;fillColor=none;align=left;verticalAlign=middle;spacingTop=-1;spacingLeft=3;spacingRight=3;rotatable=0;labelPosition=right;points=[];portConstraint=eastwest;strokeColor=inherit;" value="" vertex="1">
+          <mxGeometry height="10" width="300" y="70" as="geometry" />
+        </mxCell>
+        <mxCell id="VMSfo_ro281nzpjOfBVw-4" parent="VMSfo_ro281nzpjOfBVw-1" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;whiteSpace=wrap;html=1;" value="&lt;div&gt;+ GetBlackbox(subject)&lt;/div&gt;&lt;div&gt;+ ForceReset()&lt;/div&gt;" vertex="1">
+          <mxGeometry height="40" width="300" y="80" as="geometry" />
+        </mxCell>
+        <mxCell id="rBuOODIRSO2HJSoDm4xC-8" parent="1" style="swimlane;fontStyle=0;childLayout=stackLayout;horizontal=1;startSize=40;fillColor=none;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=1;marginBottom=0;whiteSpace=wrap;html=1;" value="&lt;div&gt;&lt;i&gt;&amp;lt;&amp;lt;enum&amp;gt;&amp;gt;&lt;/i&gt;&lt;/div&gt;&lt;b&gt;ScopeType&lt;/b&gt;" vertex="1">
+          <mxGeometry height="110" width="140" x="60" y="-1560" as="geometry" />
+        </mxCell>
+        <mxCell id="rBuOODIRSO2HJSoDm4xC-9" parent="rBuOODIRSO2HJSoDm4xC-8" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;whiteSpace=wrap;html=1;" value="&lt;div&gt;None&lt;/div&gt;&lt;div&gt;Open&lt;/div&gt;&lt;div&gt;Close&lt;/div&gt;&lt;div&gt;Step&lt;/div&gt;" vertex="1">
+          <mxGeometry height="70" width="140" y="40" as="geometry" />
+        </mxCell>
+        <mxCell id="W8mdcEFcFrxreAkvDG2p-2" parent="1" style="swimlane;fontStyle=1;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=30;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=1;marginBottom=0;whiteSpace=wrap;html=1;" value="LogContext" vertex="1">
+          <mxGeometry height="350" width="300" x="400" y="-1980" as="geometry" />
+        </mxCell>
+        <mxCell id="W8mdcEFcFrxreAkvDG2p-3" parent="W8mdcEFcFrxreAkvDG2p-2" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;whiteSpace=wrap;html=1;" value="&lt;div&gt;- Blackbox blackbox&lt;/div&gt;&lt;div&gt;- LogData[] logBuffer&lt;/div&gt;&lt;div&gt;- long currentLogIndex&lt;/div&gt;&lt;div&gt;- int threadId&lt;/div&gt;&lt;div&gt;- string threadName&lt;/div&gt;&lt;div&gt;- List&amp;lt;ScopeInfo&amp;gt; openScopes&lt;/div&gt;" vertex="1">
+          <mxGeometry height="100" width="300" y="30" as="geometry" />
+        </mxCell>
+        <mxCell id="W8mdcEFcFrxreAkvDG2p-4" parent="W8mdcEFcFrxreAkvDG2p-2" style="line;strokeWidth=1;fillColor=none;align=left;verticalAlign=middle;spacingTop=-1;spacingLeft=3;spacingRight=3;rotatable=0;labelPosition=right;points=[];portConstraint=eastwest;strokeColor=inherit;" value="" vertex="1">
+          <mxGeometry height="10" width="300" y="130" as="geometry" />
+        </mxCell>
+        <mxCell id="W8mdcEFcFrxreAkvDG2p-5" parent="W8mdcEFcFrxreAkvDG2p-2" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;whiteSpace=wrap;html=1;" value="&lt;div&gt;+ OpenScope(message, sequence, methodName, scopeId)&lt;/div&gt;&lt;div&gt;+ CloseScope(scopeId, sequence)&lt;/div&gt;&lt;div&gt;+ EnqueueLog(message, sequence, methodName, scopeId, interactionId)&lt;/div&gt;&lt;div&gt;+ EnqueueTagLog(message, sequence, methodName, interactionId)&lt;/div&gt;&lt;div&gt;+ ResolveWith(logIndex, tags, targetTypes)&lt;/div&gt;&lt;div&gt;+ RenderMessage(logIndex, fallbackMessage)&lt;/div&gt;&lt;div&gt;+ TryMergeScope(interactionId)&lt;/div&gt;&lt;div&gt;+ GetLogs(maxSequence)&lt;/div&gt;" vertex="1">
+          <mxGeometry height="210" width="300" y="140" as="geometry" />
+        </mxCell>
+        <mxCell id="FTL-LogFormatter-1" parent="1" style="swimlane;fontStyle=1;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=40;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=1;marginBottom=0;whiteSpace=wrap;html=1;" value="&lt;div&gt;&lt;i style=&quot;font-weight: normal;&quot;&gt;&amp;lt;&amp;lt;static&amp;gt;&amp;gt;&lt;/i&gt;&lt;/div&gt;LogFormatter" vertex="1">
+          <mxGeometry height="160" width="300" x="280" y="-1560" as="geometry" />
+        </mxCell>
+        <mxCell id="FTL-LogFormatter-2" parent="FTL-LogFormatter-1" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;whiteSpace=wrap;html=1;" value="&lt;div&gt;+ RenderMessage(log)&lt;/div&gt;&lt;div&gt;+ RenderTextLine(log, scopeDepth)&lt;/div&gt;&lt;div&gt;+ RenderMethodLabel(log)&lt;/div&gt;&lt;div&gt;+ ObjectRef(blackbox)&lt;/div&gt;&lt;div&gt;+ TagRef(blackbox, interactionId)&lt;/div&gt;&lt;div&gt;+ Arrow(right, interactionId)&lt;/div&gt;" vertex="1">
+          <mxGeometry height="120" width="300" y="40" as="geometry" />
+        </mxCell>
+        <mxCell id="FTL-LogFormatter-3" edge="1" parent="1" source="DpX3UCNjPbcBsEBKDDQN-1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=open;endFill=0;endSize=12;dashed=1;" target="FTL-LogFormatter-1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="3CZWdc3Jv8ImXDIqczmN-1" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=open;endFill=0;startArrow=diamond;startFill=1;startSize=12;endSize=12;">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="361" y="-1850" />
+            </Array>
+            <mxPoint x="400" y="-1850" as="sourcePoint" />
+            <mxPoint x="360" y="-1850" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
