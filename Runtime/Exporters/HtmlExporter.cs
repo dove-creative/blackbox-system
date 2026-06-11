@@ -27,7 +27,7 @@ namespace com.BlackThunder.BlackboxSystem.Exporters
             BuildHtml(nodes, sb);
             AppendDocumentEnd(sb);
 
-            // 4. Save
+            // Save
             var ext = ".html";
             var fileName = $"Blackbox {Tools.TrimSmart(blackbox.OwnerString)} ({blackbox.Id}){ext}";
             if (isCrash) fileName = "[CRASH] " + fileName;
