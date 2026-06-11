@@ -6,6 +6,7 @@ Blackbox is a Unity/C# tracing framework for recording object activity, executio
 
 Where a normal log focuses on a message at one moment, Blackbox records both 'what process this object went through' and 'which objects were connected during that process'.
 
+<img src="Documentation~/Images/blackbox-html-export.png" alt="Blackbox HTML export preview" width="900">
 ## Before You Start
 
 Blackbox is a foundational tracing framework in the BlackThunder project family.
@@ -68,7 +69,7 @@ public class Loader
         BlackboxHandle.Of(this).Write("Prepare %0").With(worker);
 
         using (BlackboxHandle.Of(this).Exert(worker, "Worker.Load"))
-            worker.Load();
+		worker.Load();
     }
 
     public void ExportLogs()
