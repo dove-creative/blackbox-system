@@ -100,9 +100,10 @@ namespace com.BlackThunder.BlackboxSystem.Tests
             var directory = BlackboxTestDoubles.CreateTempDirectory();
             BlackboxTestDoubles.Reset(logDirectory: directory);
             var source = BlackboxTestDoubles.Blackbox("source");
-            var target = BlackboxTestDoubles.Blackbox("target");
+            var targetOwner = BlackboxTestDoubles.Owner("target");
+            var target = BlackboxTestDoubles.BlackboxFor(targetOwner);
             source.ExertMessage(target, "include target", "Run");
-            source.Write("uses %0", "Tag").With(target, TargetTypes.Full);
+            source.Write("uses %0", "Tag").With(targetOwner, TargetTypes.Full);
 
             // Table 6-2 / HtmlReady x Export.Normal
             HtmlExporter.Export(source, 10, false, true, false);
