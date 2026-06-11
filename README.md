@@ -27,26 +27,31 @@ Thank you for using Blackbox.
 
 ## Installation
 
-The current structure assumes a folder-based Unity package.
+The current structure supports both Unity Package Manager installation and folder-based package installation.
+
+### Install with Package Manager
+
+1. In Unity, open `Window > Package Manager`.
+2. Click the `+` button in the upper-left corner, then select `Add package from git URL...`.
+3. Enter the URL below and click `Add`.
+
+```text
+https://github.com/dove-creative/blackbox-system.git
+```
+
+### Install as a Folder
 
 1. Place this folder at `Packages/com.blackthunder.blackboxsystem` in a Unity project.
-2. Enable the `BLACKBOX` symbol in Player Settings or asmdef define constraints.
-3. Configure the log output location early in execution.
+
+### Configure After Installation
+
+1. Enable the `BLACKBOX` symbol in Player Settings or asmdef define constraints.
+2. Configure the log output location early in execution.
 
 ```csharp
-using System.IO;
-using com.BlackThunder.BlackboxSystem;
-using UnityEngine;
-
-public static class BlackboxBootstrap
-{
-    public static void Initialize()
-    {
-        BlackboxHandle.Configure(
-            logDirectory: Path.Combine(Application.persistentDataPath, "BlackboxLogs"),
-            logger: Debug.Log);
-    }
-}
+BlackboxHandle.Configure(
+	logDirectory: Path.Combine(Application.persistentDataPath, "BlackboxLogs"),
+	logger: Debug.Log);
 ```
 
 If the `BLACKBOX` symbol is not defined, most recording calls fall back to default values or return the original message. This can be used to remove recording cost from release builds.

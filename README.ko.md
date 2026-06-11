@@ -27,26 +27,31 @@ Blackbox를 사용해 주셔서 감사합니다.
 
 ## 설치
 
-현재 구조는 Unity 프로젝트의 폴더형 플러그인을 기준으로 한다.
+현재 구조는 Unity Package Manager와 폴더형 패키지 설치를 모두 지원한다.
+
+### Package Manager로 설치
+
+1. Unity에서 `Window > Package Manager`를 연다.
+2. 왼쪽 위 `+` 버튼을 누른 뒤 `Add package from git URL...`을 선택한다.
+3. 아래 URL을 입력하고 `Add`를 누른다.
+
+```text
+https://github.com/dove-creative/blackbox-system.git
+```
+
+### 폴더로 직접 설치
 
 1. 이 폴더를 Unity 프로젝트의 `Packages/com.blackthunder.blackboxsystem` 위치에 둔다.
-2. Player Settings 또는 asmdef define constraints에서 `BLACKBOX` 심볼을 활성화한다.
-3. 실행 초기에 로그 출력 위치를 설정한다.
+
+### 설치 후 설정
+
+1. Player Settings 또는 asmdef define constraints에서 `BLACKBOX` 심볼을 활성화한다.
+2. 실행 초기에 로그 출력 위치를 설정한다.
 
 ```csharp
-using System.IO;
-using com.BlackThunder.BlackboxSystem;
-using UnityEngine;
-
-public static class BlackboxBootstrap
-{
-    public static void Initialize()
-    {
-        BlackboxHandle.Configure(
-            logDirectory: Path.Combine(Application.persistentDataPath, "BlackboxLogs"),
-            logger: Debug.Log);
-    }
-}
+BlackboxHandle.Configure(
+	logDirectory: Path.Combine(Application.persistentDataPath, "BlackboxLogs"),
+	logger: Debug.Log);
 ```
 
 `BLACKBOX` 심볼을 정의하지 않으면 기록 호출은 대부분 기본값 또는 원래 메시지 반환으로 빠진다. 배포 빌드에서 기록 비용을 빼고 싶을 때 이 구조를 사용할 수 있다.
