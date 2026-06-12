@@ -5,7 +5,6 @@
         "UnityEngine.TestRunner",
         "UnityEditor.TestRunner",
         "com.BlackThunder.BlackboxSystem",
-        "com.BlackThunder.BlackboxSystem.Tests",
         "UniTest",
         "UniTask"
     ],
