@@ -4,7 +4,6 @@
     "references": [
         "UnityEngine.TestRunner",
         "UnityEditor.TestRunner",
-        "BlackThunder.BlackboxSystem",
         "BlackThunder.BlackboxSystem"
     ],
     "includePlatforms": [
