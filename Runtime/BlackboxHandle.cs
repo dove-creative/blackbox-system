@@ -1,9 +1,9 @@
 using System;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
-using com.BlackThunder.BlackboxSystem.Exporters;
+using BlackThunder.BlackboxSystem.Exporters;
 
-namespace com.BlackThunder.BlackboxSystem
+namespace BlackThunder.BlackboxSystem
 {
     public enum ExportFormat
     {
@@ -30,6 +30,13 @@ namespace com.BlackThunder.BlackboxSystem
     {
         None,
         CrashExport,
+        BasedOnSettings,
+    }
+
+    public enum UseBlackboxOption
+    {
+        Use,
+        DoNotUse,
         BasedOnSettings,
     }
 
@@ -74,6 +81,13 @@ namespace com.BlackThunder.BlackboxSystem
             set => Infrastructure.DefaultRecursionDepth = value;
         }
 
+        public static bool UseBlackbox
+        {
+            get => Infrastructure.UseBlackbox == UseBlackboxOption.Use;
+            set => Infrastructure.UseBlackbox = value
+                ? UseBlackboxOption.Use
+                : UseBlackboxOption.DoNotUse;
+        }
         public static ExportFormat ExportFormat
         {
             get => Infrastructure.ExportFormat;
@@ -100,6 +114,7 @@ namespace com.BlackThunder.BlackboxSystem
         {
             get
             {
+                if (Infrastructure.UseBlackbox == UseBlackboxOption.DoNotUse) return null;
                 if (_blackbox != null) return _blackbox;
                 if (_subject == null) return null;
                 return BlackboxRegistry.GetBlackbox(_subject);
@@ -130,9 +145,10 @@ namespace com.BlackThunder.BlackboxSystem
             FullExportOption fullExportOption = FullExportOption.BasedOnSettings,
             OpenLogOption openLogOption = OpenLogOption.BasedOnSettings,
             ExceptionHandlingOption exceptionHandlingOption = ExceptionHandlingOption.BasedOnSettings,
-            TargetTypes tagTargetTypes = TargetTypes.BasedOnSettings)
+            TargetTypes tagTargetTypes = TargetTypes.BasedOnSettings,
+            UseBlackboxOption useBlackbox = UseBlackboxOption.BasedOnSettings)
         {
-            Configure(logDirectory, logger, logger, strongReference, exportFormat, fullExportOption, openLogOption, exceptionHandlingOption, tagTargetTypes);
+            Configure(logDirectory, logger, logger, strongReference, exportFormat, fullExportOption, openLogOption, exceptionHandlingOption, tagTargetTypes, useBlackbox);
         }
 
         public static void Configure(
@@ -144,12 +160,14 @@ namespace com.BlackThunder.BlackboxSystem
             FullExportOption fullExportOption = FullExportOption.BasedOnSettings,
             OpenLogOption openLogOption = OpenLogOption.BasedOnSettings,
             ExceptionHandlingOption exceptionHandlingOption = ExceptionHandlingOption.BasedOnSettings,
-            TargetTypes tagTargetTypes = TargetTypes.BasedOnSettings)
+            TargetTypes tagTargetTypes = TargetTypes.BasedOnSettings,
+            UseBlackboxOption useBlackbox = UseBlackboxOption.BasedOnSettings)
         {
             Infrastructure.LogDirectory = logDirectory;
             Infrastructure.NormalLogger = normalLogger;
             Infrastructure.WarningLogger = warningLogger;
             Infrastructure.StrongReference = strongReference;
+            Infrastructure.UseBlackbox = useBlackbox;
 
             Infrastructure.ExportFormat = exportFormat;
             Infrastructure.FullExportOption = fullExportOption;
@@ -170,35 +188,25 @@ namespace com.BlackThunder.BlackboxSystem
         #region Helpers
         public static BlackboxHandle Of<T>(T subject) where T : class
         {
-#if !BLACKBOX
-            return default;
-#else
+            if (Infrastructure.UseBlackbox != UseBlackboxOption.Use)
+                return default;
+
             if (subject == null)
                 throw new ArgumentNullException(
                     nameof(subject),
                     $"{nameof(subject)} cannot be null.");
 
             return new BlackboxHandle(subject);
-#endif
         }
 
         public ScopeHandle Construct([CallerMemberName] string methodName = "") => Construct(out _, methodName);
         public ScopeHandle Construct(out BlackboxHandle blackboxHandle, [CallerMemberName] string methodName = "")
         {
-#if !BLACKBOX
-            blackboxHandle = default;
-            return default;
-#else
             return Construct(string.Empty, out blackboxHandle, methodName);
-#endif
         }
         public ScopeHandle Construct([InterpolatedStringHandlerArgument("")] ref WriteHandler handler, [CallerMemberName] string methodName = "") => Construct(ref handler, out _, methodName);
         public ScopeHandle Construct([InterpolatedStringHandlerArgument("")] ref WriteHandler handler, out BlackboxHandle blackboxHandle, [CallerMemberName] string methodName = "")
         {
-#if !BLACKBOX
-            blackboxHandle = default;
-            return default;
-#else
             if (!handler.ShouldLog)
             {
                 blackboxHandle = default;
@@ -206,15 +214,10 @@ namespace com.BlackThunder.BlackboxSystem
             }
 
             return Construct(handler.GetTextAndClear(), out blackboxHandle, methodName);
-#endif
         }
         public ScopeHandle Construct(string message, [CallerMemberName] string methodName = "") => Construct(message, out _, methodName);
         public ScopeHandle Construct(string message, out BlackboxHandle blackboxHandle, [CallerMemberName] string methodName = "")
         {
-#if !BLACKBOX
-            blackboxHandle = default;
-            return default;
-#else
             var blackbox = Blackbox;
             if (blackbox == null)
             {
@@ -228,53 +231,33 @@ namespace com.BlackThunder.BlackboxSystem
 
             blackboxHandle = new BlackboxHandle(_subject, blackbox);
             return blackbox.WriteScope(constructMessage, methodName);
-#endif
         }
 
         public readonly BlackboxHandle When(bool condition)
         {
-#if !BLACKBOX
-            return default;
-#else
             return condition ? this : default;
-#endif
         }
         public BlackboxHandle When(Func<bool> predicate)
         {
-#if !BLACKBOX
-            return default;
-#else
             if (predicate == null)
                 throw new ArgumentNullException(
                     nameof(predicate),
                     FormatLogMessage($"{nameof(predicate)} cannot be null."));
 
             return predicate() ? this : default;
-#endif
         }
 
         public BlackboxHandle Dispose()
         {
-#if !BLACKBOX
-            return default;
-#else
             return Dispose(string.Empty, nameof(Dispose));
-#endif
         }
         public BlackboxHandle Dispose([InterpolatedStringHandlerArgument("")] ref WriteHandler handler, [CallerMemberName] string methodName = "")
         {
-#if !BLACKBOX
-            return default;
-#else
             if (!handler.ShouldLog) return default;
             return Dispose(handler.GetTextAndClear(), methodName);
-#endif
         }
         public BlackboxHandle Dispose(string message, [CallerMemberName] string methodName = "")
         {
-#if !BLACKBOX
-            return default;
-#else
             var blackbox = Blackbox;
             if (blackbox == null) return default;
 
@@ -284,26 +267,17 @@ namespace com.BlackThunder.BlackboxSystem
 
             blackbox.Write(disposerMessage, methodName);
             return new BlackboxHandle(_subject, blackbox);
-#endif
         }
         #endregion
 
         public readonly TagHandle Write([InterpolatedStringHandlerArgument("")] ref WriteHandler handler, [CallerMemberName] string methodName = "")
         {
-#if !BLACKBOX
-            return default;
-#else
             if (!handler.ShouldLog) return default;
             return Write(handler.GetTextAndClear(), methodName);
-#endif
         }
         public readonly TagHandle Write(string message, [CallerMemberName] string methodName = "")
         {
-#if !BLACKBOX
-            return TagHandle.FromMessage(message);
-#else
             return Blackbox?.Write(message, methodName) ?? TagHandle.FromMessage(message);
-#endif
         }
 
         public readonly ScopeHandle Scope([InterpolatedStringHandlerArgument("")] ref WriteHandler handler, [CallerMemberName] string methodName = "")

@@ -1,7 +1,7 @@
 using System;
 using System.Threading;
 
-namespace com.BlackThunder.BlackboxSystem
+namespace BlackThunder.BlackboxSystem
 {
     public enum LogLevel
     {
@@ -47,6 +47,15 @@ namespace com.BlackThunder.BlackboxSystem
         public static bool IsPrinted => Volatile.Read(ref _isPrinted) != 0;
         private static int _isPrinted = 0;
 
+        public static UseBlackboxOption UseBlackbox
+        {
+            get => _useBlackbox;
+            set
+            {
+                if (value != UseBlackboxOption.BasedOnSettings)
+                    _useBlackbox = value;
+            }
+        }
         public static ExportFormat ExportFormat
         {
             get => _exportFormat;
@@ -99,14 +108,17 @@ namespace com.BlackThunder.BlackboxSystem
         private static volatile int _maxLogCount = 100;
         private static volatile bool _strongReference = false;
         private static volatile int _defaultRecursionDepth = 100;
+#if UNITY_5_3_OR_NEWER && !BLACKBOX
+        private static volatile UseBlackboxOption _useBlackbox = UseBlackboxOption.DoNotUse;
+#else
+        private static volatile UseBlackboxOption _useBlackbox = UseBlackboxOption.Use;
+#endif
         private static volatile ExportFormat _exportFormat = ExportFormat.Html;
         private static volatile FullExportOption _fullExportOption = FullExportOption.Full;
         private static volatile OpenLogOption _openLogOption = OpenLogOption.Open;
         private static volatile ExceptionHandlingOption _exceptionHandlingOption = ExceptionHandlingOption.None;
         private static volatile TargetTypes _tagTargetTypes = TargetTypes.Full;
 
-
-        // Content
         public static bool TryMarkPrinted() => Interlocked.CompareExchange(ref _isPrinted, 1, 0) == 0;
 
         /// <summary>
@@ -134,6 +146,7 @@ namespace com.BlackThunder.BlackboxSystem
             return true;
         }
 
+        public static UseBlackboxOption Resolve(this UseBlackboxOption useBlackbox) => useBlackbox == UseBlackboxOption.BasedOnSettings ? UseBlackbox : useBlackbox;
         public static ExportFormat Resolve(this ExportFormat format) => format == ExportFormat.BasedOnSettings ? ExportFormat : format;
         public static FullExportOption Resolve(this FullExportOption option) => option == FullExportOption.BasedOnSettings ? FullExportOption : option;
         public static OpenLogOption Resolve(this OpenLogOption option) => option == OpenLogOption.BasedOnSettings ? OpenLogOption : option;

@@ -4,7 +4,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Text;
 
-namespace com.BlackThunder.BlackboxSystem.Exporters
+namespace BlackThunder.BlackboxSystem.Exporters
 {
     internal static partial class HtmlExporter
     {

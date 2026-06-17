@@ -1,0 +1,29 @@
+{
+    "name": "BlackThunder.BlackboxSystem.UniTests",
+    "rootNamespace": "BlackThunder.BlackboxSystem.Tests",
+    "references": [
+        "UnityEngine.TestRunner",
+        "UnityEditor.TestRunner",
+        "BlackThunder.BlackboxSystem",
+        "UniTest",
+        "UniTask"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": true,
+    "precompiledReferences": [
+        "nunit.framework.dll"
+    ],
+    "autoReferenced": false,
+    "defineConstraints": [
+        "UNITY_INCLUDE_TESTS",
+        "BLACKBOX_TESTS",
+        "UNITEST",
+        "UNITEST_SINGLETHREAD"
+    ],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

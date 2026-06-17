@@ -1,13 +1,12 @@
-#if BLACKBOX
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading;
-using com.BlackThunder.BlackboxSystem.Exporters;
+using BlackThunder.BlackboxSystem.Exporters;
 using NUnit.Framework;
 
-namespace com.BlackThunder.BlackboxSystem.Tests
+namespace BlackThunder.BlackboxSystem.Tests
 {
     internal static class BlackboxTableScenarioFactory
     {
@@ -941,7 +940,7 @@ namespace com.BlackThunder.BlackboxSystem.Tests
                 {
                     var owner = m.NewOwner("export");
                     Box(owner).Write("root", "Run");
-                    var nodes = com.BlackThunder.BlackboxSystem.Exporters.Tools.BuildExportGraph(Box(owner), 0, false);
+                    var nodes = BlackThunder.BlackboxSystem.Exporters.Tools.BuildExportGraph(Box(owner), 0, false);
 
                     Assert.That(nodes.Count, Is.EqualTo(1), "Table 6-1 / RootOnly x BuildExportGraph");
                     Assert.That(nodes[0].Blackbox, Is.SameAs(Box(owner)));
@@ -951,7 +950,7 @@ namespace com.BlackThunder.BlackboxSystem.Tests
                     var source = m.NewOwner("source");
                     var target = m.NewOwner("target");
                     Box(source).ExertMessage(Box(target), "call", "Run");
-                    var nodes = com.BlackThunder.BlackboxSystem.Exporters.Tools.BuildExportGraph(Box(target), 1, false);
+                    var nodes = BlackThunder.BlackboxSystem.Exporters.Tools.BuildExportGraph(Box(target), 1, false);
 
                     Assert.That(nodes.Any(node => node.Blackbox == Box(source)), Is.True, "Table 6-1 / Focused x BuildExportGraph");
                 }, NotPrinted),
@@ -960,7 +959,7 @@ namespace com.BlackThunder.BlackboxSystem.Tests
                     var source = m.NewOwner("source");
                     var target = m.NewOwner("target");
                     Box(source).ExertMessage(Box(target), "call", "Run");
-                    var nodes = com.BlackThunder.BlackboxSystem.Exporters.Tools.BuildExportGraph(Box(source), 1, true);
+                    var nodes = BlackThunder.BlackboxSystem.Exporters.Tools.BuildExportGraph(Box(source), 1, true);
 
                     Assert.That(nodes.Any(node => node.Blackbox == Box(target)), Is.True, "Table 6-1 / Full x BuildExportGraph");
                 }, NotPrinted),
@@ -971,7 +970,7 @@ namespace com.BlackThunder.BlackboxSystem.Tests
                     var third = m.NewOwner("third");
                     Box(first).ExertMessage(Box(second), "call", "Run");
                     Box(second).ExertMessage(Box(third), "call", "Run");
-                    var nodes = com.BlackThunder.BlackboxSystem.Exporters.Tools.BuildExportGraph(Box(first), 1, true);
+                    var nodes = BlackThunder.BlackboxSystem.Exporters.Tools.BuildExportGraph(Box(first), 1, true);
 
                     Assert.That(nodes.Any(node => node.Blackbox == Box(second)), Is.True, "Table 6-1 / DepthLimited x BuildExportGraph");
                     Assert.That(nodes.Any(node => node.Blackbox == Box(third)), Is.False);
@@ -984,7 +983,7 @@ namespace com.BlackThunder.BlackboxSystem.Tests
                         new LogData(owner, "open", DateTime.UtcNow, 1, "Scope", ScopeType.Open, 1, 1, "main", -1, null, null, null, null),
                         new LogData(owner, "close", DateTime.UtcNow, 2, "Scope", ScopeType.Close, 1, 1, "main", -1, null, null, null, null)
                     };
-                    var flattened = com.BlackThunder.BlackboxSystem.Exporters.Tools.FlattenSteps(logs);
+                    var flattened = BlackThunder.BlackboxSystem.Exporters.Tools.FlattenSteps(logs);
 
                     Assert.That(flattened.Count, Is.EqualTo(1), "Table 6-1 / RootOnly x FlattenSteps");
                     Assert.That(flattened[0].ScopeType, Is.EqualTo(ScopeType.Step));
@@ -1000,7 +999,7 @@ namespace com.BlackThunder.BlackboxSystem.Tests
                         new LogData(owner, "close", DateTime.UtcNow, 3, "Scope", ScopeType.Close, 1, 1, "main", -1, null, null, null, null)
                     };
 
-                    Assert.That(com.BlackThunder.BlackboxSystem.Exporters.Tools.FlattenSteps(logs).Count, Is.EqualTo(3), "Table 6-1 / Focused x FlattenSteps");
+                    Assert.That(BlackThunder.BlackboxSystem.Exporters.Tools.FlattenSteps(logs).Count, Is.EqualTo(3), "Table 6-1 / Focused x FlattenSteps");
                 }),
                 Scenario("ResolveScopeDepths", m =>
                 {
@@ -1012,7 +1011,7 @@ namespace com.BlackThunder.BlackboxSystem.Tests
                         new LogData(owner, "", DateTime.UtcNow, 3, "Inner", ScopeType.Close, 2, 1, "main", -1, null, null, null, null),
                         new LogData(owner, "", DateTime.UtcNow, 4, "Outer", ScopeType.Close, 1, 1, "main", -1, null, null, null, null)
                     };
-                    var resolved = com.BlackThunder.BlackboxSystem.Exporters.Tools.ResolveScopeDepths(logs);
+                    var resolved = BlackThunder.BlackboxSystem.Exporters.Tools.ResolveScopeDepths(logs);
 
                     Assert.That(resolved.Select(log => log.ScopeDepth), Is.EqualTo(new[] { 0, 1, 1, 0 }), "Table 6-1 / RootOnly x ResolveScopeDepths");
                 }),
@@ -1021,10 +1020,10 @@ namespace com.BlackThunder.BlackboxSystem.Tests
                     var invalidChar = Path.GetInvalidFileNameChars().First();
                     var longName = new string('a', 40);
 
-                    Assert.That(com.BlackThunder.BlackboxSystem.Exporters.Tools.TrimSmart(null), Is.EqualTo("null"), "Table 6-1 / FileName x TrimSmart");
-                    Assert.That(com.BlackThunder.BlackboxSystem.Exporters.Tools.TrimSmart(new string(invalidChar, 3)), Is.EqualTo("null"));
-                    Assert.That(com.BlackThunder.BlackboxSystem.Exporters.Tools.TrimSmart("a" + invalidChar + "b"), Is.EqualTo("ab"));
-                    Assert.That(com.BlackThunder.BlackboxSystem.Exporters.Tools.TrimSmart(longName).Length, Is.LessThan(longName.Length));
+                    Assert.That(BlackThunder.BlackboxSystem.Exporters.Tools.TrimSmart(null), Is.EqualTo("null"), "Table 6-1 / FileName x TrimSmart");
+                    Assert.That(BlackThunder.BlackboxSystem.Exporters.Tools.TrimSmart(new string(invalidChar, 3)), Is.EqualTo("null"));
+                    Assert.That(BlackThunder.BlackboxSystem.Exporters.Tools.TrimSmart("a" + invalidChar + "b"), Is.EqualTo("ab"));
+                    Assert.That(BlackThunder.BlackboxSystem.Exporters.Tools.TrimSmart(longName).Length, Is.LessThan(longName.Length));
                 })
             };
         }
@@ -1276,4 +1275,3 @@ namespace com.BlackThunder.BlackboxSystem.Tests
 
     }
 }
-#endif

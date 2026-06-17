@@ -2,7 +2,7 @@ using System;
 using System.Text;
 using System.Text.RegularExpressions;
 
-namespace com.BlackThunder.BlackboxSystem
+namespace BlackThunder.BlackboxSystem
 {
     internal static class LogFormatter
     {

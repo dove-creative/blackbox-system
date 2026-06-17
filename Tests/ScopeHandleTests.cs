@@ -2,9 +2,8 @@ using System.Linq;
 using System.Threading;
 using NUnit.Framework;
 
-namespace com.BlackThunder.BlackboxSystem.Tests
+namespace BlackThunder.BlackboxSystem.Tests
 {
-#if BLACKBOX
     internal sealed class ScopeHandleTests : BlackboxTestBase
     {
         [Test]
@@ -101,5 +100,4 @@ namespace com.BlackThunder.BlackboxSystem.Tests
             Assert.That(logs[0].ScopeType, Is.EqualTo(ScopeType.Open));
         }
     }
-#endif
 }

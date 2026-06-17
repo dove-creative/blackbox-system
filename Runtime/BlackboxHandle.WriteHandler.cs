@@ -1,7 +1,7 @@
 using System.Runtime.CompilerServices;
 using System.Text;
 
-namespace com.BlackThunder.BlackboxSystem
+namespace BlackThunder.BlackboxSystem
 {
     public partial struct BlackboxHandle
     {

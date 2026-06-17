@@ -2,12 +2,11 @@ using System;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using com.BlackThunder.BlackboxSystem.Exporters;
+using BlackThunder.BlackboxSystem.Exporters;
 using NUnit.Framework;
 
-namespace com.BlackThunder.BlackboxSystem.Tests
+namespace BlackThunder.BlackboxSystem.Tests
 {
-#if BLACKBOX
     internal sealed class ExporterTests : BlackboxTestBase
     {
         [Test]
@@ -152,5 +151,4 @@ namespace com.BlackThunder.BlackboxSystem.Tests
             Assert.That(BlackboxTestDoubles.WarningLogs.Any(log => log.Contains("blocked html open")), Is.True);
         }
     }
-#endif
 }

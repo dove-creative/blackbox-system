@@ -2,12 +2,11 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using com.BlackThunder.BlackboxSystem.Exporters;
+using BlackThunder.BlackboxSystem.Exporters;
 using NUnit.Framework;
 
-namespace com.BlackThunder.BlackboxSystem.Tests
+namespace BlackThunder.BlackboxSystem.Tests
 {
-#if BLACKBOX
     internal sealed class ExportToolsTests : BlackboxTestBase
     {
         [Test]
@@ -149,5 +148,4 @@ namespace com.BlackThunder.BlackboxSystem.Tests
             return new LogData(owner, message, DateTime.UtcNow, sequence, "Run", scopeType, scopeId, 1, "thread", -1, null, null, null, null);
         }
     }
-#endif
 }

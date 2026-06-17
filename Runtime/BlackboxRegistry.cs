@@ -2,7 +2,7 @@ using System;
 using System.Linq;
 using System.Runtime.CompilerServices;
 
-namespace com.BlackThunder.BlackboxSystem
+namespace BlackThunder.BlackboxSystem
 {
     internal static class BlackboxRegistry
     {

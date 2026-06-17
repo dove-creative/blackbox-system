@@ -23,7 +23,7 @@ Thank you for using Blackbox.
 - Interaction records: records object-to-object call relationships on both sides with `Exert(...)` and `ExertMessage(...)`.
 - Tag links: attaches related targets to the source log with `Write(...).With(...)` or `Scope(...).With(...)`.
 - Export: writes recorded logs to text or HTML files.
-- Disable switch: when the `BLACKBOX` symbol is missing, the main recording calls do not write actual logs.
+- Runtime switch: set `BlackboxHandle.UseBlackbox` to control whether recording handles are created and logs are written.
 
 ## Installation
 
@@ -45,8 +45,7 @@ https://github.com/dove-creative/blackbox-system.git
 
 ### Configure After Installation
 
-1. Enable the `BLACKBOX` symbol in Player Settings or asmdef define constraints.
-2. Configure the log output location early in execution.
+1. Configure the log output location early in execution.
 
 ```csharp
 BlackboxHandle.Configure(
@@ -54,12 +53,14 @@ BlackboxHandle.Configure(
 	logger: Debug.Log);
 ```
 
-If the `BLACKBOX` symbol is not defined, most recording calls fall back to default values or return the original message. This can be used to remove recording cost from release builds.
+In Unity, recording starts disabled by default unless the `BLACKBOX` scripting define symbol is present. Add `BLACKBOX` in Player Settings or set `BlackboxHandle.UseBlackbox = true` during startup to enable recording by default.
+
+If you want to temporarily stop recording, set `BlackboxHandle.UseBlackbox = false` or pass `useBlackbox: UseBlackboxOption.DoNotUse` to `Configure(...)`. When this runtime switch is off, `BlackboxHandle.Of(subject)` returns an invalid handle and recording calls fall back to no-op/default behavior.
 
 ## Quick Start
 
 ```csharp
-using com.BlackThunder.BlackboxSystem;
+using BlackThunder.BlackboxSystem;
 
 public class Loader
 {
@@ -108,23 +109,23 @@ This example records the following information.
 
 ## Documentation
 
-Detailed documentation is available in `Documentation~/Wiki-ENG`.
+Detailed documentation is available in `Documentation~/Wiki.en`.
 
-- [01-Overview.md](Documentation~/Wiki-ENG/01-Overview.md): purpose and overall flow
-- [02-Implementations.md](Documentation~/Wiki-ENG/02-Implementations.md): implementation structure
-- [02.1-Tag-Flow.md](Documentation~/Wiki-ENG/02.1-Tag-Flow.md): tag-linking flow
-- [02.2-Export-Pipeline.md](Documentation~/Wiki-ENG/02.2-Export-Pipeline.md): export pipeline
-- [02.3-Handle-Lifecycle.md](Documentation~/Wiki-ENG/02.3-Handle-Lifecycle.md): handle lifecycle
-- [03-Object-Diagram.md](Documentation~/Wiki-ENG/03-Object-Diagram.md): object relationship diagram
-- [04-Usage.md](Documentation~/Wiki-ENG/04-Usage.md): usage examples and call guidelines
+- [01-Overview.md](Documentation~/Wiki.en/01-Overview.md): purpose and overall flow
+- [02-Implementations.md](Documentation~/Wiki.en/02-Implementations.md): implementation structure
+- [02.1-Tag-Flow.md](Documentation~/Wiki.en/02.1-Tag-Flow.md): tag-linking flow
+- [02.2-Export-Pipeline.md](Documentation~/Wiki.en/02.2-Export-Pipeline.md): export pipeline
+- [02.3-Handle-Lifecycle.md](Documentation~/Wiki.en/02.3-Handle-Lifecycle.md): handle lifecycle
+- [03-Object-Diagram.md](Documentation~/Wiki.en/03-Object-Diagram.md): object relationship diagram
+- [04-Usage.md](Documentation~/Wiki.en/04-Usage.md): usage examples and call guidelines
 
-Korean documentation is available in `Documentation~/Wiki-KOR`.
+Korean documentation is available in `Documentation~/Wiki.ko`.
 
 ## Tests
 
 Test code is in the `Tests` folder and uses Unity Test Framework with NUnit.
 
-To run tests in Unity, use an Editor test environment where `BLACKBOX`, `BLACKBOX_TESTS`, and `UNITY_INCLUDE_TESTS` are enabled. If the package is used as a separated package, also check the Unity project's testables settings and test asmdef settings.
+To run tests in Unity, use an Editor test environment where `BLACKBOX_TESTS` and `UNITY_INCLUDE_TESTS` are enabled. Add `BLACKBOX` too when the Unity default recording state should be enabled. If the package is used as a separated package, also check the Unity project's testables settings and test asmdef settings.
 
 ## License
 

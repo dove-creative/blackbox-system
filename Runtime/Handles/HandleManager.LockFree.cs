@@ -1,7 +1,7 @@
 using System;
 using System.Threading;
 
-namespace com.BlackThunder.BlackboxSystem
+namespace BlackThunder.BlackboxSystem
 {
 #if !BLACKBOX_LOCK_HANDLES
     /// <summary>

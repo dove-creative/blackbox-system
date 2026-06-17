@@ -1,6 +1,6 @@
 using System.Threading;
 
-namespace com.BlackThunder.BlackboxSystem
+namespace BlackThunder.BlackboxSystem
 {
     internal static class BlackboxRuntime
     {

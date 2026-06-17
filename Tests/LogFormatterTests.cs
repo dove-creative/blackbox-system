@@ -1,9 +1,8 @@
 using System;
 using NUnit.Framework;
 
-namespace com.BlackThunder.BlackboxSystem.Tests
+namespace BlackThunder.BlackboxSystem.Tests
 {
-#if BLACKBOX
     internal sealed class LogFormatterTests : BlackboxTestBase
     {
         [Test]
@@ -107,5 +106,4 @@ namespace com.BlackThunder.BlackboxSystem.Tests
             Assert.That(LogFormatter.TagRef(null, -1), Is.EqualTo("null"));
         }
     }
-#endif
 }

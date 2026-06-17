@@ -1,9 +1,8 @@
 using System;
 using NUnit.Framework;
 
-namespace com.BlackThunder.BlackboxSystem.Tests
+namespace BlackThunder.BlackboxSystem.Tests
 {
-#if BLACKBOX
     internal sealed class LogDataTests : BlackboxTestBase
     {
         [Test]
@@ -100,5 +99,4 @@ namespace com.BlackThunder.BlackboxSystem.Tests
             Assert.That(rendered, Does.Contain("hello"));
         }
     }
-#endif
 }

@@ -1,8 +1,9 @@
 {
   "name": "com.blackthunder.blackboxsystem",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "displayName": "Blackbox System",
   "description": "Object activity, scope, and interaction tracing for Unity and C#.",
+  "documentationUrl": "https://github.com/dove-creative/blackbox-system#readme",
   "unity": "6000.0",
   "license": "MIT",
   "author": {
@@ -16,9 +17,14 @@
   ],
   "samples": [
     {
-      "displayName": "Usage",
+      "displayName": "Unity Usage",
       "description": "Interactive scene for usage tutorials with HTML export.",
-      "path": "Samples~/Usage"
+      "path": "Samples~/Unity"
+    },
+    {
+      "displayName": "Native C# Usage",
+      "description": "Native C# usage samples.",
+      "path": "Samples~/NativeCSharp"
     }
   ]
 }

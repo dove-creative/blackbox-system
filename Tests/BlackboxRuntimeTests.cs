@@ -1,8 +1,7 @@
 using NUnit.Framework;
 
-namespace com.BlackThunder.BlackboxSystem.Tests
+namespace BlackThunder.BlackboxSystem.Tests
 {
-#if BLACKBOX
     internal sealed class BlackboxRuntimeTests : BlackboxTestBase
     {
         [Test]
@@ -36,5 +35,4 @@ namespace com.BlackThunder.BlackboxSystem.Tests
             Assert.That(BlackboxRuntime.GetNextSequence(), Is.EqualTo(0));
         }
     }
-#endif
 }

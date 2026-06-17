@@ -4,7 +4,7 @@ using UnityEngine;
 using UnityEditor;
 #endif
 
-namespace com.BlackThunder.BlackboxSystem.Exporters
+namespace BlackThunder.BlackboxSystem.Exporters
 {
     public class BlackboxLogExporter : MonoBehaviour
     {

@@ -3,11 +3,10 @@ using System.IO;
 using System.Linq;
 using NUnit.Framework;
 
-namespace com.BlackThunder.BlackboxSystem.Tests
+namespace BlackThunder.BlackboxSystem.Tests
 {
     internal sealed class BlackboxHandleTests : BlackboxTestBase
     {
-#if BLACKBOX
         [Test]
         public void OfCreatesValidHandleAndRejectsNull()
         {
@@ -23,6 +22,26 @@ namespace com.BlackThunder.BlackboxSystem.Tests
 
             // Table 5-1 / Valid x Of.NullSubject
             Assert.That(() => BlackboxHandle.Of<object>(null), Throws.TypeOf<ArgumentNullException>());
+        }
+
+        [Test]
+        public void UseBlackboxFalseDisablesNewAndExistingHandles()
+        {
+            var owner = BlackboxTestDoubles.Owner("owner");
+            var handle = BlackboxHandle.Of(owner);
+            Assert.That(handle.IsValid, Is.True);
+
+            var blackbox = BlackboxRegistry.GetBlackbox(owner);
+
+            BlackboxHandle.UseBlackbox = false;
+
+            Assert.That(BlackboxHandle.UseBlackbox, Is.False);
+            Assert.That(handle.IsValid, Is.False);
+            Assert.That(BlackboxHandle.Of(owner).IsValid, Is.False);
+            Assert.DoesNotThrow(() => BlackboxHandle.Of<object>(null));
+
+            handle.Write("skipped", "Run").With();
+            Assert.That(BlackboxTestDoubles.Logs(blackbox), Is.Empty);
         }
 
         [Test]
@@ -319,27 +338,5 @@ namespace com.BlackThunder.BlackboxSystem.Tests
                 return "formatted";
             }
         }
-#else
-        [Test]
-        public void SymbolOffReturnsInvalidHandlesAndOriginalMessages()
-        {
-            var owner = BlackboxTestDoubles.Owner("owner");
-            var other = BlackboxTestDoubles.Owner("other");
-
-            // Table 5-1 / SymbolOff x Of.ValidSubject
-            var handle = BlackboxHandle.Of(owner);
-
-            Assert.That(handle.IsValid, Is.False);
-
-            // Table 5-1 / SymbolOff x Write
-            Assert.That(handle.Write("message").With(), Is.EqualTo("message"));
-
-            // Table 5-1 / SymbolOff x ExertMessage.OtherPeer
-            Assert.That(handle.ExertMessage(other, "call"), Is.EqualTo("call"));
-
-            // Table 5-1 / SymbolOff x WriteError.ErrorTargetsEmpty
-            Assert.That(handle.WriteError("error"), Is.EqualTo("error"));
-        }
-#endif
     }
 }

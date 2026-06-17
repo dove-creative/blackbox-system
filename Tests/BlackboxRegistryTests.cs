@@ -1,9 +1,8 @@
 using System;
 using NUnit.Framework;
 
-namespace com.BlackThunder.BlackboxSystem.Tests
+namespace BlackThunder.BlackboxSystem.Tests
 {
-#if BLACKBOX
     internal sealed class BlackboxRegistryTests : BlackboxTestBase
     {
         [Test]
@@ -123,5 +122,4 @@ namespace com.BlackThunder.BlackboxSystem.Tests
                 .GetValue(instance);
         }
     }
-#endif
 }

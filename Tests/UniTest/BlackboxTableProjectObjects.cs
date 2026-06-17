@@ -1,11 +1,10 @@
-#if BLACKBOX
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using UniTest;
 
-namespace com.BlackThunder.BlackboxSystem.Tests
+namespace BlackThunder.BlackboxSystem.Tests
 {
     internal sealed class BlackboxTableProject : Project<BlackboxTableModel>
     {
@@ -147,4 +146,3 @@ namespace com.BlackThunder.BlackboxSystem.Tests
         }
     }
 }
-#endif

@@ -1,0 +1,5 @@
+﻿[*.{cs,vb}]
+
+end_of_line = lf
+
+dotnet_diagnostic.IDE0130.severity = none

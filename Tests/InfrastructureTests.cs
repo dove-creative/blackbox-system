@@ -1,8 +1,7 @@
 using NUnit.Framework;
 
-namespace com.BlackThunder.BlackboxSystem.Tests
+namespace BlackThunder.BlackboxSystem.Tests
 {
-#if BLACKBOX
     internal sealed class InfrastructureTests : BlackboxTestBase
     {
         [Test]
@@ -20,10 +19,12 @@ namespace com.BlackThunder.BlackboxSystem.Tests
                 FullExportOption.Focused,
                 OpenLogOption.Open,
                 ExceptionHandlingOption.CrashExport,
-                TargetTypes.Name);
+                TargetTypes.Name,
+                UseBlackboxOption.DoNotUse);
 
             Assert.That(Infrastructure.LogDirectory, Is.EqualTo(directory));
             Assert.That(Infrastructure.StrongReference, Is.True);
+            Assert.That(Infrastructure.UseBlackbox, Is.EqualTo(UseBlackboxOption.DoNotUse));
             Assert.That(Infrastructure.ExportFormat, Is.EqualTo(ExportFormat.Html));
             Assert.That(Infrastructure.FullExportOption, Is.EqualTo(FullExportOption.Focused));
             Assert.That(Infrastructure.OpenLogOption, Is.EqualTo(OpenLogOption.Open));
@@ -79,5 +80,4 @@ namespace com.BlackThunder.BlackboxSystem.Tests
             Assert.That(Infrastructure.TryMarkPrinted(), Is.True);
         }
     }
-#endif
 }

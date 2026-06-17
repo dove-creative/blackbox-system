@@ -2,9 +2,8 @@ using System.IO;
 using System.Linq;
 using NUnit.Framework;
 
-namespace com.BlackThunder.BlackboxSystem.Tests
+namespace BlackThunder.BlackboxSystem.Tests
 {
-#if BLACKBOX
     internal sealed class IntegrationTests : BlackboxTestBase
     {
         [Test]
@@ -134,5 +133,4 @@ namespace com.BlackThunder.BlackboxSystem.Tests
             Assert.That(logs[1].Message, Is.EqualTo("three"));
         }
     }
-#endif
 }

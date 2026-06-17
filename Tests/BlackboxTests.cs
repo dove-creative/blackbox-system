@@ -3,9 +3,8 @@ using System.Linq;
 using System.Threading;
 using NUnit.Framework;
 
-namespace com.BlackThunder.BlackboxSystem.Tests
+namespace BlackThunder.BlackboxSystem.Tests
 {
-#if BLACKBOX
     internal sealed class BlackboxTests : BlackboxTestBase
     {
         [Test]
@@ -189,5 +188,4 @@ namespace com.BlackThunder.BlackboxSystem.Tests
             }
         }
     }
-#endif
 }

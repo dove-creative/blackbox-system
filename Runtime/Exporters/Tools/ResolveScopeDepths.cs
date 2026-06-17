@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using System.Linq;
 
-namespace com.BlackThunder.BlackboxSystem.Exporters
+namespace BlackThunder.BlackboxSystem.Exporters
 {
     internal static partial class Tools
     {

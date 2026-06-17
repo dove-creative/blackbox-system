@@ -1,6 +1,6 @@
 using System;
 
-namespace com.BlackThunder.BlackboxSystem
+namespace BlackThunder.BlackboxSystem
 {
     internal enum ScopeType
     {

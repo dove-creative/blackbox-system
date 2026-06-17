@@ -4,6 +4,21 @@ This file records public changes to Blackbox.
 
 The format follows Keep a Changelog, and version numbers follow Semantic Versioning.
 
+## [0.1.1] - 2026-06-17
+
+### Added
+
+- Added native C# usage samples under `Samples~/NativeCSharp` for running the `Write`, `Exert`, `Tag`, and exception-recording scenarios.
+- Added an interactive native sample launcher that keeps accepting commands until `exit` is entered.
+- Added the bool `BlackboxHandle.UseBlackbox` property and `Configure(..., useBlackbox: UseBlackboxOption.DoNotUse)` as runtime switches for disabling recording.
+- Added contribution branch naming guidance for short-lived branches from `main` using the `<username>/<topic>` format.
+
+### Changed
+
+- Changed the public C# namespace and Unity asmdef names from `com.BlackThunder.BlackboxSystem` to `BlackThunder.BlackboxSystem` while keeping the Unity package ID as `com.blackthunder.blackboxsystem`.
+- Changed `BLACKBOX` from a runtime code-inclusion requirement into a Unity default-activation symbol; native C# and non-Unity builds record by default unless disabled at runtime.
+- Updated package sample metadata so usage samples are registered separately by target environment.
+
 ## [0.1.0] - 2026-06-11
 
 ### Added

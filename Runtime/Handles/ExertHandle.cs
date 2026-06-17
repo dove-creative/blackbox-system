@@ -1,6 +1,6 @@
 using System;
 
-namespace com.BlackThunder.BlackboxSystem
+namespace BlackThunder.BlackboxSystem
 {
     public readonly struct ExertHandle : IDisposable
     {

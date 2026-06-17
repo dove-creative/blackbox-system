@@ -3,7 +3,7 @@ using System.Linq;
 using System.Collections.Generic;
 using System.Threading;
 
-namespace com.BlackThunder.BlackboxSystem
+namespace BlackThunder.BlackboxSystem
 {
     internal class Blackbox
     {

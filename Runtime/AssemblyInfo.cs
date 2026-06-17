@@ -1,4 +1,4 @@
 using System.Runtime.CompilerServices;
 
-[assembly: InternalsVisibleTo("com.BlackThunder.BlackboxSystem.Tests")]
-[assembly: InternalsVisibleTo("com.BlackThunder.BlackboxSystem.UniTests")]
+[assembly: InternalsVisibleTo("BlackThunder.BlackboxSystem.Tests")]
+[assembly: InternalsVisibleTo("BlackThunder.BlackboxSystem.UniTests")]

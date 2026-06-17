@@ -1,9 +1,8 @@
 using System.Linq;
 using NUnit.Framework;
 
-namespace com.BlackThunder.BlackboxSystem.Tests
+namespace BlackThunder.BlackboxSystem.Tests
 {
-#if BLACKBOX
     internal sealed class TagHandleTests : BlackboxTestBase
     {
         [Test]
@@ -93,5 +92,4 @@ namespace com.BlackThunder.BlackboxSystem.Tests
             Assert.That(targetLine, Does.Not.Contain("hello"));
         }
     }
-#endif
 }

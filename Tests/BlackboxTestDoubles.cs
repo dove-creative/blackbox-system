@@ -4,7 +4,7 @@ using System.IO;
 using System.Linq;
 using NUnit.Framework;
 
-namespace com.BlackThunder.BlackboxSystem.Tests
+namespace BlackThunder.BlackboxSystem.Tests
 {
     internal abstract class BlackboxTestBase
     {
@@ -68,7 +68,8 @@ namespace com.BlackThunder.BlackboxSystem.Tests
                 FullExportOption.Full,
                 OpenLogOption.Never,
                 ExceptionHandlingOption.None,
-                TargetTypes.Full);
+                TargetTypes.Full,
+                UseBlackboxOption.Use);
 
             BlackboxHandle.MaxLogCount = maxLogCount;
             BlackboxHandle.DefaultRecursionDepth = 10;

@@ -1,6 +1,6 @@
 using System;
 
-namespace com.BlackThunder.BlackboxSystem
+namespace BlackThunder.BlackboxSystem
 {
     /// <summary>
     /// Defines which source details are written to tagged target logs.
