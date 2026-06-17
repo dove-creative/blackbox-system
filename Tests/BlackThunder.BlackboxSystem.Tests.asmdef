@@ -4,7 +4,7 @@
     "references": [
         "UnityEngine.TestRunner",
         "UnityEditor.TestRunner",
-        "BlackThunder.BlackboxSystem"
+        "GUID:83786de9691edcc488d9d6f1d572c585"
     ],
     "includePlatforms": [
         "Editor"
