@@ -63,7 +63,7 @@ BlackboxHandle.Configure(
 	logger: Debug.Log);
 ```
 
-Unity에서는 `BLACKBOX` 심볼이 없으면 기본적으로 기록이 꺼진 상태에서 시작한다. 실제 기록을 기본 활성화하려면 Player Settings의 Scripting Define Symbols에 `BLACKBOX`를 추가하거나, 실행 초기에 `BlackboxHandle.UseBlackbox = true`를 설정한다.
+Unity에서 `BLACKBOX` 심볼은 `BlackboxHandle.UseBlackbox`의 시작 기본값만 정한다. 심볼 유무와 관계없이 동일한 런타임 API를 사용하며, 이 심볼이 없으면 Unity는 기록이 꺼진 상태에서 시작한다. 기록을 활성화하려면 Player Settings의 Scripting Define Symbols에 `BLACKBOX`를 추가하거나, 실행 초기에 `BlackboxHandle.UseBlackbox = true`를 설정한다.
 
 기록을 일시적으로 멈추고 싶다면 `BlackboxHandle.UseBlackbox = false`를 설정하거나 `Configure(..., useBlackbox: UseBlackboxOption.DoNotUse)`를 사용한다. 이 런타임 스위치가 꺼져 있으면 `BlackboxHandle.Of(subject)`는 유효하지 않은 핸들을 반환하고, 기록 호출은 no-op 또는 기본값 반환으로 빠진다.
 
@@ -184,7 +184,7 @@ dotnet run --project Blackbox.NativeCSharp.Samples.csproj
 
 테스트 코드는 `Tests` 폴더에 있으며, Unity Test Framework와 NUnit을 사용한다.
 
-Unity에서 테스트를 실행하려면 `BLACKBOX_TESTS`, `UNITY_INCLUDE_TESTS` 심볼이 활성화된 Editor 테스트 환경을 사용한다. Unity에서 기록 기본값도 함께 켜려면 `BLACKBOX` 심볼을 추가한다. 패키지 형태로 분리해 사용하는 경우, Unity 프로젝트의 testables 설정이나 테스트 asmdef 설정도 함께 확인한다.
+Unity에서 테스트를 실행하려면 `BLACKBOX_TESTS`, `UNITY_INCLUDE_TESTS` 심볼이 활성화된 Editor 테스트 환경을 사용한다. Unity에서 `UseBlackbox` 시작 기본값도 함께 켜려면 `BLACKBOX` 심볼을 추가한다. 패키지 형태로 분리해 사용하는 경우, Unity 프로젝트의 testables 설정이나 테스트 asmdef 설정도 함께 확인한다.
 
 ---
 

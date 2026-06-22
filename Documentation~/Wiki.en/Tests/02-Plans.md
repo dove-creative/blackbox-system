@@ -11,7 +11,7 @@ Blackbox is a POCO-centered recording framework, so tests keep an asmdef that ca
 - Write test code in the `Tests` folder.
 - Keep the existing `BlackThunder.BlackboxSystem.Tests.asmdef`.
 - The `BlackThunder.BlackboxSystem.Tests` assembly references the `BlackThunder.BlackboxSystem` assembly, and verifies internal types through `InternalsVisibleTo("BlackThunder.BlackboxSystem.Tests")` in `AssemblyInfo.cs`.
-- The Unity Test Runner and `BlackThunder.BlackboxSystem.Tests.asmdef` axis default to `UNITY_INCLUDE_TESTS` and `BLACKBOX_TESTS` being enabled. In Unity verification environments where the default recording state must also be enabled, enable `BLACKBOX` as well.
+- The Unity Test Runner and `BlackThunder.BlackboxSystem.Tests.asmdef` axis default to `UNITY_INCLUDE_TESTS` and `BLACKBOX_TESTS` being enabled. In Unity verification environments where the `UseBlackbox` startup default must also be enabled, enable `BLACKBOX` as well.
 - The pure NUnit external execution axis uses `Tools/ExternalNUnitExecutor/ExternalNUnitExecutor.csproj`. This axis verifies Blackbox's real recording/output flow.
 - Recording-disabled fallback behavior is verified through the `UseBlackbox=false` runtime setting, not through a separate build axis.
 

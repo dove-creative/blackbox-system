@@ -388,7 +388,7 @@ Blackbox는 기록 시점부터 스코프 id, 스코프 종류, 상호작용 상
 
 `BlackboxHandle.Of(subject)`와 주요 기록 메서드는 `UseBlackbox` 설정을 기준으로 실제 기록 여부를 결정한다. 이 값이 꺼져 있으면 기록용 핸들이 유효하지 않거나 일부 기록 호출이 조건부로 빠질 수 있다. 따라서 Blackbox를 실제 추적 도구로 사용할 때는 실행 초기 설정에서 `UseBlackbox`가 켜져 있는지 확인해야 한다.
 
-Unity에서는 `BLACKBOX` 심볼이 없으면 기본값이 꺼진 상태로 시작한다. 이 심볼은 런타임 코드를 제거하기 위한 조건이 아니라 Unity 프로젝트에서 기본 기록 상태를 켤지 정하는 기본값 신호이다. 네이티브 C#과 비 Unity 빌드에서는 별도 심볼 없이 기본 기록 상태가 켜져 있으며, 필요한 경우 `BlackboxHandle.UseBlackbox = false`나 `Configure(..., useBlackbox: UseBlackboxOption.DoNotUse)`로 끌 수 있다.
+Unity에서는 `BLACKBOX` 심볼이 없으면 기본값이 꺼진 상태로 시작한다. 이 심볼은 Unity 프로젝트에서 기본 기록 상태를 켤지 정하는 기본값 신호일 뿐이며, 심볼 유무와 관계없이 동일한 런타임 API를 사용한다. 네이티브 C#과 비 Unity 빌드에서는 별도 심볼 없이 기본 기록 상태가 켜져 있으며, 필요한 경우 `BlackboxHandle.UseBlackbox = false`나 `Configure(..., useBlackbox: UseBlackboxOption.DoNotUse)`로 끌 수 있다.
 
 ## 7-2. 출력 이후의 기록 중단
 

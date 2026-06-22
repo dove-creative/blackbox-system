@@ -27,7 +27,7 @@ Thank you for using Blackbox.
 
 ## Installation
 
-The current structure supports both Unity Package Manager installation and folder-based package installation.
+The current structure supports both Unity Package Manager installation and folder-based package installation. Native C# projects can also include the runtime source directly when needed.
 
 ### Install with Package Manager
 
@@ -53,9 +53,31 @@ BlackboxHandle.Configure(
 	logger: Debug.Log);
 ```
 
-In Unity, recording starts disabled by default unless the `BLACKBOX` scripting define symbol is present. Add `BLACKBOX` in Player Settings or set `BlackboxHandle.UseBlackbox = true` during startup to enable recording by default.
+In Unity, the `BLACKBOX` scripting define symbol only selects the startup default for `BlackboxHandle.UseBlackbox`. The same runtime API remains available either way. Without that symbol, Unity starts with recording off by default. Add `BLACKBOX` in Player Settings or set `BlackboxHandle.UseBlackbox = true` during startup to enable recording.
 
 If you want to temporarily stop recording, set `BlackboxHandle.UseBlackbox = false` or pass `useBlackbox: UseBlackboxOption.DoNotUse` to `Configure(...)`. When this runtime switch is off, `BlackboxHandle.Of(subject)` returns an invalid handle and recording calls fall back to no-op/default behavior.
+
+### Use in Native C#
+
+There is no separate NuGet package yet. In native C# projects, keep this package folder as a source dependency and include the `Runtime/**/*.cs` files in compilation.
+
+```xml
+<ItemGroup>
+  <Compile
+    Include="path/to/com.blackthunder.blackboxsystem/Runtime/**/*.cs"
+    LinkBase="Blackbox/Runtime" />
+</ItemGroup>
+```
+
+Configure the log output location and logger early in execution.
+
+```csharp
+BlackboxHandle.Configure(
+	logDirectory: Path.Combine(AppContext.BaseDirectory, "BlackboxLogs"),
+	logger: Console.WriteLine);
+```
+
+Native C# does not use the Unity-only `BLACKBOX` symbol, so recording starts enabled by default. If you want to temporarily stop recording, set `BlackboxHandle.UseBlackbox = false` or pass `useBlackbox: UseBlackboxOption.DoNotUse` to `Configure(...)`.
 
 ## Quick Start
 
@@ -125,7 +147,7 @@ Korean documentation is available in `Documentation~/Wiki.ko`.
 
 Test code is in the `Tests` folder and uses Unity Test Framework with NUnit.
 
-To run tests in Unity, use an Editor test environment where `BLACKBOX_TESTS` and `UNITY_INCLUDE_TESTS` are enabled. Add `BLACKBOX` too when the Unity default recording state should be enabled. If the package is used as a separated package, also check the Unity project's testables settings and test asmdef settings.
+To run tests in Unity, use an Editor test environment where `BLACKBOX_TESTS` and `UNITY_INCLUDE_TESTS` are enabled. Add `BLACKBOX` too when the Unity `UseBlackbox` startup default should be enabled. If the package is used as a separated package, also check the Unity project's testables settings and test asmdef settings.
 
 ## License
 

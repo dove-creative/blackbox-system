@@ -11,7 +11,7 @@ Blackbox는 POCO 중심의 기록 프레임워크이므로, 테스트는 Unity T
 - 테스트 코드는 `Tests` 폴더에 작성한다.
 - 기존 `BlackThunder.BlackboxSystem.Tests.asmdef`는 유지한다.
 - `BlackThunder.BlackboxSystem.Tests` assembly는 `BlackThunder.BlackboxSystem` assembly를 참조하고, `AssemblyInfo.cs`의 `InternalsVisibleTo("BlackThunder.BlackboxSystem.Tests")`를 통해 internal 타입을 검증한다.
-- Unity Test Runner와 `BlackThunder.BlackboxSystem.Tests.asmdef` 축은 `UNITY_INCLUDE_TESTS`, `BLACKBOX_TESTS`가 켜진 상태를 기본으로 한다. Unity에서 기록 기본값도 함께 켜야 하는 검증 환경에서는 `BLACKBOX`도 함께 켠다.
+- Unity Test Runner와 `BlackThunder.BlackboxSystem.Tests.asmdef` 축은 `UNITY_INCLUDE_TESTS`, `BLACKBOX_TESTS`가 켜진 상태를 기본으로 한다. Unity에서 `UseBlackbox` 시작 기본값도 함께 켜야 하는 검증 환경에서는 `BLACKBOX`도 함께 켠다.
 - 순수 NUnit 외부 실행 축은 `Tools/ExternalNUnitExecutor/ExternalNUnitExecutor.csproj`를 사용한다. 이 축에서 Blackbox의 실제 기록/출력 흐름을 검증한다.
 - 기록 비활성 fallback 동작은 별도 빌드 축이 아니라 `UseBlackbox=false` 런타임 설정으로 확인한다.
 

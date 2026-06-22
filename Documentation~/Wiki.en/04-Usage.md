@@ -122,9 +122,9 @@ The main recording methods of `BlackboxHandle` decide whether to actually record
 
 In short, if you inserted the code but no logs appear, first check whether `BlackboxHandle.UseBlackbox` is turned off.
 
-In Unity, if the `BLACKBOX` symbol is missing, recording starts off by default. To enable recording by default, add `BLACKBOX` to Scripting Define Symbols in Player Settings, or set `BlackboxHandle.UseBlackbox = true` during startup.
+In Unity, the `BLACKBOX` symbol only selects the startup default for `BlackboxHandle.UseBlackbox`. The same runtime API remains available either way. If the symbol is missing, recording starts off by default. To enable recording, add `BLACKBOX` to Scripting Define Symbols in Player Settings, or set `BlackboxHandle.UseBlackbox = true` during startup.
 
-In environments without Unity symbols, such as native C#, the default value is `true`. If you only want to temporarily turn recording off at runtime, set `BlackboxHandle.UseBlackbox = false` or use `Configure(..., useBlackbox: UseBlackboxOption.DoNotUse)`.
+In native C# environments without Unity symbols, the default value is `true`. If you only want to temporarily turn recording off at runtime, set `BlackboxHandle.UseBlackbox = false` or use `Configure(..., useBlackbox: UseBlackboxOption.DoNotUse)`.
 
 ## 1-2. Decide the Log Output Location First
 

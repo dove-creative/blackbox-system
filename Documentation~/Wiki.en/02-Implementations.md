@@ -388,7 +388,7 @@ By keeping `LogFormatter` as a separate tool, `LogData` does not have to own lon
 
 `BlackboxHandle.Of(subject)` and the main recording methods decide whether to actually record based on the `UseBlackbox` setting. If this value is off, the recording handle may not be valid, or some recording calls may be conditionally skipped. Therefore, when using Blackbox as an actual tracing tool, first check that `UseBlackbox` is enabled during startup configuration.
 
-In Unity, if the `BLACKBOX` symbol is missing, the default state starts with recording off. This symbol is not a condition for removing runtime code; it is a default-value signal that decides whether a Unity project starts with recording enabled. In native C# and non-Unity builds, the default recording state is enabled without a separate symbol, and it can be turned off when needed with `BlackboxHandle.UseBlackbox = false` or `Configure(..., useBlackbox: UseBlackboxOption.DoNotUse)`.
+In Unity, if the `BLACKBOX` symbol is missing, the default state starts with recording off. This symbol is only a default-value signal that decides whether a Unity project starts with recording enabled; the same runtime API remains available either way. In native C# and non-Unity builds, the default recording state is enabled without a separate symbol, and it can be turned off when needed with `BlackboxHandle.UseBlackbox = false` or `Configure(..., useBlackbox: UseBlackboxOption.DoNotUse)`.
 
 ## 7-2. Stop Recording After Output
 

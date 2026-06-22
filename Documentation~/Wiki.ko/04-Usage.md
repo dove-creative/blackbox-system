@@ -122,7 +122,7 @@ _bb.WriteError(
 
 즉 '코드는 넣었는데 로그가 안 남는다'면, 먼저 `BlackboxHandle.UseBlackbox`가 꺼져 있지 않은지 확인하는 편이 좋다.
 
-Unity에서는 `BLACKBOX` 심볼이 없으면 기본적으로 기록이 꺼진 상태에서 시작한다. 기록을 기본 활성화하려면 Player Settings의 Scripting Define Symbols에 `BLACKBOX`를 추가하거나 실행 초기에 `BlackboxHandle.UseBlackbox = true`를 설정한다.
+Unity에서 `BLACKBOX` 심볼은 `BlackboxHandle.UseBlackbox`의 시작 기본값만 정한다. 심볼 유무와 관계없이 동일한 런타임 API를 사용하며, 이 심볼이 없으면 Unity는 기록이 꺼진 상태에서 시작한다. 기록을 활성화하려면 Player Settings의 Scripting Define Symbols에 `BLACKBOX`를 추가하거나 실행 초기에 `BlackboxHandle.UseBlackbox = true`를 설정한다.
 
 네이티브 C#처럼 Unity 심볼이 없는 환경에서는 기본값이 `true`이다. 런타임으로 기록만 잠시 끄고 싶다면 `BlackboxHandle.UseBlackbox = false`를 설정하거나 `Configure(..., useBlackbox: UseBlackboxOption.DoNotUse)`를 사용한다.
 
