@@ -4,18 +4,18 @@ Blackbox는 POCO 중심의 기록 프레임워크이므로, 테스트는 Unity T
 
 ---
 
-# 1. 테스트 구성 원칙
+## 1. 테스트 구성 원칙
 
-## 1-1. 실행 방식
+### 1-1. 실행 방식
 
 - 테스트 코드는 `Tests` 폴더에 작성한다.
 - 기존 `BlackThunder.BlackboxSystem.Tests.asmdef`는 유지한다.
 - `BlackThunder.BlackboxSystem.Tests` assembly는 `BlackThunder.BlackboxSystem` assembly를 참조하고, `AssemblyInfo.cs`의 `InternalsVisibleTo("BlackThunder.BlackboxSystem.Tests")`를 통해 internal 타입을 검증한다.
 - Unity Test Runner와 `BlackThunder.BlackboxSystem.Tests.asmdef` 축은 `UNITY_INCLUDE_TESTS`, `BLACKBOX_TESTS`가 켜진 상태를 기본으로 한다. Unity에서 `UseBlackbox` 시작 기본값도 함께 켜야 하는 검증 환경에서는 `BLACKBOX`도 함께 켠다.
-- 순수 NUnit 외부 실행 축은 `Tools/ExternalNUnitExecutor/ExternalNUnitExecutor.csproj`를 사용한다. 이 축에서 Blackbox의 실제 기록/출력 흐름을 검증한다.
+- 순수 NUnit 외부 실행 축은 `Packages/com.blackthunder.unitest/Tools~/ExternalNUnitExecutor/ExternalNUnitExecutor.csproj`를 사용한다. 이 축에서 Blackbox의 실제 기록/출력 흐름을 검증한다.
 - 기록 비활성 fallback 동작은 별도 빌드 축이 아니라 `UseBlackbox=false` 런타임 설정으로 확인한다.
 
-## 1-2. 작성 규칙
+### 1-2. 작성 규칙
 
 - Blackbox 자체를 검증하는 테스트 코드에는 Blackbox 계측 호출을 넣지 않는다.
 - 새 assert는 `Assert.That(actual, constraint)` 형식을 우선 사용한다.
@@ -26,11 +26,11 @@ Blackbox는 POCO 중심의 기록 프레임워크이므로, 테스트는 Unity T
 - interpolated string handler 경로는 public API 호출로 우선 검증하고, handler 자체의 short-circuit 상태처럼 public 호출만으로 관찰하기 어려운 부분은 `BlackboxHandle.WriteHandler`를 직접 구성해 검증한다.
 - 파일 출력 테스트는 임시 폴더를 사용한다. 일반 export 테스트에서는 자동 open을 `OpenLogOption.Never`로 끄고, `OpenLog` 전용 칸은 테스트 빌드 hook으로 외부 프로세스 실행 없이 실패 warning 경로를 검증한다.
 
-## 1-3. 예상 규모
+### 1-3. 예상 규모
 
 `01-Tables.md` 기준 `X`를 제외한 모든 결과 칸을 풀어도 약 95-115개 테스트 함수, 120-170개 assert 구간으로 예상된다. 200개 이하이므로 전체 표를 기준으로 테스트를 작성한다.
 
-## 1-4. 칸 커버리지 기준
+### 1-4. 칸 커버리지 기준
 
 테스트 계획과 테스트 코드에서는 아래 기준을 사용한다.
 
@@ -48,9 +48,9 @@ Blackbox는 POCO 중심의 기록 프레임워크이므로, 테스트는 Unity T
 
 ---
 
-# 2. 공통 테스트 도구
+## 2. 공통 테스트 도구
 
-## 2-1. `BlackboxTestDoubles.cs`
+### 2-1. `BlackboxTestDoubles.cs`
 
 공통 테스트 fixture와 helper를 둔다.
 
@@ -73,9 +73,9 @@ Blackbox는 POCO 중심의 기록 프레임워크이므로, 테스트는 Unity T
 
 ---
 
-# 3. 단위 테스트 계획
+## 3. 단위 테스트 계획
 
-## 3-1. `LogDataTests.cs`
+### 3-1. `LogDataTests.cs`
 
 대응 표: `1-1. LogData`
 
@@ -87,7 +87,7 @@ Blackbox는 POCO 중심의 기록 프레임워크이므로, 테스트는 Unity T
 | `MutableExportFieldsCanBeUpdated` | export/merge 단계에서 `ScopeDepth`, `IsValid`, `Message`, interaction 정보가 갱신된다. |
 | `ToStringUsesFormatter` | `ToString()`이 `LogFormatter.RenderTextLine(...)` 경로의 결과를 낸다. |
 
-## 3-2. `LogFormatterTests.cs`
+### 3-2. `LogFormatterTests.cs`
 
 대응 표: `1-2. LogFormatter`
 
@@ -100,7 +100,7 @@ Blackbox는 POCO 중심의 기록 프레임워크이므로, 테스트는 Unity T
 | `RenderMethodLabelDependsOnScopeType` | open/close/step/normal label이 scope type에 맞게 렌더링된다. |
 | `ArrowAndTagRefHandleInteractionIds` | interaction id 유무에 따라 arrow와 tag ref 표현이 달라진다. |
 
-## 3-3. `TagHandleTests.cs`
+### 3-3. `TagHandleTests.cs`
 
 대응 표: `2-1. TagHandle`
 
@@ -113,7 +113,7 @@ Blackbox는 POCO 중심의 기록 프레임워크이므로, 테스트는 Unity T
 | `WithNullArrayTagsNull` | `With((object[])null)`도 null target으로 정규화된다. |
 | `WithTargetTypesLastOverridesTargetLogPolicy` | 마지막 `TargetTypes` 인자가 target 로그 표시 정책으로 사용된다. |
 
-## 3-4. `ScopeHandleTests.cs`
+### 3-4. `ScopeHandleTests.cs`
 
 대응 표: `2-2. ScopeHandle`
 
@@ -126,7 +126,7 @@ Blackbox는 POCO 중심의 기록 프레임워크이므로, 테스트는 Unity T
 | `DifferentThreadDisposeWarns` | 생성 thread와 다른 thread에서 dispose하면 warning을 남긴다. |
 | `PrintedDisposeDoesNotCloseScope` | export 이후 dispose는 close log를 추가하지 않는다. |
 
-## 3-5. `ExertHandleTests.cs`
+### 3-5. `ExertHandleTests.cs`
 
 대응 표: `2-3. ExertHandle`
 
@@ -139,7 +139,7 @@ Blackbox는 POCO 중심의 기록 프레임워크이므로, 테스트는 Unity T
 | `DifferentThreadDisposeWarns` | 다른 thread dispose는 warning을 남긴다. |
 | `PrintedDisposeDoesNotMerge` | export 이후 dispose는 병합하지 않는다. |
 
-## 3-6. `BlackboxRuntimeTests.cs`
+### 3-6. `BlackboxRuntimeTests.cs`
 
 대응 표: `3-1. BlackboxRuntime`
 
@@ -148,7 +148,7 @@ Blackbox는 POCO 중심의 기록 프레임워크이므로, 테스트는 Unity T
 | `IdsIncreaseIndependently` | blackbox id, interaction id, sequence가 독립적으로 증가한다. |
 | `ResetRestartsCounters` | reset 후 각 counter가 초기값부터 다시 시작한다. |
 
-## 3-7. `BlackboxRegistryTests.cs`
+### 3-7. `BlackboxRegistryTests.cs`
 
 대응 표: `3-2. BlackboxRegistry`
 
@@ -161,7 +161,7 @@ Blackbox는 POCO 중심의 기록 프레임워크이므로, 테스트는 Unity T
 | `StrongReferencePolicyKeepsOwnerReference` | strong reference 설정이 owner를 강하게 보관한다. |
 | `WeakReferencePolicyStoresWeakOwnerReference` | weak reference 설정에서는 owner가 사라질 수 있고 fallback owner string을 유지한다. |
 
-## 3-8. `InfrastructureTests.cs`
+### 3-8. `InfrastructureTests.cs`
 
 대응 표: `3-3. Infrastructure`
 
@@ -172,7 +172,7 @@ Blackbox는 POCO 중심의 기록 프레임워크이므로, 테스트는 Unity T
 | `LogDispatchesToMatchingLogger` | normal/warning logger가 분리 호출된다. |
 | `TryMarkPrintedSucceedsOnceAndResetAllowsPrintingAgain` | export 완료 상태는 한 번만 성공하고 reset 후 다시 출력 가능 상태가 된다. |
 
-## 3-9. `LogContextTests.cs`
+### 3-9. `LogContextTests.cs`
 
 대응 표: `4-1. LogContext`
 
@@ -189,7 +189,7 @@ Blackbox는 POCO 중심의 기록 프레임워크이므로, 테스트는 Unity T
 | `TryMergeScopeRejectsNonAdjacentOrMissingTarget` | 병합 대상이 없으면 기존 로그를 유지한다. |
 | `GetLogsStopsAtMaxSequence` | `maxSequence` 이후 로그를 반환하지 않는다. |
 
-## 3-10. `BlackboxTests.cs`
+### 3-10. `BlackboxTests.cs`
 
 대응 표: `4-2. Blackbox`
 
@@ -206,7 +206,7 @@ Blackbox는 POCO 중심의 기록 프레임워크이므로, 테스트는 Unity T
 | `GetLogsByContextReturnsSeparateThreadBuckets` | thread별 context 로그 묶음을 분리해서 반환한다. |
 | `OwnerStringFallsBackWhenOwnerReferenceIsLost` | weak owner가 사라진 경우 fallback owner string을 사용한다. |
 
-## 3-11. `BlackboxHandleTests.cs`
+### 3-11. `BlackboxHandleTests.cs`
 
 대응 표: `5-1. BlackboxHandle`, `1-3. BlackboxHandle.WriteHandler`
 
@@ -230,7 +230,7 @@ Blackbox는 POCO 중심의 기록 프레임워크이므로, 테스트는 Unity T
 | `WriteHandlerSkipsFormattingForInvalidHandle` | invalid handle에서 handler가 skipped 상태가 되어 문자열 조립과 로그 저장을 생략한다. |
 | `UseBlackboxFalseDisablesNewAndExistingHandles` | `UseBlackbox=false` 상태에서 public API가 invalid/default handle과 원래 message를 반환하고 실제 기록을 만들지 않는다. |
 
-## 3-12. `ExportToolsTests.cs`
+### 3-12. `ExportToolsTests.cs`
 
 대응 표: `6-1. export tools`
 
@@ -245,7 +245,7 @@ Blackbox는 POCO 중심의 기록 프레임워크이므로, 테스트는 Unity T
 | `ResolveScopeDepthsAssignsNestedDepths` | 중첩 scope depth를 계산한다. |
 | `TrimSmartSanitizesFileNameParts` | 비어 있거나 파일 이름에 부적합한 입력은 `null`로 정규화하고 긴 입력은 앞/뒤를 보존해 줄인다. |
 
-## 3-13. `ExporterTests.cs`
+### 3-13. `ExporterTests.cs`
 
 대응 표: `6-2. exporters`
 
@@ -260,9 +260,9 @@ Blackbox는 POCO 중심의 기록 프레임워크이므로, 테스트는 Unity T
 
 ---
 
-# 4. 통합 테스트 계획
+## 4. 통합 테스트 계획
 
-## 4-1. `IntegrationTests.cs`
+### 4-1. `IntegrationTests.cs`
 
 대응 표: `7. 통합 흐름`
 

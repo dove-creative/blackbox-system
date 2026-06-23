@@ -4,7 +4,7 @@ A framework for recording and tracing per-object activity, execution context, an
 
 ---
 
-# Table of Contents
+## Table of Contents
 
 1. Introducing Blackbox
 2. Basic Recording Structure
@@ -13,7 +13,7 @@ A framework for recording and tracing per-object activity, execution context, an
 
 ---
 
-# 1. Introducing Blackbox
+## 1. Introducing Blackbox
 
 Blackbox is a framework that traces object activity logs, execution scopes, and object-to-object interactions inside one recording system.
 
@@ -23,7 +23,7 @@ Blackbox is a framework that traces object activity logs, execution scopes, and 
 | Purpose | Understand recorded state changes, processing steps, and object connections in the same context while debugging |
 | Implementation | Look up the `Blackbox` for the target object and call recording features through `BlackboxHandle` |
 
-## 1-1. Problem to Solve
+### 1-1. Problem to Solve
 
 General logging and breakpoint-based tracing are excellent at inspecting state at a desired point, and they are effective for understanding exactly what happens at a specific moment. On the other hand, they have limits when you need to read how an object reached its current state, and what connections it made with other objects along the way. Blackbox stores internal activity, scope flow, and interactions with other objects in per-object recording storage, so it can trace both 'what process brought this object to its current state' and 'which objects were connected during that process'.
 
@@ -37,7 +37,7 @@ Tracing through logs/breakpoints and Blackbox-based tracing have the following c
 | Use case | Understand exactly what happens at a specific point | Cases with many interactions or hard-to-find causes |
 | Example | Inspect line-level operation, assignment, and call flow | Inspect object-level activity, scope, and interaction flow |
 
-## 1-2. Implementation Principles
+### 1-2. Implementation Principles
 
 Blackbox aims to interfere as little as possible with existing code control flow, and to be easy to disable when needed. A recorded object does not need a separate contract or field. `BlackboxHandle` finds the `Blackbox` corresponding to the target object and forwards recording calls. When runtime settings are disabled, the main recording paths should not produce actual log storage.
 
@@ -52,19 +52,19 @@ This principle appears in the following traits.
 
 ---
 
-# 2. Basic Recording Structure
+## 2. Basic Recording Structure
 
 The most basic feature of Blackbox is accumulating one object's execution context in a log storage dedicated to that object.
 
 This chapter introduces Blackbox in the order of basic log storage first, then scope storage, interaction recording, and connected output structure on top of it.
 
-## 2-1. Log Storage Feature
+### 2-1. Log Storage Feature
 
 The log storage feature independently keeps each object's activity records. This makes it possible to trace, in occurrence order, what state changes and processing steps a specific object went through.
 
 Blackbox stores 'what the object did' as log objects.
 
-## 2-2. Scope Storage Feature
+### 2-2. Scope Storage Feature
 
 The scope storage feature is added on top of the existing log storage.
 
@@ -74,7 +74,7 @@ Usually, one scope corresponds to one method or one meaningful processing step.
 
 ---
 
-# 3. Interaction Recording Method
+## 3. Interaction Recording Method
 
 In addition to recording one object's logs, Blackbox can also record object-to-object interaction relationships bidirectionally through Exert.
 
@@ -84,11 +84,11 @@ Because this method leaves traces of the same flow on both the sending side and 
 
 ---
 
-# 4. Log Connection Structure and Output
+## 4. Log Connection Structure and Output
 
 Blackbox logs have a structure in which per-object records and object-to-object interaction records are connected.
 
-## 4-1. Connection Structure of Log Objects
+### 4-1. Connection Structure of Log Objects
 
 The log structure is read as follows.
 
@@ -98,7 +98,7 @@ The log structure is read as follows.
 
 Because of this structure, Blackbox is not merely a log outputter. It is a tracing device for reading multiple objects' execution flows again while keeping them connected.
 
-## 4-2. Log Output
+### 4-2. Log Output
 
 Log output is not structured as a way to isolate only one target object. Instead, it keeps the relationships among objects connected by Exert interactions around that object, so they can be read together.
 

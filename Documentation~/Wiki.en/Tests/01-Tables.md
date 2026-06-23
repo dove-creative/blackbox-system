@@ -6,7 +6,7 @@ Blackbox is a framework where recorded target objects, log contexts, disposable 
 
 ---
 
-# Notation
+## Notation
 
 - **StateName**: State changes after the behavior.
 - `[Behavior]`: Performs behavior unique to that state.
@@ -20,9 +20,9 @@ Blackbox is a framework where recorded target objects, log contexts, disposable 
 
 ---
 
-# 1. Value and Formatting Units
+## 1. Value and Formatting Units
 
-## 1-1. `LogData`
+### 1-1. `LogData`
 
 `LogData` is the structured value of one log line. Tests verify that constructor and output conversion paths preserve the stored values.
 
@@ -34,7 +34,7 @@ Blackbox is a framework where recorded target objects, log contexts, disposable 
 | Tagged | - | **Tagged** | `[RenderTaggedMessage]` | `[update Tags]` |
 | Interaction | - | **Interaction** | `[RenderInteraction]` | `[update Interaction merge info]` |
 
-## 1-2. `LogFormatter`
+### 1-2. `LogFormatter`
 
 `LogFormatter` is a static tool that converts `LogData` into output strings rather than owning state.
 
@@ -44,7 +44,7 @@ Blackbox is a framework where recorded target objects, log contexts, disposable 
 |  | - |  |  |  |  |  |
 | Ready | - | `[resolve tag placeholders]` | `[display thread/sequence/scope/interaction]` | `[label by scope type]` | `[direction display]` | `[target display]` |
 
-## 1-3. `BlackboxHandle.WriteHandler`
+### 1-3. `BlackboxHandle.WriteHandler`
 
 `WriteHandler` is a public API helper value that assembles strings only when the handle is valid in interpolated string calls. Tests verify not the string assembly itself, but whether formatted value evaluation and log assembly are skipped for invalid handles.
 
@@ -58,9 +58,9 @@ Blackbox is a framework where recorded target objects, log contexts, disposable 
 
 ---
 
-# 2. Handle Units
+## 2. Handle Units
 
-## 2-1. `TagHandle`
+### 2-1. `TagHandle`
 
 `TagHandle` is the one-shot connection point that attaches related targets after `Write(...)` or `Scope(...)`.
 
@@ -72,7 +72,7 @@ Blackbox is a framework where recorded target objects, log contexts, disposable 
 | FallbackMessage | - | - | - | - | - | `[fallback message]` |
 | SourceLog | - | `[fix tag]` | `[null tag]` | `[null tag]` | `[apply display policy]` | `[resolved message]` |
 
-## 2-2. `ScopeHandle`
+### 2-2. `ScopeHandle`
 
 `ScopeHandle` is a disposable handle that closes an opened scope.
 
@@ -84,7 +84,7 @@ Blackbox is a framework where recorded target objects, log contexts, disposable 
 | Alive | - | `[attach tag to open log]` | **Disposed** | **Disposed** + warning | **Disposed** |
 | Disposed | - | - | - | - | - |
 
-## 2-3. `ExertHandle`
+### 2-3. `ExertHandle`
 
 `ExertHandle` is a disposable handle that tries to merge a receiving-side scope after an interaction log.
 
@@ -98,9 +98,9 @@ Blackbox is a framework where recorded target objects, log contexts, disposable 
 
 ---
 
-# 3. Runtime Storage Units
+## 3. Runtime Storage Units
 
-## 3-1. `BlackboxRuntime`
+### 3-1. `BlackboxRuntime`
 
 `BlackboxRuntime` issues global ids, interaction ids, and sequences.
 
@@ -110,7 +110,7 @@ Blackbox is a framework where recorded target objects, log contexts, disposable 
 |  | - |  |  |  |  |
 | Ready | - | `[increase id]` | `[increase interaction id]` | `[increase sequence]` | **Ready** |
 
-## 3-2. `BlackboxRegistry`
+### 3-2. `BlackboxRegistry`
 
 `BlackboxRegistry` connects target objects to `Blackbox`.
 
@@ -122,7 +122,7 @@ Blackbox is a framework where recorded target objects, log contexts, disposable 
 | Registered | - | `[reuse same owner]` | _ArgumentNullException_ | `[strong owner]` | `[weak owner]` | `[true]` | _ArgumentNullException_ | `[count]` | **Empty** |
 | Any | - | ^ | ^ | ^ | ^ | ^ | ^ | X | `<runtime/handle reset>` |
 
-## 3-3. `Infrastructure`
+### 3-3. `Infrastructure`
 
 `Infrastructure` stores Blackbox global settings and export-completed state.
 
@@ -137,9 +137,9 @@ Settings include `LogDirectory`, logger, `MaxLogCount`, `StrongReference`, `Defa
 
 ---
 
-# 4. Log Context Units
+## 4. Log Context Units
 
-## 4-1. `LogContext`
+### 4-1. `LogContext`
 
 `LogContext` manages per-thread log buffers and scope lifecycles inside one `Blackbox`.
 
@@ -151,7 +151,7 @@ Settings include `LogDirectory`, logger, `MaxLogCount`, `StrongReference`, `Defa
 | ScopeOpen | - | `[store scoped log]` | **ScopeOpen** | **Ready** | **Ready** + auto close | `[requested close]` + warning | `[tag resolve]` | `[merge]` | - | `[valid logs]` |
 | RingBufferFull | - | `[overwrite old log]` | `[old log may be overwritten]` | `[available range]` | `[available range]` | `[available range]` | `[available log only]` | `[available range only]` | - | `[recent logs]` |
 
-## 4-2. `Blackbox`
+### 4-2. `Blackbox`
 
 `Blackbox` applies actual recording rules for one owner.
 
@@ -165,9 +165,9 @@ Settings include `LogDirectory`, logger, `MaxLogCount`, `StrongReference`, `Defa
 
 ---
 
-# 5. External Entry Point Unit
+## 5. External Entry Point Unit
 
-## 5-1. `BlackboxHandle`
+### 5-1. `BlackboxHandle`
 
 `BlackboxHandle` is the public API surface used by external code.
 
@@ -193,9 +193,9 @@ This table has both the default recording axis and the fallback verification axi
 
 ---
 
-# 6. Export Units
+## 6. Export Units
 
-## 6-1. Export Tools
+### 6-1. Export Tools
 
 Export tools organize source logs into an output graph.
 
@@ -209,7 +209,7 @@ Export tools organize source logs into an output graph.
 | DepthLimited | - | `[include only to recursionDepth]` | `[convert by context]` | `[calculate by context]` | X |
 | FileName | - | X | X | X | `[remove invalid chars/limit length/null fallback]` |
 
-## 6-2. Exporters
+### 6-2. Exporters
 
 `TxtExporter` and `HtmlExporter` output the same export graph in different file formats.
 
@@ -223,7 +223,7 @@ Export tools organize source logs into an output graph.
 
 ---
 
-# 7. Integration Flow
+## 7. Integration Flow
 
 Integration tests verify representative usage flows based on behaviors already verified in individual object tables.
 

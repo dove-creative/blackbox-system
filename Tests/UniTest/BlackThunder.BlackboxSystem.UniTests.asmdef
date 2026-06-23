@@ -5,8 +5,7 @@
         "UnityEngine.TestRunner",
         "UnityEditor.TestRunner",
         "GUID:83786de9691edcc488d9d6f1d572c585",
-        "UniTest",
-        "UniTask"
+        "UniTest"
     ],
     "includePlatforms": [
         "Editor"

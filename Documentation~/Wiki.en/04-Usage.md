@@ -14,13 +14,13 @@ This document does not explain the internal implementation structure of Blackbox
 
 Therefore, the explanation order follows what users need to check first: settings, the shortest recording flow, method selection criteria, and actual recording scenarios.
 
-# 0. Blackbox Call Line-Breaking Rules
+## 0. Blackbox Call Line-Breaking Rules
 
 A Blackbox call is closer to a marker that adds recording meaning to an existing domain call or error message than to domain logic itself.
 
 When you only want to leave the moment of connection with another object, use `ExertMessage(...)`. Conversely, when you want to read the call range as a connected span, close the `ExertHandle` returned by `Exert(...)` with `using`, so Blackbox can try to merge it with the following receiving-side scope.
 
-## 0-1. `Exert(...)` Can Be Attached Like a using Marker
+### 0-1. `Exert(...)` Can Be Attached Like a using Marker
 
 `Exert(...)` opens a call range with the peer object and returns `ExertHandle`. If this range contains only one statement, `using` can be attached right before the next statement like a Blackbox-only marker.
 
@@ -45,7 +45,7 @@ input = WorkInternal.Start(input);
 
 Use this notation only for `Exert(...)` and one-statement call ranges. Do not extend it to general `using`, `Scope`, or blocks that execute multiple statements.
 
-## 0-2. Use ExertMessage When Only a One-Line Interaction Record Is Needed
+### 0-2. Use ExertMessage When Only a One-Line Interaction Record Is Needed
 
 If you only want to leave the object-to-object interaction itself without opening a call range, use `ExertMessage(...)`. This method leaves only the interaction log without creating an `ExertHandle`, so it is not automatically merged with a following receiving-side scope.
 
@@ -57,7 +57,7 @@ public void Attack(Monster monster)
 }
 ```
 
-## 0-3. `WriteError(...)` Is Used Like a Marker Attached to an Error Message
+### 0-3. `WriteError(...)` Is Used Like a Marker Attached to an Error Message
 
 In code that throws exceptions, `WriteError(...)` does not replace the domain statement that creates the error message. It is a wrapper that records the same message into Blackbox.
 
@@ -89,7 +89,7 @@ if (child == null)
 
 Use the shortened form only when wrapping a one-line error message with `WriteError(...)`. If the message spans several lines or the expression becomes long, use normal indentation or split the message into a local variable first.
 
-## 0-4. Error Records Can Include Related Targets
+### 0-4. Error Records Can Include Related Targets
 
 When only the error message is left, you may later need to search again for which object caused the problem. If you pass a context name and target object as the second argument to `WriteError(...)`, related targets are displayed inside the error log.
 
@@ -114,9 +114,9 @@ _bb.WriteError(
 
 This record is not meant to change exception control flow. Its purpose is to return the error message while leaving related object references in the same log, so possible causes can be followed immediately when reading the output.
 
-# 1. Things to Check Before Starting
+## 1. Things to Check Before Starting
 
-## 1-1. Check the UseBlackbox Setting
+### 1-1. Check the UseBlackbox Setting
 
 The main recording methods of `BlackboxHandle` decide whether to actually record based on the `UseBlackbox` setting. If this value is off, `BlackboxHandle.Of(subject)` does not create a valid handle, and recording calls either leave no log or return the original message as is.
 
@@ -126,7 +126,7 @@ In Unity, the `BLACKBOX` symbol only selects the startup default for `BlackboxHa
 
 In native C# environments without Unity symbols, the default value is `true`. If you only want to temporarily turn recording off at runtime, set `BlackboxHandle.UseBlackbox = false` or use `Configure(..., useBlackbox: UseBlackboxOption.DoNotUse)`.
 
-## 1-2. Decide the Log Output Location First
+### 1-2. Decide the Log Output Location First
 
 The first thing to do is decide where output results will be saved. The example code directly assigns `LogDirectory`.
 
@@ -146,7 +146,7 @@ BlackboxHandle.Configure(
 
 Output itself is possible with only `LogDirectory`, but if you also want to see normal logs or warning logs in the console while running, it is convenient to pass a logger too.
 
-## 1-3. The Starting Point Is Always BlackboxHandle.Of(this)
+### 1-3. The Starting Point Is Always BlackboxHandle.Of(this)
 
 Usage code does not handle `Blackbox` directly. External code obtains a handle for the target object and calls recording methods through that handle.
 
@@ -163,7 +163,7 @@ bb.Write("State updated");
 
 Remembering this one entry point is enough to follow most usage flows.
 
-## 1-4. Adjust Related Target Display Policy Only When Needed
+### 1-4. Adjust Related Target Display Policy Only When Needed
 
 At first, you can leave the default settings as they are. Configure `TagTargetTypes` when you frequently use `Write(...).With(...)` or `Scope(...).With(...)`, and want to control how much source information appears in target-side logs.
 
@@ -180,7 +180,7 @@ This setting controls the display range of tag logs left on the target side. The
 
 ---
 
-# 2. Shortest Start Flow
+## 2. Shortest Start Flow
 
 The simplest usage flow has four steps.
 
@@ -202,7 +202,7 @@ This flow alone can immediately trace 'in what order one object changed state'.
 
 ---
 
-# 3. Method Selection Guide
+## 3. Method Selection Guide
 
 Before reading the tutorial, understanding which method is used in which situation makes the code much faster to read.
 
@@ -231,11 +231,11 @@ In practice, it is convenient to think like this.
 
 ---
 
-# 4. Tutorial 1. Recording State Changes in One Object
+## 4. Tutorial 1. Recording State Changes in One Object
 
 The first step is to record state changes inside one object, as in `Scenario_1`. At this stage, focus on reading 'what happened inside my object' rather than interactions.
 
-## 4-1. Record the Creation Point
+### 4-1. Record the Creation Point
 
 A constructor becomes the baseline for interpreting later state, so leaving initial values makes the logs easier to read. Here, `Construct("message", out handle)` opens a construction scope and also returns the handle to use inside the same construction flow.
 
@@ -267,7 +267,7 @@ public Player()
 }
 ```
 
-## 4-2. Leave State Changes with Write First
+### 4-2. Leave State Changes with Write First
 
 If you leave the previous value and next value right before actually changing the value, the output can later be read by following the flow directly.
 
@@ -284,7 +284,7 @@ public void DrinkPotion(Potion potion)
 
 This form is the most basic recording style. It adds one recording line before the existing state-change code, so it does not greatly change the original code flow.
 
-## 4-2-1. Attach Related Targets to a One-Line Record
+### 4-2-1. Attach Related Targets to a One-Line Record
 
 A state change itself is the current object's record, but sometimes you want to also leave the object that caused the change. In that case, attach `.With(...)` immediately after `Write(...)`.
 
@@ -317,7 +317,7 @@ BlackboxHandle.Of(this)
     .With(null);
 ```
 
-## 4-3. Use Scope When You Need to See the Processing Range
+### 4-3. Use Scope When You Need to See the Processing Range
 
 When one-line records are not enough and the whole method should appear as one processing step, use `Scope(...)`. You can understand `Scope(...)` as `Write(...)` with scope opening added.
 
@@ -378,7 +378,7 @@ public void ApplyPotion(Potion potion)
 }
 ```
 
-## 4-4. Close Scopes in the Reverse Order of Opening
+### 4-4. Close Scopes in the Reverse Order of Opening
 
 Scopes are generally easiest to read when they close in the reverse order of opening.
 
@@ -427,7 +427,7 @@ inner.Dispose(); // Already auto-closed, so no duplicate close log is left.
 
 This behavior is a correction to keep log files clean. Instead of intentionally relying on it, if you must call `Dispose()` directly, close child scopes first when possible.
 
-## 4-5. Choose the Center Object When Exporting
+### 4-5. Choose the Center Object When Exporting
 
 `Scenario_1` is an example that observes state changes in one `player`, so output also calls `Export(...)` centered on that object.
 
@@ -444,7 +444,7 @@ At this stage, what you get is 'the history of one object'. There is not yet muc
 
 ---
 
-# 5. Tutorial 2. Tracing Object-to-Object Interactions
+## 5. Tutorial 2. Tracing Object-to-Object Interactions
 
 The second step is to read a flow involving several objects, as in `Scenario_2`. This is where Blackbox becomes especially useful.
 
@@ -455,7 +455,7 @@ The key questions in this scenario look like this.
 
 These questions are hard to answer with only single-object logs, and they require interaction records.
 
-## 5-1. Use ExertMessage When You Only Need the Moment of Connection with Another Object
+### 5-1. Use ExertMessage When You Only Need the Moment of Connection with Another Object
 
 `Player.Attack(Monster monster)` is a call where the player affects the monster. The lightest recording method is to leave only the connection point with `ExertMessage(...)` right before the call.
 
@@ -474,7 +474,7 @@ This record leaves the call relationship itself.
 - The existing call code does not enter a separate debug scope.
 - Since no `ExertHandle` is created, it does not merge with a following monster processing scope.
 
-## 5-2. Attach a One-Statement Call Range with an Exert using Marker
+### 5-2. Attach a One-Statement Call Range with an Exert using Marker
 
 When you want to read not only the call relationship but the whole call range as one processing range, use `Exert(...)` with `using`. `Exert(...)` writes the interaction log first and returns `ExertHandle`.
 
@@ -490,7 +490,7 @@ public void Attack(Monster monster)
 
 This method makes the call range an explicit recording range. Therefore, use `ExertMessage(...)` when you only want to leave a connection point, and close `Exert(...)` with `using` when you want to read the following receiving-side processing together.
 
-## 5-3. Open Long Call Ranges Directly with Exert
+### 5-3. Open Long Call Ranges Directly with Exert
 
 If the call range spans several statements and needs local variables or intermediate `return`, use `Exert(...)`.
 
@@ -531,7 +531,7 @@ public SegmentView Connect(SegmentView view)
 
 `Exert(...)` returns `ExertHandle`. Therefore, short one-line work can be left as a `using (_bb.Exert(...))` marker; when the block itself must read as the call range, use a `using` block. When the whole function reads as one interaction range, `using var _` is more natural.
 
-## 5-4. Merge Behavior Is Decided by When the Exert Handle Closes
+### 5-4. Merge Behavior Is Decided by When the Exert Handle Closes
 
 If you want the sending-side interaction and the receiving-side first processing scope to read more strongly connected in the output, place the receiving-side call inside the `using` range of `Exert(...)`.
 
@@ -551,7 +551,7 @@ However, this merge happens only when scope opening continues inside the target 
 
 The important point is that this merge does not always happen. If the receiving side opens a new scope after the `Exert(...)` handle closes, Blackbox does not merge the two records later. This rule prevents an already-finished call range from being mixed with later work.
 
-## 5-5. The Receiving Side Continues to Leave Internal Changes with Scope
+### 5-5. The Receiving Side Continues to Leave Internal Changes with Scope
 
 Receiving an interaction does not force the receiving-side code into a special form. Actual state changes are still left through that object's own scopes and `Write(...)`.
 
@@ -581,7 +581,7 @@ In short, interaction logs and internal state logs are not competitors. They are
 
 Using both keeps the flow from being cut later.
 
-## 5-6. Choose One Center Object When Following a Bug
+### 5-6. Choose One Center Object When Following a Bug
 
 `Scenario_2` includes several monsters, but output starts with `Export(...)` centered on `player`.
 
@@ -593,9 +593,9 @@ This allows you to follow monster logs connected around the player. In other wor
 
 ---
 
-# 6. Reading Output and Results
+## 6. Reading Output and Results
 
-## 6-1. Basic Output
+### 6-1. Basic Output
 
 The most basic call is one line.
 
@@ -609,9 +609,10 @@ By default, `Html` output is used, and it is suitable for following connected ob
 BlackboxHandle.Of(player).Export(format: ExportFormat.Txt);
 ```
 
-## 6-2. Output Is a Tool for Reading After Execution
+### 6-2. Output Is a Tool for Reading After Execution
 
 Blackbox is closer to a tool for reading context again after execution than to a real-time console debugger. Therefore, instead of trying to display something immediately inside every method, it fits better to record the problem range sufficiently and then output and read it at the necessary point.
+
 
 ---
 

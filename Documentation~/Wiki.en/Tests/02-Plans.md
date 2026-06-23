@@ -4,18 +4,18 @@ Blackbox is a POCO-centered recording framework, so tests keep an asmdef that ca
 
 ---
 
-# 1. Test Composition Principles
+## 1. Test Composition Principles
 
-## 1-1. Execution Method
+### 1-1. Execution Method
 
 - Write test code in the `Tests` folder.
 - Keep the existing `BlackThunder.BlackboxSystem.Tests.asmdef`.
 - The `BlackThunder.BlackboxSystem.Tests` assembly references the `BlackThunder.BlackboxSystem` assembly, and verifies internal types through `InternalsVisibleTo("BlackThunder.BlackboxSystem.Tests")` in `AssemblyInfo.cs`.
 - The Unity Test Runner and `BlackThunder.BlackboxSystem.Tests.asmdef` axis default to `UNITY_INCLUDE_TESTS` and `BLACKBOX_TESTS` being enabled. In Unity verification environments where the `UseBlackbox` startup default must also be enabled, enable `BLACKBOX` as well.
-- The pure NUnit external execution axis uses `Tools/ExternalNUnitExecutor/ExternalNUnitExecutor.csproj`. This axis verifies Blackbox's real recording/output flow.
+- The pure NUnit external execution axis uses `Packages/com.blackthunder.unitest/Tools~/ExternalNUnitExecutor/ExternalNUnitExecutor.csproj`. This axis verifies Blackbox's real recording/output flow.
 - Recording-disabled fallback behavior is verified through the `UseBlackbox=false` runtime setting, not through a separate build axis.
 
-## 1-2. Writing Rules
+### 1-2. Writing Rules
 
 - Do not put Blackbox instrumentation calls into test code that verifies Blackbox itself.
 - Prefer the `Assert.That(actual, constraint)` form for new asserts.
@@ -26,11 +26,11 @@ Blackbox is a POCO-centered recording framework, so tests keep an asmdef that ca
 - Verify interpolated string handler paths first through public API calls. Parts that are hard to observe with public calls alone, such as handler short-circuit state, are verified by directly constructing `BlackboxHandle.WriteHandler`.
 - File output tests use temporary folders. In normal export tests, automatic opening is disabled with `OpenLogOption.Never`. The dedicated `OpenLog` cells verify the failure-warning path without launching an external process by using a test-build hook.
 
-## 1-3. Expected Scale
+### 1-3. Expected Scale
 
 Even if all non-`X` result cells in `01-Tables.md` are expanded, the expected size is about 95-115 test functions and 120-170 assert sections. Since this is below 200, tests are written against the entire table.
 
-## 1-4. Cell Coverage Criteria
+### 1-4. Cell Coverage Criteria
 
 The test plan and test code use the following criteria.
 
@@ -48,9 +48,9 @@ When writing test code, add table positions to test comments whenever possible, 
 
 ---
 
-# 2. Shared Test Tools
+## 2. Shared Test Tools
 
-## 2-1. `BlackboxTestDoubles.cs`
+### 2-1. `BlackboxTestDoubles.cs`
 
 This file contains shared test fixtures and helpers.
 
@@ -73,9 +73,9 @@ This file is a test helper, so it does not include `[Test]` methods.
 
 ---
 
-# 3. Unit Test Plan
+## 3. Unit Test Plan
 
-## 3-1. `LogDataTests.cs`
+### 3-1. `LogDataTests.cs`
 
 Corresponding table: `1-1. LogData`
 
@@ -87,7 +87,7 @@ Corresponding table: `1-1. LogData`
 | `MutableExportFieldsCanBeUpdated` | `ScopeDepth`, `IsValid`, `Message`, and interaction information are updated during export/merge. |
 | `ToStringUsesFormatter` | `ToString()` produces the result of the `LogFormatter.RenderTextLine(...)` path. |
 
-## 3-2. `LogFormatterTests.cs`
+### 3-2. `LogFormatterTests.cs`
 
 Corresponding table: `1-2. LogFormatter`
 
@@ -100,7 +100,7 @@ Corresponding table: `1-2. LogFormatter`
 | `RenderMethodLabelDependsOnScopeType` | Open/close/step/normal labels render according to scope type. |
 | `ArrowAndTagRefHandleInteractionIds` | Arrow and tag-ref expressions differ depending on whether an interaction id exists. |
 
-## 3-3. `TagHandleTests.cs`
+### 3-3. `TagHandleTests.cs`
 
 Corresponding table: `2-1. TagHandle`
 
@@ -113,7 +113,7 @@ Corresponding table: `2-1. TagHandle`
 | `WithNullArrayTagsNull` | `With((object[])null)` is also normalized as a null target. |
 | `WithTargetTypesLastOverridesTargetLogPolicy` | A final `TargetTypes` argument is used as the target log display policy. |
 
-## 3-4. `ScopeHandleTests.cs`
+### 3-4. `ScopeHandleTests.cs`
 
 Corresponding table: `2-2. ScopeHandle`
 
@@ -126,7 +126,7 @@ Corresponding table: `2-2. ScopeHandle`
 | `DifferentThreadDisposeWarns` | Disposing from a thread different from the creation thread leaves a warning. |
 | `PrintedDisposeDoesNotCloseScope` | Dispose after export does not add a close log. |
 
-## 3-5. `ExertHandleTests.cs`
+### 3-5. `ExertHandleTests.cs`
 
 Corresponding table: `2-3. ExertHandle`
 
@@ -139,7 +139,7 @@ Corresponding table: `2-3. ExertHandle`
 | `DifferentThreadDisposeWarns` | Dispose from another thread leaves a warning. |
 | `PrintedDisposeDoesNotMerge` | Dispose after export does not merge. |
 
-## 3-6. `BlackboxRuntimeTests.cs`
+### 3-6. `BlackboxRuntimeTests.cs`
 
 Corresponding table: `3-1. BlackboxRuntime`
 
@@ -148,7 +148,7 @@ Corresponding table: `3-1. BlackboxRuntime`
 | `IdsIncreaseIndependently` | Blackbox id, interaction id, and sequence increase independently. |
 | `ResetRestartsCounters` | After reset, each counter starts again from its initial value. |
 
-## 3-7. `BlackboxRegistryTests.cs`
+### 3-7. `BlackboxRegistryTests.cs`
 
 Corresponding table: `3-2. BlackboxRegistry`
 
@@ -161,7 +161,7 @@ Corresponding table: `3-2. BlackboxRegistry`
 | `StrongReferencePolicyKeepsOwnerReference` | Strong reference setting keeps the owner strongly. |
 | `WeakReferencePolicyStoresWeakOwnerReference` | With weak reference settings, the owner can disappear while fallback owner string is preserved. |
 
-## 3-8. `InfrastructureTests.cs`
+### 3-8. `InfrastructureTests.cs`
 
 Corresponding table: `3-3. Infrastructure`
 
@@ -172,7 +172,7 @@ Corresponding table: `3-3. Infrastructure`
 | `LogDispatchesToMatchingLogger` | Normal and warning loggers are called separately. |
 | `TryMarkPrintedSucceedsOnceAndResetAllowsPrintingAgain` | Export-completed state succeeds only once, and reset allows output state again. |
 
-## 3-9. `LogContextTests.cs`
+### 3-9. `LogContextTests.cs`
 
 Corresponding table: `4-1. LogContext`
 
@@ -189,7 +189,7 @@ Corresponding table: `4-1. LogContext`
 | `TryMergeScopeRejectsNonAdjacentOrMissingTarget` | Existing logs remain when there is no merge target. |
 | `GetLogsStopsAtMaxSequence` | Logs after `maxSequence` are not returned. |
 
-## 3-10. `BlackboxTests.cs`
+### 3-10. `BlackboxTests.cs`
 
 Corresponding table: `4-2. Blackbox`
 
@@ -206,7 +206,7 @@ Corresponding table: `4-2. Blackbox`
 | `GetLogsByContextReturnsSeparateThreadBuckets` | Thread-specific context log groups are returned separately. |
 | `OwnerStringFallsBackWhenOwnerReferenceIsLost` | Fallback owner string is used when a weak owner disappears. |
 
-## 3-11. `BlackboxHandleTests.cs`
+### 3-11. `BlackboxHandleTests.cs`
 
 Corresponding table: `5-1. BlackboxHandle`, `1-3. BlackboxHandle.WriteHandler`
 
@@ -230,7 +230,7 @@ Corresponding table: `5-1. BlackboxHandle`, `1-3. BlackboxHandle.WriteHandler`
 | `WriteHandlerSkipsFormattingForInvalidHandle` | With an invalid handle, the handler enters skipped state and omits string assembly and log storage. |
 | `UseBlackboxFalseDisablesNewAndExistingHandles` | With `UseBlackbox=false`, the public API returns invalid/default handles and original messages, and does not create actual records. |
 
-## 3-12. `ExportToolsTests.cs`
+### 3-12. `ExportToolsTests.cs`
 
 Corresponding table: `6-1. export tools`
 
@@ -245,7 +245,7 @@ Corresponding table: `6-1. export tools`
 | `ResolveScopeDepthsAssignsNestedDepths` | Calculates nested scope depth. |
 | `TrimSmartSanitizesFileNameParts` | Normalizes empty or file-name-invalid input to `null`, and shortens long input while preserving the front/back. |
 
-## 3-13. `ExporterTests.cs`
+### 3-13. `ExporterTests.cs`
 
 Corresponding table: `6-2. exporters`
 
@@ -260,9 +260,9 @@ Corresponding table: `6-2. exporters`
 
 ---
 
-# 4. Integration Test Plan
+## 4. Integration Test Plan
 
-## 4-1. `IntegrationTests.cs`
+### 4-1. `IntegrationTests.cs`
 
 Corresponding table: `7. Integration Flow`
 

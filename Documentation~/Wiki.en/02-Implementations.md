@@ -10,7 +10,7 @@
 
 ---
 
-# 1. Blackbox Structure
+## 1. Blackbox Structure
 
 Blackbox is a framework that places an internal engine for recording one object's execution context at the center, and stores object-to-object interactions and scope flow inside the same log system.
 
@@ -31,7 +31,7 @@ The core of this structure is separating the recording center, execution context
 
 ---
 
-# 2. Detailed Implementation Documents
+## 2. Detailed Implementation Documents
 
 This document explains the overall structure and representative flows of Blackbox. Detailed implementations that require reading several objects together are covered in separate documents below.
 
@@ -41,9 +41,9 @@ This document explains the overall structure and representative flows of Blackbo
 
 ---
 
-# 3. Core Components
+## 3. Core Components
 
-## 3-1. Blackbox
+### 3-1. Blackbox
 
 `Blackbox` is the recording engine corresponding to one object. It coordinates the recording subject, scope rules, interaction rules, and overall output order.
 
@@ -74,7 +74,7 @@ Provided services and reasons:
 
 In short, `Blackbox` is less a log storage itself and more the central engine that coordinates per-object recording rules and overall output order.
 
-## 3-2. BlackboxRuntime
+### 3-2. BlackboxRuntime
 
 `BlackboxRuntime` is the global number-issuing point shared by `Blackbox` instances.
 
@@ -92,7 +92,7 @@ Provided services and reasons:
 - `GetNextSequence()`: Issues a number for sorting overall log occurrence order
 - `Reset()`: Resets runtime state during `ForceReset()`
 
-## 3-3. LogContext
+### 3-3. LogContext
 
 `LogContext` is an internal structure that separates per-thread log buffers and scope state inside one `Blackbox`.
 
@@ -122,7 +122,7 @@ Provided services and reasons:
 
 This separation is needed because the same owner object can be recorded from multiple threads. Even if different threads record the same owner object, each thread's ring buffer and thread metadata remain independent, and output later merges them again by global sequence.
 
-## 3-4. LogData
+### 3-4. LogData
 
 `LogData` is the minimum recording unit stored by `Blackbox`. One item contains validity, message, time, method name, scope id, scope type, interaction peer, and interaction id together.
 
@@ -144,7 +144,7 @@ Provided services and reasons:
 - `internal set` fields: Adjust `Message`, `InteractionId`, interaction direction, tag information, validity, and scope display information during merge, tag resolution, and output conversion
 - `ToString(scopeDepth)`: Receives depth calculated in the output step and provides a one-line text log format through `LogFormatter`
 
-## 3-5. LogFormatter
+### 3-5. LogFormatter
 
 `LogFormatter` is a formatting tool that turns stored `LogData` into strings that humans can read.
 
@@ -157,7 +157,7 @@ Provided services and reasons:
 - `RenderMethodLabel(...)`: Creates method labels in open/close/step form depending on scope type
 - `Arrow(...)` / `TagRef(...)`: Displays interaction ids and target references as consistent strings
 
-## 3-6. BlackboxRegistry
+### 3-6. BlackboxRegistry
 
 `BlackboxRegistry` is the global lookup point that connects objects to `Blackbox`.
 
@@ -174,7 +174,7 @@ Provided services and reasons:
 - `Contains(...)` / `Count()`: Test and debug observation of registry state
 - `ForceReset()`: Resets registry, runtime, and handle id state for tests or repeated experiments
 
-## 3-7. BlackboxHandle
+### 3-7. BlackboxHandle
 
 `BlackboxHandle` is the entry point that external code actually meets. From an implementer's perspective, however, it is better understood as a thin forwarding layer around the internal structures above rather than as a new recording structure.
 
@@ -204,7 +204,7 @@ Provided services and reasons:
 
 Therefore, the value of `BlackboxHandle` is not that it has many features, but that it separates external usage style from the internal recording structure.
 
-## 3-8. ScopeHandle
+### 3-8. ScopeHandle
 
 `ScopeHandle` is an `IDisposable` handle that closes an open scope.
 
@@ -226,7 +226,7 @@ Provided services and reasons:
 - Thread mismatch warning: Warns when the handle is disposed from a thread different from the one where it was created
 - Ignore default/disposed handles: Simplifies call sites in conditional recording or duplicate dispose cases
 
-## 3-9. ExertHandle
+### 3-9. ExertHandle
 
 `ExertHandle` is an `IDisposable` handle that tries to merge a receiving-side scope after an object-to-object interaction.
 
@@ -247,7 +247,7 @@ Provided services and reasons:
 - `IsAlive` / `IsDisposed`: Observe handle lifecycle
 - Target-context merge: Attempts merging only inside the target context fixed at creation time
 
-## 3-10. HandleManager
+### 3-10. HandleManager
 
 `HandleManager<T>` manages the id lifecycle of `ScopeHandle` and `ExertHandle`.
 
@@ -263,11 +263,11 @@ Provided services and reasons:
 
 ---
 
-# 4. Recording Pipeline
+## 4. Recording Pipeline
 
 The recording pipeline shows how the objects described above connect in actual call order. Basic recording leaves records inside one object; scopes and exert build on that by adding execution ranges and object-to-object connections.
 
-## 4-1. Normal Recording Flow
+### 4-1. Normal Recording Flow
 
 The most basic flow is when one object leaves its own state or progress.
 
@@ -281,7 +281,7 @@ The important point in this flow is that external code does not handle log stora
 
 If `.With(...)` is attached right after recording, the target list is fixed on the same source log. In this case, `LogContext.ResolveWith(...)` fills the source log's `Tags`, and if the target object is a different `Blackbox` from the source, a tag log is also added to the target side. This tag log is not a record that opens a call range like `Exert(...)`; it is an auxiliary connection for reading the source log and related targets together.
 
-## 4-2. Scope Recording Flow
+### 4-2. Scope Recording Flow
 
 Scope recording is a flow that leaves the start and end of one step as a block.
 
@@ -298,7 +298,7 @@ If a parent scope closes before a child scope, `LogContext.CloseScope(...)` chec
 
 Scope-depth calculation, and the conversion that makes open/close pairs with no child records look like step logs, are performed at output time rather than storage time. The output-side `ResolveScopeDepths` and `FlattenSteps` preserve the source logs and create an output list.
 
-## 4-3. Exert Recording Flow
+### 4-3. Exert Recording Flow
 
 Exert recording is a structure that records the flow where one object interacts with another object on both sides at the same time.
 
@@ -314,7 +314,7 @@ The advantage of this structure is that reading only one object's logs is enough
 
 Here, target context means the context where the receiving-side interaction log was actually stored. `TryMergeScope(...)` merges only when the two logs are immediately adjacent inside this context. Therefore, if an interaction and the receiving-side processing scope are recorded in different thread contexts, as with `Task.Run`, the policy is not to merge them.
 
-## 4-4. Output Formatting Flow
+### 4-4. Output Formatting Flow
 
 Stored logs are converted into readable strings again at output time.
 
@@ -328,7 +328,7 @@ In this flow, the source log's structural values and output strings are separate
 
 ---
 
-# 5. Thread-Based Recording Safety
+## 5. Thread-Based Recording Safety
 
 Blackbox partly reflects the assumption that one owner object can be recorded from multiple threads. The important issue here is keeping the storage location of each log line and the output order from being mixed across threads.
 
@@ -350,59 +350,59 @@ Conversely, directly modifying one `LogContext` from multiple threads at the sam
 
 ---
 
-# 6. Structural Intent
+## 6. Structural Intent
 
 The Blackbox implementation has six broad intentions.
 
-## 6-1. Gather Recording Rules in One Center
+### 6-1. Gather Recording Rules in One Center
 
 If actual recording rules are gathered in `Blackbox`, recording style can be maintained in one place even when there are many external call sites. This prevents scope rules, interaction rules, and storage rules from being redundantly implemented in different places.
 
-## 6-2. Separate Thread-Based Execution Contexts
+### 6-2. Separate Thread-Based Execution Contexts
 
 Recording rules are coordinated by `Blackbox`, but thread-based log buffers and open scope lists are separated into `LogContext`. Thanks to this, even if the same owner is recorded from multiple threads, each thread's recording position and thread metadata remain independent.
 
-## 6-3. Keep External Usage Code Simple
+### 6-3. Keep External Usage Code Simple
 
 External code uses recording in a form such as `BlackboxHandle.Of(this).Write(...)`. Because the internal structure is not exposed directly, callers can focus on 'what context to leave' rather than 'where and how it is stored'.
 
-## 6-4. Split `Dispose()` Post-Processing by Purpose into Handles
+### 6-4. Split `Dispose()` Post-Processing by Purpose into Handles
 
 Scope close and exert merge both happen at `using` / `Dispose()` time, but their meanings differ. The current implementation does not combine them into one action handle; it separates them into `ScopeHandle` and `ExertHandle`. This makes the information each handle must store and the dispose policy clearer, and `HandleManager` can prevent duplicate dispose caused by struct copies.
 
-## 6-5. Make Logs Easy to Read Later
+### 6-5. Make Logs Easy to Read Later
 
 Blackbox stores scope id, scope type, interaction peer, interaction id, tag target, sequence, and thread information from recording time. Scope depth is calculated at output time. This choice is not only about leaving records; it makes the flow easier to read again during output or later analysis.
 
 In other words, this framework puts more weight on making written logs readable with structure than on simply writing many logs.
 
-## 6-6. Separate Output Format from Recording Data
+### 6-6. Separate Output Format from Recording Data
 
 By keeping `LogFormatter` as a separate tool, `LogData` does not have to own long string rules directly. Recording data keeps structural values such as owner, scope, interaction, and tag, while labels, arrows, and tag reference strings required for text/HTML output are assembled in the formatting step. This separation reduces unnecessary changes to the recording storage path when output representation is adjusted.
 
 ---
 
-# 7. Implementation Considerations
+## 7. Implementation Considerations
 
-## 7-1. When Runtime Recording Is Off
+### 7-1. When Runtime Recording Is Off
 
 `BlackboxHandle.Of(subject)` and the main recording methods decide whether to actually record based on the `UseBlackbox` setting. If this value is off, the recording handle may not be valid, or some recording calls may be conditionally skipped. Therefore, when using Blackbox as an actual tracing tool, first check that `UseBlackbox` is enabled during startup configuration.
 
 In Unity, if the `BLACKBOX` symbol is missing, the default state starts with recording off. This symbol is only a default-value signal that decides whether a Unity project starts with recording enabled; the same runtime API remains available either way. In native C# and non-Unity builds, the default recording state is enabled without a separate symbol, and it can be turned off when needed with `BlackboxHandle.UseBlackbox = false` or `Configure(..., useBlackbox: UseBlackboxOption.DoNotUse)`.
 
-## 7-2. Stop Recording After Output
+### 7-2. Stop Recording After Output
 
 Once output runs, the internal global state changes to output-completed state. After that, additional recording and duplicate output are intentionally restricted. If multiple experiments must be repeated in the same process, reset registry and runtime state with `BlackboxHandle.ForceReset()` at a safe point.
 
-## 7-3. Timing of Global Setting Changes
+### 7-3. Timing of Global Setting Changes
 
 Values such as `LogDirectory`, logger, output option, `MaxLogCount`, `StrongReference`, and `TagTargetTypes` affect how the recording structure behaves. In particular, `MaxLogCount` is used as the buffer size when a new `Blackbox` creates a `LogContext`, so it is safer to configure it before recording starts rather than changing it arbitrarily during execution.
 
-## 7-4. Safe Point for Handle Reset
+### 7-4. Safe Point for Handle Reset
 
 `BlackboxHandle.ForceReset()` resets not only registry and runtime state, but also the `HandleManager` state for `ScopeHandle` / `ExertHandle`. This reset must be called only at a safe point where previously issued handles are no longer used. After reset, the dispose or alive lookup of old handles is not meaningfully preserved.
 
-## 7-5. Tag Target Display Policy
+### 7-5. Tag Target Display Policy
 
 Targets connected by `.With(...)` can be displayed directly inside the source log message through placeholders such as `%0` and `%1`. Targets not used in the message are appended as extra tag information during output. Tag logs left on the target side decide, according to `TargetTypes`, how much of the source name, interaction id, and source message to show.
 
