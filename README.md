@@ -8,31 +8,6 @@ Where a normal log focuses on a message at one moment, Blackbox records both 'wh
 
 <img src="Documentation~/Images/blackbox-html-export.png" alt="Blackbox HTML export preview" width="900">
 
-## Before and After
-
-A flat log can show that calls happened, but the relationship has to be reconstructed by hand.
-
-```text
-[Player] Attack requested
-[Player] Power = 3
-[Monster] TakeDamage(3)
-[Monster] HP 10 -> 7
-[Player] Attack finished
-```
-
-With Blackbox, the source call and target-side work share an interaction id in the HTML export.
-
-```text
-Player
-  [Interaction #4] Attack -> Monster
-Monster
-  [Interaction #4] from Player
-  [Scope] TakeDamage
-  HP 10 -> 7
-```
-
-The important change is that the output keeps the source -> target connection next to each object's own activity, so the cause chain stays visible after the run.
-
 ## Before You Start
 
 Blackbox is a foundational tracing framework in the BlackThunder project family.
