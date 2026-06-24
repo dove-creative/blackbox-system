@@ -2,8 +2,6 @@
 
 This document records the results of organizing and running Blackbox tests based on `01-Tables.md` and `02-Plans.md`.
 
----
-
 ## 1. 260611 Documentation-Test Alignment Results
 
 ### 1-1. Applied Scope

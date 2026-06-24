@@ -2,8 +2,6 @@
 
 Blackbox는 POCO 중심의 기록 프레임워크이므로, 테스트는 Unity Test Runner에 올릴 수 있는 asmdef를 유지하되 가능한 한 순수 NUnit 테스트로 작성한다.
 
----
-
 ## 1. 테스트 구성 원칙
 
 ### 1-1. 실행 방식
@@ -46,8 +44,6 @@ Blackbox는 POCO 중심의 기록 프레임워크이므로, 테스트는 Unity T
 
 테스트 코드 작성 시 각 테스트 주석에는 가능한 한 `Table 2-2 / Alive x Dispose.DifferentThread`처럼 표 위치를 적어, non-X 칸 누락 여부를 다시 확인할 수 있게 한다.
 
----
-
 ## 2. 공통 테스트 도구
 
 ### 2-1. `BlackboxTestDoubles.cs`
@@ -70,8 +66,6 @@ Blackbox는 POCO 중심의 기록 프레임워크이므로, 테스트는 Unity T
 | `NormalLogs` / `WarningLogs` | logger 호출 결과 저장 |
 
 이 파일은 테스트 보조 도구이므로 `[Test]` 메서드를 포함하지 않는다.
-
----
 
 ## 3. 단위 테스트 계획
 
@@ -257,8 +251,6 @@ Blackbox는 POCO 중심의 기록 프레임워크이므로, 테스트는 Unity T
 | `HtmlExporterCreatesNormalAndCrashFiles` | normal/crash html 파일을 만든다. |
 | `HtmlExporterWritesInteractionLinks` | html export가 interaction anchor/link를 포함한다. |
 | `OpenLogFailureIsReportedAsWarning` | 자동 open 실패는 warning으로 보고된다. |
-
----
 
 ## 4. 통합 테스트 계획
 

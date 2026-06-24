@@ -4,8 +4,6 @@ This document organizes object-level states and behaviors before writing new tes
 
 Blackbox is a framework where recorded target objects, log contexts, disposable handles, and export tools work together. Therefore, the test tables are not written as one large feature group. They start from low-level value/handle objects and move upward toward the external entry point `BlackboxHandle` and the export flow.
 
----
-
 ## Notation
 
 - **StateName**: State changes after the behavior.
@@ -17,8 +15,6 @@ Blackbox is a framework where recorded target objects, log contexts, disposable 
 - `-`: Normally ignores the combination without state change, or keeps the existing value.
 - `X`: A meaningless combination in that state or condition.
 - **UseBlackboxOff**: The runtime axis where `UseBlackbox` is off. This axis verifies that the public API returns original messages or default handles and does not create actual records.
-
----
 
 ## 1. Value and Formatting Units
 
@@ -55,8 +51,6 @@ Blackbox is a framework where recorded target objects, log contexts, disposable 
 | Active | - | **Active** | `[store literal]` | `[stringify value]` | `[return message + clear]` |
 | Skipped | - | **Skipped** | - | - | `[return empty string]` |
 | Active | - | ^ | ^ | `[stringify null]` | ^ |
-
----
 
 ## 2. Handle Units
 
@@ -96,8 +90,6 @@ Blackbox is a framework where recorded target objects, log contexts, disposable 
 | Alive | - | **Disposed** + `[merge]` | **Disposed** | **Disposed** + warning | **Disposed** |
 | Disposed | - | - | - | - | - |
 
----
-
 ## 3. Runtime Storage Units
 
 ### 3-1. `BlackboxRuntime`
@@ -135,8 +127,6 @@ Settings include `LogDirectory`, logger, `MaxLogCount`, `StrongReference`, `Defa
 | Ready | - | `[update settings]` | `[resolve explicit/default]` | `[call logger]` | **Printed** | - |
 | Printed | - | `[update settings]` | `[resolve explicit/default]` | `[call logger]` | - | **Ready** |
 
----
-
 ## 4. Log Context Units
 
 ### 4-1. `LogContext`
@@ -163,8 +153,6 @@ Settings include `LogDirectory`, logger, `MaxLogCount`, `StrongReference`, `Defa
 | Printed | - | - | - | - | - | - | - | - | - | `[snapshot]` | `[snapshot]` |
 | OwnerReferenceLost | - | `[fallback owner string]` | `[fallback owner string]` | `[fallback owner string]` | ^ | ^ | `[fallback owner string]` | ^ | ^ | `[fallback owner string]` | `[fallback owner string]` |
 
----
-
 ## 5. External Entry Point Unit
 
 ### 5-1. `BlackboxHandle`
@@ -190,8 +178,6 @@ This table has both the default recording axis and the fallback verification axi
 | Default/Invalid | - | `[return message]` | `[return message]` | `[return message]` | `[return message + possible warning]` | `[warning]` | `[warning]` | `<Registry.ForceReset>` |
 | Valid | - | `[error log]` | `[error log + tag]` | `<CrashExport>` | `[error log + stack trace + export]` | **Printed** | - | `<Registry.ForceReset>` |
 | Printed | - | `[return message]` | `[return message]` | `[return message]` | `[restrict duplicate export]` | - | - | **Default reset state** |
-
----
 
 ## 6. Export Units
 
@@ -220,8 +206,6 @@ Export tools organize source logs into an output graph.
 | LogDirectoryMissing | - | _InvalidOperationException_ | ^ | X |
 | TxtReady | - | `[create txt file]` | `[create CRASH prefix file]` | `[try opening file automatically]` |
 | HtmlReady | - | `[create html file]` | `[create CRASH prefix file]` | `[try opening file automatically]` |
-
----
 
 ## 7. Integration Flow
 

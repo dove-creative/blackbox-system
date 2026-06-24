@@ -2,8 +2,6 @@
 
 Blackbox is a POCO-centered recording framework, so tests keep an asmdef that can run on Unity Test Runner while being written as pure NUnit tests as much as possible.
 
----
-
 ## 1. Test Composition Principles
 
 ### 1-1. Execution Method
@@ -46,8 +44,6 @@ The test plan and test code use the following criteria.
 
 When writing test code, add table positions to test comments whenever possible, such as `Table 2-2 / Alive x Dispose.DifferentThread`, so missing non-`X` cells can be checked again.
 
----
-
 ## 2. Shared Test Tools
 
 ### 2-1. `BlackboxTestDoubles.cs`
@@ -70,8 +66,6 @@ This file contains shared test fixtures and helpers.
 | `NormalLogs` / `WarningLogs` | Store logger call results |
 
 This file is a test helper, so it does not include `[Test]` methods.
-
----
 
 ## 3. Unit Test Plan
 
@@ -257,8 +251,6 @@ Corresponding table: `6-2. exporters`
 | `HtmlExporterCreatesNormalAndCrashFiles` | Creates normal/crash html files. |
 | `HtmlExporterWritesInteractionLinks` | HTML export includes interaction anchors/links. |
 | `OpenLogFailureIsReportedAsWarning` | Automatic open failure is reported as a warning. |
-
----
 
 ## 4. Integration Test Plan
 

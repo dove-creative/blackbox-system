@@ -8,8 +8,6 @@
 5. Tutorial 2. Tracing Object-to-Object Interactions
 6. Reading Output and Results
 
----
-
 This document does not explain the internal implementation structure of Blackbox. Instead, it takes the recording model organized in the overview and implementation documents and moves it into the flow of using it in real code.
 
 Therefore, the explanation order follows what users need to check first: settings, the shortest recording flow, method selection criteria, and actual recording scenarios.
@@ -178,8 +176,6 @@ BlackboxHandle.Configure(
 
 This setting controls the display range of tag logs left on the target side. The source log itself keeps the target references passed to `.With(...)`.
 
----
-
 ## 2. Shortest Start Flow
 
 The simplest usage flow has four steps.
@@ -199,8 +195,6 @@ BlackboxHandle.Of(player).Export();
 ```
 
 This flow alone can immediately trace 'in what order one object changed state'.
-
----
 
 ## 3. Method Selection Guide
 
@@ -228,8 +222,6 @@ In practice, it is convenient to think like this.
 - Use `ExertMessage` when only the moment of connection with another object is needed.
 - Use `using` and `Exert` when you want to add a call range to the connection record.
 - Use `Export` when writing logs to a file.
-
----
 
 ## 4. Tutorial 1. Recording State Changes in One Object
 
@@ -442,8 +434,6 @@ BlackboxHandle.Of(player).Export();
 
 At this stage, what you get is 'the history of one object'. There is not yet much connection with other objects, but the order and context of state changes can be read clearly enough.
 
----
-
 ## 5. Tutorial 2. Tracing Object-to-Object Interactions
 
 The second step is to read a flow involving several objects, as in `Scenario_2`. This is where Blackbox becomes especially useful.
@@ -591,8 +581,6 @@ BlackboxHandle.Of(player).Export();
 
 This allows you to follow monster logs connected around the player. In other words, it is best to choose the output root object as the starting point that best reveals the problem.
 
----
-
 ## 6. Reading Output and Results
 
 ### 6-1. Basic Output
@@ -613,8 +601,6 @@ BlackboxHandle.Of(player).Export(format: ExportFormat.Txt);
 
 Blackbox is closer to a tool for reading context again after execution than to a real-time console debugger. Therefore, instead of trying to display something immediately inside every method, it fits better to record the problem range sufficiently and then output and read it at the necessary point.
 
-
----
 
 To summarize, the Blackbox usage flow is not complicated.
 

@@ -57,7 +57,7 @@ In Unity, the `BLACKBOX` scripting define symbol only selects the startup defaul
 
 If you want to temporarily stop recording, set `BlackboxHandle.UseBlackbox = false` or pass `useBlackbox: UseBlackboxOption.DoNotUse` to `Configure(...)`. When this runtime switch is off, `BlackboxHandle.Of(subject)` returns an invalid handle and recording calls fall back to no-op/default behavior.
 
-### Use in Native C#
+### Use in Native CSharp
 
 There is no separate NuGet package yet. In native C# projects, keep this package folder as a source dependency and include the `Runtime/**/*.cs` files in compilation.
 

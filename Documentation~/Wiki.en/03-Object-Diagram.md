@@ -124,8 +124,6 @@ BlackboxHandle --> BlackboxRegistry : looks up owner
 BlackboxHandle --> Blackbox : forwards recording calls
 ```
 
----
-
 ## Items Excluded from the Diagram
 
 For readability, handle-related auxiliary structures such as `TagHandle`, `ScopeHandle`, `ExertHandle`, and `HandleManager<T>` are excluded from this diagram. Target recording connected by `.With(...)` is handled as a flow where `LogContext.ResolveWith(...)` fixes the source log's tag list, then `Blackbox.Tag(...)` adds a target-side tag log.

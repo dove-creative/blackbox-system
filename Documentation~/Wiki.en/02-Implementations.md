@@ -8,8 +8,6 @@
 6. Structural Intent
 7. Implementation Considerations
 
----
-
 ## 1. Blackbox Structure
 
 Blackbox is a framework that places an internal engine for recording one object's execution context at the center, and stores object-to-object interactions and scope flow inside the same log system.
@@ -29,8 +27,6 @@ The implementation of this framework is broadly divided into ten elements.
 
 The core of this structure is separating the recording center, execution context, output formatting, external usage interface, and `Dispose()` post-processing units. Actual recording rules gather in `Blackbox`; log buffers and scope state that differ per thread are separated into `LogContext`; output string assembly is handled by `LogFormatter`. External code uses this structure indirectly through `BlackboxHandle`. `ScopeHandle` and `ExertHandle` are not one action-based handle as before; each has its own post-processing meaning to close.
 
----
-
 ## 2. Detailed Implementation Documents
 
 This document explains the overall structure and representative flows of Blackbox. Detailed implementations that require reading several objects together are covered in separate documents below.
@@ -38,8 +34,6 @@ This document explains the overall structure and representative flows of Blackbo
 - `02.1-Tag-Flow.md`: Source logs, target logs, display policies, and placeholder processing connected through `.With(...)`
 - `02.2-Export-Pipeline.md`: Export graph collection, scope display conversion, and text/HTML output flow
 - `02.3-Handle-Lifecycle.md`: Lifecycle of `ScopeHandle`, `ExertHandle`, and `HandleManager<T>`, and duplicate `Dispose()` prevention
-
----
 
 ## 3. Core Components
 
@@ -261,8 +255,6 @@ Provided services and reasons:
 - `WarnIfThreadMismatch(...)`: Outputs a warning when creation thread and dispose thread differ
 - `Reset()`: Resets handle id state at a safe point for tests or repeated experiments during `BlackboxRegistry.ForceReset()`
 
----
-
 ## 4. Recording Pipeline
 
 The recording pipeline shows how the objects described above connect in actual call order. Basic recording leaves records inside one object; scopes and exert build on that by adding execution ranges and object-to-object connections.
@@ -326,8 +318,6 @@ Stored logs are converted into readable strings again at output time.
 
 In this flow, the source log's structural values and output strings are separated. Therefore, even if tag display policy or HTML/text representation changes, the responsibility of the recording creation step remains unchanged.
 
----
-
 ## 5. Thread-Based Recording Safety
 
 Blackbox partly reflects the assumption that one owner object can be recorded from multiple threads. The important issue here is keeping the storage location of each log line and the output order from being mixed across threads.
@@ -347,8 +337,6 @@ The current implementation handles thread-based safety as follows.
 This structure focuses on separating thread-local log buffers from global output order. For example, even if thread A opens a scope and thread B logs the same owner object, thread B's record is stored in B's context and merged again by sequence at output time.
 
 Conversely, directly modifying one `LogContext` from multiple threads at the same time is not considered a stable default usage flow. This is why a warning is left when a handle is disposed on a thread different from the thread where it was created. Global states such as registry reset, setting changes, and output-completed state must also be handled at safe points. In particular, `ForceReset()` is closer to debug or test initialization, and it does not assume that other threads are recording at the same time.
-
----
 
 ## 6. Structural Intent
 
@@ -379,8 +367,6 @@ In other words, this framework puts more weight on making written logs readable 
 ### 6-6. Separate Output Format from Recording Data
 
 By keeping `LogFormatter` as a separate tool, `LogData` does not have to own long string rules directly. Recording data keeps structural values such as owner, scope, interaction, and tag, while labels, arrows, and tag reference strings required for text/HTML output are assembled in the formatting step. This separation reduces unnecessary changes to the recording storage path when output representation is adjusted.
-
----
 
 ## 7. Implementation Considerations
 

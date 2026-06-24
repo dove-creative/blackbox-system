@@ -2,16 +2,12 @@
 
 A framework for recording and tracing per-object activity, execution context, and object-to-object interaction flow.
 
----
-
 ## Table of Contents
 
 1. Introducing Blackbox
 2. Basic Recording Structure
 3. Interaction Recording Method
 4. Log Connection Structure and Output
-
----
 
 ## 1. Introducing Blackbox
 
@@ -50,8 +46,6 @@ This principle appears in the following traits.
 3. It can disable major recording features through a runtime switch.
    When `UseBlackbox` is off, major recording calls should fall back to default or fallback values and not create actual log storage.
 
----
-
 ## 2. Basic Recording Structure
 
 The most basic feature of Blackbox is accumulating one object's execution context in a log storage dedicated to that object.
@@ -72,8 +66,6 @@ If basic log storage records an object's activity, scope storage records the sta
 
 Usually, one scope corresponds to one method or one meaningful processing step.
 
----
-
 ## 3. Interaction Recording Method
 
 In addition to recording one object's logs, Blackbox can also record object-to-object interaction relationships bidirectionally through Exert.
@@ -81,8 +73,6 @@ In addition to recording one object's logs, Blackbox can also record object-to-o
 This structure works by letting one object leave a connection point with another object or hand work to it, while the `Blackbox` instances of both participating objects record the interaction in both object logs. The two logs share the same interaction id, so when reading each object's individual log, the log flow can continue through the same interaction point.
 
 Because this method leaves traces of the same flow on both the sending side and the receiving side, execution involving many objects can be followed by asking 'who handed execution to whom'.
-
----
 
 ## 4. Log Connection Structure and Output
 
