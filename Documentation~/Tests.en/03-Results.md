@@ -21,7 +21,7 @@ This document records the results of organizing and running Blackbox tests based
 | --- | --- | --- |
 | Blackbox runtime build | `dotnet build Blackbox.csproj --no-restore` | Succeeded. Unity reference conflicts and nullable-related warnings appeared, but there were no errors. |
 | Blackbox tests build | `dotnet build Blackbox.Tests.csproj --no-restore` | Succeeded. Unity reference conflicts and nullable-related warnings appeared, but there were no errors. |
-| Default recording tests | `dotnet run --no-restore --project Packages/com.blackthunder.unitest/Tools~/ExternalNUnitExecutor/ExternalNUnitExecutor.csproj` | Succeeded. `total=97 passed=97 failed=0` |
+| Default recording tests | `dotnet test --no-restore Packages/com.blackthunder.blackbox-system/Tests/ExternalNUnitExecutor/ExternalNUnitExecutor.csproj` | Succeeded. At the time, the runner printed `total=97 passed=97 failed=0`; the current official command uses the external executor owned by the Blackbox package. |
 | Recording-disabled tests | `UseBlackbox=false` runtime axis | Verified as fallback behavior in `BlackboxHandleTests`. |
 | Whitespace check | `git diff --check` | Succeeded. |
 

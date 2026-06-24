@@ -147,7 +147,11 @@ Korean documentation is available in `Documentation~/Wiki.ko`.
 
 Test code is in the `Tests` folder and uses Unity Test Framework with NUnit.
 
+Test planning documents are in `Documentation~/Tests.en`; Korean documents are in `Documentation~/Tests.ko`.
+
 To run tests in Unity, use an Editor test environment where `BLACKBOX_TESTS` and `UNITY_INCLUDE_TESTS` are enabled. Add `BLACKBOX` too when the Unity `UseBlackbox` startup default should be enabled. If the package is used as a separated package, also check the Unity project's testables settings and test asmdef settings.
+
+To verify UniTest-based table-flow tests outside Unity, keep the sibling `Packages/com.blackthunder.unitest` package available and use `Tests/ExternalNUnitExecutor/ExternalNUnitExecutor.csproj`.
 
 ## License
 

@@ -21,7 +21,7 @@
 | --- | --- | --- |
 | Blackbox runtime build | `dotnet build Blackbox.csproj --no-restore` | 성공. Unity 참조 충돌과 nullable 관련 경고가 있었지만 오류는 없었다. |
 | Blackbox tests build | `dotnet build Blackbox.Tests.csproj --no-restore` | 성공. Unity 참조 충돌과 nullable 관련 경고가 있었지만 오류는 없었다. |
-| 기본 기록 테스트 | `dotnet run --no-restore --project Packages/com.blackthunder.unitest/Tools~/ExternalNUnitExecutor/ExternalNUnitExecutor.csproj` | 성공. `total=97 passed=97 failed=0` |
+| 기본 기록 테스트 | `dotnet test --no-restore Packages/com.blackthunder.blackbox-system/Tests/ExternalNUnitExecutor/ExternalNUnitExecutor.csproj` | 성공. 기록 당시 실행기는 `total=97 passed=97 failed=0`을 출력했다. 현재 공식 명령은 Blackbox 패키지가 소유한 external executor를 사용한다. |
 | 기록 비활성 테스트 | `UseBlackbox=false` 런타임 축 | `BlackboxHandleTests`에서 fallback 동작으로 확인한다. |
 | whitespace 검사 | `git diff --check` | 성공. |
 

@@ -184,7 +184,11 @@ dotnet run --project Blackbox.NativeCSharp.Samples.csproj
 
 테스트 코드는 `Tests` 폴더에 있으며, Unity Test Framework와 NUnit을 사용한다.
 
+테스트 계획 문서는 `Documentation~/Tests.ko` 폴더에 있으며, 영어 문서는 `Documentation~/Tests.en` 폴더에 있다.
+
 Unity에서 테스트를 실행하려면 `BLACKBOX_TESTS`, `UNITY_INCLUDE_TESTS` 심볼이 활성화된 Editor 테스트 환경을 사용한다. Unity에서 `UseBlackbox` 시작 기본값도 함께 켜려면 `BLACKBOX` 심볼을 추가한다. 패키지 형태로 분리해 사용하는 경우, Unity 프로젝트의 testables 설정이나 테스트 asmdef 설정도 함께 확인한다.
+
+UniTest 기반 테이블 흐름 테스트를 Unity 밖에서 확인하려면 sibling 패키지인 `Packages/com.blackthunder.unitest`를 함께 둔 뒤 `Tests/ExternalNUnitExecutor/ExternalNUnitExecutor.csproj`를 사용한다.
 
 ---
 

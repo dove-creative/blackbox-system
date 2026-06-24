@@ -16,6 +16,7 @@ Basic checklist:
 - The `Packages/com.blackthunder.blackboxsystem` folder exists inside a Unity project.
 - The test assembly uses the `BLACKBOX_TESTS` and `UNITY_INCLUDE_TESTS` symbols.
 - Tests run on Unity Test Framework and NUnit.
+- UniTest-based verification also keeps the sibling `Packages/com.blackthunder.unitest` package available.
 
 ## Code Style
 
@@ -37,6 +38,7 @@ Run the applicable verification for the changed area.
 
 - Documentation-only changes: check links, terminology, line endings, and trailing whitespace.
 - Code changes: run `Blackbox.Tests` in Unity Test Framework.
+- UniTest table-flow changes: build the external NUnit executor under `Tests/ExternalNUnitExecutor`.
 - Output or file-generation changes: verify both text and HTML output.
 - Changes to recording disable behavior: also verify fallback behavior with `UseBlackbox = false`.
 
