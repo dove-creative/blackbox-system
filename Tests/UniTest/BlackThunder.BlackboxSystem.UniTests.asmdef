@@ -1,11 +1,11 @@
 {
-    "name": "BlackThunder.BlackboxSystem.UniTests",
+    "name": "BlackThunder.BlackboxSystem.UniTest",
     "rootNamespace": "BlackThunder.BlackboxSystem.Tests",
     "references": [
-        "UnityEngine.TestRunner",
-        "UnityEditor.TestRunner",
+        "GUID:27619889b8ba8c24980f49ee34dbb44a",
+        "GUID:0acc523941302664db1f4e527237feb3",
         "GUID:83786de9691edcc488d9d6f1d572c585",
-        "UniTest"
+        "GUID:164f6e76bbebb9848a796deb2696a645"
     ],
     "includePlatforms": [
         "Editor"
