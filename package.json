@@ -1,5 +1,5 @@
 {
-  "name": "com.blackthunder.blackboxsystem",
+  "name": "com.blackthunder.blackbox-system",
   "version": "0.1.1",
   "displayName": "Blackbox System",
   "description": "Object activity, scope, and interaction tracing for Unity and C#.",

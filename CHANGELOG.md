@@ -15,7 +15,7 @@ The format follows Keep a Changelog, and version numbers follow Semantic Version
 
 ### Changed
 
-- Changed the public C# namespace and Unity asmdef names from `com.BlackThunder.BlackboxSystem` to `BlackThunder.BlackboxSystem` while keeping the Unity package ID as `com.blackthunder.blackboxsystem`.
+- Changed the public C# namespace and Unity asmdef names from `com.BlackThunder.BlackboxSystem` to `BlackThunder.BlackboxSystem`, and set the Unity package ID to `com.blackthunder.blackbox-system` so it matches the repository and embedded package folder naming.
 - Changed `BLACKBOX` to only select Unity's default recording state; native C# and non-Unity builds record by default unless disabled at runtime.
 - Updated package sample metadata so usage samples are registered separately by target environment.
 

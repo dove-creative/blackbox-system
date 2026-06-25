@@ -41,7 +41,7 @@ https://github.com/dove-creative/blackbox-system.git
 
 ### Install as a Folder
 
-1. Place this folder at `Packages/com.blackthunder.blackboxsystem` in a Unity project.
+1. Place this folder at `Packages/com.blackthunder.blackbox-system` in a Unity project.
 
 ### Configure After Installation
 
@@ -64,7 +64,7 @@ There is no separate NuGet package yet. In native C# projects, keep this package
 ```xml
 <ItemGroup>
   <Compile
-    Include="path/to/com.blackthunder.blackboxsystem/Runtime/**/*.cs"
+    Include="path/to/com.blackthunder.blackbox-system/Runtime/**/*.cs"
     LinkBase="Blackbox/Runtime" />
 </ItemGroup>
 ```

@@ -13,7 +13,7 @@ Blackbox assumes a folder-based package structure inside a Unity project.
 
 Basic checklist:
 
-- The `Packages/com.blackthunder.blackboxsystem` folder exists inside a Unity project.
+- The `Packages/com.blackthunder.blackbox-system` folder exists inside a Unity project.
 - The test assembly uses the `BLACKBOX_TESTS` and `UNITY_INCLUDE_TESTS` symbols.
 - Tests run on Unity Test Framework and NUnit.
 - UniTest-based verification also keeps the sibling `Packages/com.blackthunder.unitest` package available.
