@@ -19,7 +19,7 @@ This document records the results of organizing and running Blackbox tests based
 | --- | --- | --- |
 | Blackbox runtime build | `dotnet build Blackbox.csproj --no-restore` | Succeeded. Unity reference conflicts and nullable-related warnings appeared, but there were no errors. |
 | Blackbox tests build | `dotnet build Blackbox.Tests.csproj --no-restore` | Succeeded. Unity reference conflicts and nullable-related warnings appeared, but there were no errors. |
-| Default recording tests | `dotnet test --no-restore Packages/com.blackthunder.blackbox-system/Tests/ExternalNUnitExecutor/ExternalNUnitExecutor.csproj` | Succeeded. At the time, the runner printed `total=97 passed=97 failed=0`; the current official command uses the external executor owned by the Blackbox package. |
+| Default recording tests | `dotnet test --no-restore Packages/com.blackthunder.blackbox-system/Tests/ExternalNUnitExecutor~/ExternalNUnitExecutor.csproj` | Succeeded. At the time, the runner printed `total=97 passed=97 failed=0`; the current official command uses the external executor owned by the Blackbox package. |
 | Recording-disabled tests | `UseBlackbox=false` runtime axis | Verified as fallback behavior in `BlackboxHandleTests`. |
 | Whitespace check | `git diff --check` | Succeeded. |
 
@@ -27,5 +27,5 @@ This document records the results of organizing and running Blackbox tests based
 
 - In the normal sandbox execution, building Unity-generated csproj files produced `MSB4184` because of an access permission issue under `C:\Users\user\AppData\Local\Microsoft SDKs`.
 - When the same builds were retried in an elevated execution context, both `Blackbox.csproj` and `Blackbox.Tests.csproj` succeeded.
-- The `bin` / `obj` artifacts generated after running `ExternalNUnitExecutor` were cleaned up because they were not code changes.
+- The `bin` / `obj` artifacts generated after running `ExternalNUnitExecutor~` were cleaned up because they were not code changes.
 - New documentation and test files keep the repository's LF line-ending policy.

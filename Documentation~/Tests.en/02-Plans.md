@@ -10,7 +10,7 @@ Blackbox is a POCO-centered recording framework, so tests keep an asmdef that ca
 - Keep the existing `BlackThunder.BlackboxSystem.Tests.asmdef`.
 - The `BlackThunder.BlackboxSystem.Tests` assembly references the `BlackThunder.BlackboxSystem` assembly, and verifies internal types through `InternalsVisibleTo("BlackThunder.BlackboxSystem.Tests")` in `AssemblyInfo.cs`.
 - The Unity Test Runner and `BlackThunder.BlackboxSystem.Tests.asmdef` axis default to `UNITY_INCLUDE_TESTS` and `BLACKBOX_TESTS` being enabled. In Unity verification environments where the `UseBlackbox` startup default must also be enabled, enable `BLACKBOX` as well.
-- The pure NUnit external execution axis uses `dotnet test Packages/com.blackthunder.blackbox-system/Tests/ExternalNUnitExecutor/ExternalNUnitExecutor.csproj`. This axis links the sibling `Packages/com.blackthunder.unitest` runtime sources, restores NuGet `NUnit` 3.14.0, and runs without the Unity `Library` cache while verifying Blackbox's real recording/output flow outside the Unity Editor. Test code stays within the common API supported by Unity NUnit 3.5 and NuGet NUnit 3.14.0.
+- The pure NUnit external execution axis uses `dotnet test Packages/com.blackthunder.blackbox-system/Tests/ExternalNUnitExecutor~/ExternalNUnitExecutor.csproj`. This axis links the sibling `Packages/com.blackthunder.unitest` runtime sources, restores NuGet `NUnit` 3.14.0, and runs without the Unity `Library` cache while verifying Blackbox's real recording/output flow outside the Unity Editor. Test code stays within the common API supported by Unity NUnit 3.5 and NuGet NUnit 3.14.0.
 - Recording-disabled fallback behavior is verified through the `UseBlackbox=false` runtime setting, not through a separate build axis.
 
 ### 1-2. Writing Rules

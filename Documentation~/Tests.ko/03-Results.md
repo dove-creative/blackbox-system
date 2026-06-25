@@ -19,7 +19,7 @@
 | --- | --- | --- |
 | Blackbox runtime build | `dotnet build Blackbox.csproj --no-restore` | 성공. Unity 참조 충돌과 nullable 관련 경고가 있었지만 오류는 없었다. |
 | Blackbox tests build | `dotnet build Blackbox.Tests.csproj --no-restore` | 성공. Unity 참조 충돌과 nullable 관련 경고가 있었지만 오류는 없었다. |
-| 기본 기록 테스트 | `dotnet test --no-restore Packages/com.blackthunder.blackbox-system/Tests/ExternalNUnitExecutor/ExternalNUnitExecutor.csproj` | 성공. 기록 당시 실행기는 `total=97 passed=97 failed=0`을 출력했다. 현재 공식 명령은 Blackbox 패키지가 소유한 external executor를 사용한다. |
+| 기본 기록 테스트 | `dotnet test --no-restore Packages/com.blackthunder.blackbox-system/Tests/ExternalNUnitExecutor~/ExternalNUnitExecutor.csproj` | 성공. 기록 당시 실행기는 `total=97 passed=97 failed=0`을 출력했다. 현재 공식 명령은 Blackbox 패키지가 소유한 external executor를 사용한다. |
 | 기록 비활성 테스트 | `UseBlackbox=false` 런타임 축 | `BlackboxHandleTests`에서 fallback 동작으로 확인한다. |
 | whitespace 검사 | `git diff --check` | 성공. |
 
@@ -27,5 +27,5 @@
 
 - 일반 샌드박스 실행에서는 Unity 생성 csproj 빌드가 `C:\Users\user\AppData\Local\Microsoft SDKs` 접근 권한 문제로 `MSB4184`를 냈다.
 - 같은 빌드를 권한 있는 실행으로 재시도했을 때 `Blackbox.csproj`와 `Blackbox.Tests.csproj` 모두 성공했다.
-- `ExternalNUnitExecutor` 실행 후 생성된 `bin` / `obj` 산출물은 코드 변경이 아니므로 정리했다.
+- `ExternalNUnitExecutor~` 실행 후 생성된 `bin` / `obj` 산출물은 코드 변경이 아니므로 정리했다.
 - 새 문서와 테스트 파일은 저장소의 LF 줄 끝 정책을 유지한다.
