@@ -9,26 +9,26 @@ Thank you for contributing to Blackbox. This document describes the basic standa
 
 ## Development Environment
 
-Blackbox assumes a folder-based package structure inside a Unity project.
+Blackbox uses an SDK-style .NET solution.
 
 Basic checklist:
 
-- The `Packages/com.blackthunder.blackbox-system` folder exists inside a Unity project.
-- The test assembly uses the `BLACKBOX_TESTS` and `UNITY_INCLUDE_TESTS` symbols.
-- Tests run on Unity Test Framework and NUnit.
-- UniTest-based verification also keeps the sibling `Packages/com.blackthunder.unitest` package available.
+- Install a .NET 9 SDK.
+- Keep the sibling `unitest` repository available when building the Blackbox test project.
+- Restore and build `BlackThunder.BlackboxSystem.sln` from the repository root.
+- The library remains dependency-free and targets `netstandard2.1`.
 
 ## Code Style
 
 - C# files and documentation files use LF line endings.
 - Code comments are written in English.
-- Do not use nullable syntax for Unity compatibility.
+- Do not use nullable syntax.
 - Do not add new dependencies.
 - Update tests when changing shared behavior such as value-type handles, the export pipeline, or tag flow.
 
 ## Documentation Style
 
-English documentation is in `Documentation~/Wiki.en`. Korean documentation is in `Documentation~/Wiki.ko`. Usage examples are maintained together with the `Samples~/Unity` sample.
+English documentation is in `docs/Wiki.en`. Korean documentation is in `docs/Wiki.ko`. Usage examples are maintained with `samples/Blackbox.NativeCSharp.Samples`.
 
 Keep code identifiers unchanged. For example, names such as `ScopeHandle`, `TargetTypes`, and `BlackboxHandle.Export(...)` should stay as they are.
 
@@ -37,8 +37,8 @@ Keep code identifiers unchanged. For example, names such as `ScopeHandle`, `Targ
 Run the applicable verification for the changed area.
 
 - Documentation-only changes: check links, terminology, line endings, and trailing whitespace.
-- Code changes: run `Blackbox.Tests` in Unity Test Framework.
-- UniTest table-flow changes: build the external NUnit executor under `Tests/ExternalNUnitExecutor~`.
+- Code changes: run `dotnet test tests/BlackThunder.BlackboxSystem.Tests/BlackThunder.BlackboxSystem.Tests.csproj`.
+- UniTest table-flow changes: run the same test project and confirm the sibling UniTest source links resolve.
 - Output or file-generation changes: verify both text and HTML output.
 - Changes to recording disable behavior: also verify fallback behavior with `UseBlackbox = false`.
 

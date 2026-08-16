@@ -2,11 +2,11 @@
 
 [Korean README](README.ko.md)
 
-Blackbox is a Unity/C# tracing framework for recording object activity, execution scopes, and object-to-object interactions, then reading them later as connected logs.
+Blackbox is a .NET tracing framework for recording object activity, execution scopes, and object-to-object interactions, then reading them later as connected logs.
 
 Where a normal log focuses on a message at one moment, Blackbox records both 'what process this object went through' and 'which objects were connected during that process'.
 
-<img src="Documentation~/Images/blackbox-html-export.png" alt="Blackbox HTML export preview" width="900">
+<img src="docs/Images/blackbox-html-export.png" alt="Blackbox HTML export preview" width="900">
 
 ## Before You Start
 
@@ -27,45 +27,11 @@ Thank you for using Blackbox.
 
 ## Installation
 
-The current structure supports both Unity Package Manager installation and folder-based package installation. Native C# projects can also include the runtime source directly when needed.
-
-### Install with Package Manager
-
-1. In Unity, open `Window > Package Manager`.
-2. Click the `+` button in the upper-left corner, then select `Add package from git URL...`.
-3. Enter the URL below and click `Add`.
-
-```text
-https://github.com/dove-creative/blackbox-system.git
-```
-
-### Install as a Folder
-
-1. Place this folder at `Packages/com.blackthunder.blackbox-system` in a Unity project.
-
-### Configure After Installation
-
-1. Configure the log output location early in execution.
-
-```csharp
-BlackboxHandle.Configure(
-	logDirectory: Path.Combine(Application.persistentDataPath, "BlackboxLogs"),
-	logger: Debug.Log);
-```
-
-In Unity, the `BLACKBOX` scripting define symbol only selects the startup default for `BlackboxHandle.UseBlackbox`. The same runtime API remains available either way. Without that symbol, Unity starts with recording off by default. Add `BLACKBOX` in Player Settings or set `BlackboxHandle.UseBlackbox = true` during startup to enable recording.
-
-If you want to temporarily stop recording, set `BlackboxHandle.UseBlackbox = false` or pass `useBlackbox: UseBlackboxOption.DoNotUse` to `Configure(...)`. When this runtime switch is off, `BlackboxHandle.Of(subject)` returns an invalid handle and recording calls fall back to no-op/default behavior.
-
-### Use in Native CSharp
-
-There is no separate NuGet package yet. In native C# projects, keep this package folder as a source dependency and include the `Runtime/**/*.cs` files in compilation.
+There is no separate NuGet package yet. Add this repository as a local dependency or submodule, then reference the library project.
 
 ```xml
 <ItemGroup>
-  <Compile
-    Include="path/to/com.blackthunder.blackbox-system/Runtime/**/*.cs"
-    LinkBase="Blackbox/Runtime" />
+  <ProjectReference Include="path/to/blackbox-system/src/BlackThunder.BlackboxSystem/BlackThunder.BlackboxSystem.csproj" />
 </ItemGroup>
 ```
 
@@ -77,9 +43,11 @@ BlackboxHandle.Configure(
 	logger: Console.WriteLine);
 ```
 
-Native C# does not use the Unity-only `BLACKBOX` symbol, so recording starts enabled by default. If you want to temporarily stop recording, set `BlackboxHandle.UseBlackbox = false` or pass `useBlackbox: UseBlackboxOption.DoNotUse` to `Configure(...)`.
+Recording starts enabled by default. To temporarily stop recording, set `BlackboxHandle.UseBlackbox = false` or pass `useBlackbox: UseBlackboxOption.DoNotUse` to `Configure(...)`. When this switch is off, `BlackboxHandle.Of(subject)` returns an invalid handle and recording calls fall back to no-op/default behavior.
 
 ## Quick Start
+
+### Basic Usage Code
 
 ```csharp
 using BlackThunder.BlackboxSystem;
@@ -115,6 +83,18 @@ This example records the following information.
 - Bidirectional interaction records for the `worker.Load()` call
 - Connected log output centered on `Loader` when `ExportLogs()` is called
 
+### C# Sample
+
+Run the console sample under `samples/Blackbox.NativeCSharp.Samples` to exercise the recording flows.
+
+```powershell
+dotnet run --project samples/Blackbox.NativeCSharp.Samples/Blackbox.NativeCSharp.Samples.csproj
+```
+
+At the `sample>` prompt, enter `write`, `exert`, `tag`, or `exception`. Empty input waits for another command, and `exit` closes the sample.
+
+The sample runs with the default `UseBlackbox = true` setting. Logs are written under `BlackboxSystem/Samples/NativeCSharp` in the sample output directory.
+
 ## Main APIs
 
 - `BlackboxHandle.Of(subject)`: gets the recording entry point for the target object.
@@ -131,27 +111,29 @@ This example records the following information.
 
 ## Documentation
 
-Detailed documentation is available in `Documentation~/Wiki.en`.
+Detailed documentation is available in `docs/Wiki.en`.
 
-- [01-Overview.md](Documentation~/Wiki.en/01-Overview.md): purpose and overall flow
-- [02-Implementations.md](Documentation~/Wiki.en/02-Implementations.md): implementation structure
-- [02.1-Tag-Flow.md](Documentation~/Wiki.en/02.1-Tag-Flow.md): tag-linking flow
-- [02.2-Export-Pipeline.md](Documentation~/Wiki.en/02.2-Export-Pipeline.md): export pipeline
-- [02.3-Handle-Lifecycle.md](Documentation~/Wiki.en/02.3-Handle-Lifecycle.md): handle lifecycle
-- [03-Object-Diagram.md](Documentation~/Wiki.en/03-Object-Diagram.md): object relationship diagram
-- [04-Usage.md](Documentation~/Wiki.en/04-Usage.md): usage examples and call guidelines
+- [01-Overview.md](docs/Wiki.en/01-Overview.md): purpose and overall flow
+- [02-Implementations.md](docs/Wiki.en/02-Implementations.md): implementation structure
+- [02.1-Tag-Flow.md](docs/Wiki.en/02.1-Tag-Flow.md): tag-linking flow
+- [02.2-Export-Pipeline.md](docs/Wiki.en/02.2-Export-Pipeline.md): export pipeline
+- [02.3-Handle-Lifecycle.md](docs/Wiki.en/02.3-Handle-Lifecycle.md): handle lifecycle
+- [03-Object-Diagram.md](docs/Wiki.en/03-Object-Diagram.md): object relationship diagram
+- [04-Usage.md](docs/Wiki.en/04-Usage.md): usage examples and call guidelines
 
-Korean documentation is available in `Documentation~/Wiki.ko`.
+Korean documentation is available in `docs/Wiki.ko`.
 
 ## Tests
 
-Test code is in the `Tests` folder and uses Unity Test Framework with NUnit.
+Test code is in `tests/BlackThunder.BlackboxSystem.Tests` and uses NUnit.
 
-Test planning documents are in `Documentation~/Tests.en`; Korean documents are in `Documentation~/Tests.ko`.
+The test project source-links both the Blackbox runtime and the sibling UniTest runtime so its compile-time feature symbols apply to both codebases.
 
-To run tests in Unity, use an Editor test environment where `BLACKBOX_TESTS` and `UNITY_INCLUDE_TESTS` are enabled. Add `BLACKBOX` too when the Unity `UseBlackbox` startup default should be enabled. If the package is used as a separated package, also check the Unity project's testables settings and test asmdef settings.
+```powershell
+dotnet test tests/BlackThunder.BlackboxSystem.Tests/BlackThunder.BlackboxSystem.Tests.csproj
+```
 
-To verify UniTest-based table-flow tests outside Unity, keep the sibling `Packages/com.blackthunder.unitest` package available and use `Tests/ExternalNUnitExecutor~/ExternalNUnitExecutor.csproj`.
+Test planning documents are in `docs/Tests.en`; Korean documents are in `docs/Tests.ko`.
 
 ## License
 

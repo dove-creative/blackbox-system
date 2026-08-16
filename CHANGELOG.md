@@ -4,6 +4,14 @@ This file records public changes to Blackbox.
 
 The format follows Keep a Changelog, and version numbers follow Semantic Versioning.
 
+## [Unreleased]
+
+### Changed
+
+- Converted the active library, tests, samples, and documentation to a .NET-only repository layout.
+- Changed the library target to `netstandard2.1` and the tests and console sample to `net9.0`.
+- Removed the Unity package metadata, assemblies, assets, and editor-only log exporter.
+
 ## [0.1.1] - 2026-06-17
 
 ### Added
