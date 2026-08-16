@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <Nullable>disable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <IsTestProject>true</IsTestProject>
+    <DefineConstants>$(DefineConstants);BLACKBOX_TESTS;UNITEST;UNITEST_SINGLETHREAD</DefineConstants>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="..\..\src\BlackThunder.BlackboxSystem\**\*.cs" LinkBase="Blackbox\Runtime" />
+    <Compile Include="*.cs" LinkBase="Blackbox\Tests" />
+    <Compile Include="UniTest\*.cs" LinkBase="Blackbox\Tests\UniTest" />
+    <Compile Include="..\..\..\unitest\src\UniTest\Node.cs" LinkBase="UniTest" />
+    <Compile Include="..\..\..\unitest\src\UniTest\TestCase.cs" LinkBase="UniTest" />
+    <Compile Include="..\..\..\unitest\src\UniTest\Infrastructure\*.cs" LinkBase="UniTest\Infrastructure" />
+    <Compile Include="..\..\..\unitest\src\UniTest\Lab\*.cs" LinkBase="UniTest\Lab" />
+    <Compile Include="..\..\..\unitest\src\UniTest\Model\*.cs" LinkBase="UniTest\Model" />
+    <Compile Include="..\..\..\unitest\src\UniTest\Project\*.cs" LinkBase="UniTest\Project" />
+    <Compile Include="..\..\..\unitest\src\UniTest\Tools\LabExtensions.cs" LinkBase="UniTest\Tools" />
+    <Compile Include="..\..\..\unitest\src\UniTest\Tools\NodeExtensions.cs" LinkBase="UniTest\Tools" />
+    <PackageReference Include="NUnit" Version="3.14.0" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.6.0" />
+    <PackageReference Include="NUnit3TestAdapter" Version="6.2.0" />
+  </ItemGroup>
+</Project>

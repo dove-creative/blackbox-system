@@ -2,11 +2,11 @@
 
 [English README](README.md)
 
-Blackbox는 객체별 활동, 실행 스코프, 객체 간 상호작용을 기록하고 나중에 연결된 로그로 다시 읽기 위한 Unity/C# 추적 프레임워크이다.
+Blackbox는 객체별 활동, 실행 스코프, 객체 간 상호작용을 기록하고 나중에 연결된 로그로 다시 읽기 위한 .NET 추적 프레임워크이다.
 
 일반 로그가 한 시점의 메시지를 남기는 데 집중한다면, Blackbox는 '이 객체가 어떤 과정을 거쳤는가'와 '그 과정에서 어떤 객체와 연결되었는가'를 함께 남긴다.
 
-<img src="Documentation~/Images/blackbox-html-export.png" alt="Blackbox HTML export preview" width="900">
+<img src="docs/Images/blackbox-html-export.png" alt="Blackbox HTML export preview" width="900">
 
 ## 시작하기 전에
 
@@ -27,49 +27,11 @@ Blackbox를 사용해 주셔서 감사합니다.
 
 ## 설치
 
-Blackbox는 Unity 프로젝트에서는 Unity 패키지로 사용할 수 있고, 네이티브 C# 프로젝트에서는 런타임 소스를 직접 포함해 사용할 수 있다.
-
-### Unity에서 사용
-
-Unity에서는 Package Manager 설치와 폴더형 패키지 설치를 모두 사용할 수 있다.
-
-#### Package Manager로 설치
-
-1. Unity에서 `Window > Package Manager`를 연다.
-2. 왼쪽 위 `+` 버튼을 누른 뒤 `Add package from git URL...`을 선택한다.
-3. 아래 URL을 입력하고 `Add`를 누른다.
-
-```text
-https://github.com/dove-creative/blackbox-system.git
-```
-
-#### 폴더로 직접 설치
-
-1. 이 폴더를 Unity 프로젝트의 `Packages/com.blackthunder.blackbox-system` 위치에 둔다.
-
-#### 설치 후 설정
-
-1. 실행 초기에 로그 출력 위치를 설정한다.
-
-```csharp
-BlackboxHandle.Configure(
-	logDirectory: Path.Combine(Application.persistentDataPath, "BlackboxLogs"),
-	logger: Debug.Log);
-```
-
-Unity에서 `BLACKBOX` 심볼은 `BlackboxHandle.UseBlackbox`의 시작 기본값만 정한다. 심볼 유무와 관계없이 동일한 런타임 API를 사용하며, 이 심볼이 없으면 Unity는 기록이 꺼진 상태에서 시작한다. 기록을 활성화하려면 Player Settings의 Scripting Define Symbols에 `BLACKBOX`를 추가하거나, 실행 초기에 `BlackboxHandle.UseBlackbox = true`를 설정한다.
-
-기록을 일시적으로 멈추고 싶다면 `BlackboxHandle.UseBlackbox = false`를 설정하거나 `Configure(..., useBlackbox: UseBlackboxOption.DoNotUse)`를 사용한다. 이 런타임 스위치가 꺼져 있으면 `BlackboxHandle.Of(subject)`는 유효하지 않은 핸들을 반환하고, 기록 호출은 no-op 또는 기본값 반환으로 빠진다.
-
-### 네이티브 C#에서 사용
-
-현재 별도 NuGet 패키지는 제공하지 않는다. 네이티브 C# 프로젝트에서는 이 패키지 폴더를 소스 의존성으로 두고, `Runtime/**/*.cs` 파일을 컴파일에 포함한다.
+현재 별도 NuGet 패키지는 제공하지 않는다. 이 저장소를 로컬 의존성이나 서브모듈로 둔 뒤 라이브러리 프로젝트를 참조한다.
 
 ```xml
 <ItemGroup>
-  <Compile
-    Include="path/to/com.blackthunder.blackbox-system/Runtime/**/*.cs"
-    LinkBase="Blackbox/Runtime" />
+  <ProjectReference Include="path/to/blackbox-system/src/BlackThunder.BlackboxSystem/BlackThunder.BlackboxSystem.csproj" />
 </ItemGroup>
 ```
 
@@ -81,7 +43,7 @@ BlackboxHandle.Configure(
 	logger: Console.WriteLine);
 ```
 
-네이티브 C#에서는 Unity 전용 `BLACKBOX` 심볼을 사용하지 않으므로 기본 기록 상태가 켜져 있다. 실행 중 기록을 멈추고 싶다면 `BlackboxHandle.UseBlackbox = false`를 설정하거나 `Configure(..., useBlackbox: UseBlackboxOption.DoNotUse)`를 사용한다.
+기본 기록 상태는 켜져 있다. 실행 중 기록을 멈추고 싶다면 `BlackboxHandle.UseBlackbox = false`를 설정하거나 `Configure(..., useBlackbox: UseBlackboxOption.DoNotUse)`를 사용한다. 이 런타임 스위치가 꺼져 있으면 `BlackboxHandle.Of(subject)`는 유효하지 않은 핸들을 반환하고, 기록 호출은 no-op 또는 기본값 반환으로 빠진다.
 
 ## 빠른 시작
 
@@ -121,17 +83,12 @@ public class Loader
 - `worker.Load()` 호출에 대한 양쪽 상호작용 기록
 - `ExportLogs()` 호출 시 `Loader`를 중심으로 연결된 로그 출력
 
-### Unity 샘플 실행
+### C# 샘플 실행
 
-Unity Package Manager의 `Samples`에서 `Unity Usage`를 import한 뒤 `BlackboxUsageSample` 씬을 연다. 실행 후 화면의 버튼으로 `Write`, `Exert`, `Tag`, `Exception` 샘플을 각각 실행할 수 있다.
-
-### 네이티브 C# 샘플 실행
-
-네이티브 C#에서는 `Samples~/NativeCSharp` 콘솔 샘플을 실행해 Unity API 없이 같은 기록 흐름을 확인할 수 있다.
+`samples/Blackbox.NativeCSharp.Samples` 콘솔 샘플에서 기록 흐름을 확인할 수 있다.
 
 ```powershell
-cd Samples~/NativeCSharp
-dotnet run --project Blackbox.NativeCSharp.Samples.csproj
+dotnet run --project samples/Blackbox.NativeCSharp.Samples/Blackbox.NativeCSharp.Samples.csproj
 ```
 
 실행 후 `sample>` 프롬프트에서 `write`, `exert`, `tag`, `exception` 중 하나를 입력한다. 빈 입력은 다시 입력을 기다리고, `exit`를 입력하면 종료한다.
@@ -154,27 +111,29 @@ dotnet run --project Blackbox.NativeCSharp.Samples.csproj
 
 ## 문서
 
-자세한 설명은 `Documentation~/Wiki.ko` 폴더에 있다.
+자세한 설명은 `docs/Wiki.ko` 폴더에 있다.
 
-- [01-Overview.md](Documentation~/Wiki.ko/01-Overview.md): 기능의 목적과 큰 흐름
-- [02-Implementations.md](Documentation~/Wiki.ko/02-Implementations.md): 전체 구현 구조
-- [02.1-Tag-Flow.md](Documentation~/Wiki.ko/02.1-Tag-Flow.md): 태그 연결 흐름
-- [02.2-Export-Pipeline.md](Documentation~/Wiki.ko/02.2-Export-Pipeline.md): 출력 파이프라인
-- [02.3-Handle-Lifecycle.md](Documentation~/Wiki.ko/02.3-Handle-Lifecycle.md): 핸들 생명주기
-- [03-Object-Diagram.md](Documentation~/Wiki.ko/03-Object-Diagram.md): 객체 관계 다이어그램
-- [04-Usage.md](Documentation~/Wiki.ko/04-Usage.md): 사용 예시와 호출 기준
+- [01-Overview.md](docs/Wiki.ko/01-Overview.md): 기능의 목적과 큰 흐름
+- [02-Implementations.md](docs/Wiki.ko/02-Implementations.md): 전체 구현 구조
+- [02.1-Tag-Flow.md](docs/Wiki.ko/02.1-Tag-Flow.md): 태그 연결 흐름
+- [02.2-Export-Pipeline.md](docs/Wiki.ko/02.2-Export-Pipeline.md): 출력 파이프라인
+- [02.3-Handle-Lifecycle.md](docs/Wiki.ko/02.3-Handle-Lifecycle.md): 핸들 생명주기
+- [03-Object-Diagram.md](docs/Wiki.ko/03-Object-Diagram.md): 객체 관계 다이어그램
+- [04-Usage.md](docs/Wiki.ko/04-Usage.md): 사용 예시와 호출 기준
 
-영어 문서는 `Documentation~/Wiki.en` 폴더에 있다.
+영어 문서는 `docs/Wiki.en` 폴더에 있다.
 
 ## 테스트
 
-테스트 코드는 `Tests` 폴더에 있으며, Unity Test Framework와 NUnit을 사용한다.
+테스트 코드는 `tests/BlackThunder.BlackboxSystem.Tests`에 있으며 NUnit을 사용한다.
 
-테스트 계획 문서는 `Documentation~/Tests.ko` 폴더에 있으며, 영어 문서는 `Documentation~/Tests.en` 폴더에 있다.
+테스트 프로젝트는 컴파일 심볼이 양쪽 코드에 동일하게 적용되도록 Blackbox 런타임과 형제 UniTest 런타임 소스를 링크한다.
 
-Unity에서 테스트를 실행하려면 `BLACKBOX_TESTS`, `UNITY_INCLUDE_TESTS` 심볼이 활성화된 Editor 테스트 환경을 사용한다. Unity에서 `UseBlackbox` 시작 기본값도 함께 켜려면 `BLACKBOX` 심볼을 추가한다. 패키지 형태로 분리해 사용하는 경우, Unity 프로젝트의 testables 설정이나 테스트 asmdef 설정도 함께 확인한다.
+```powershell
+dotnet test tests/BlackThunder.BlackboxSystem.Tests/BlackThunder.BlackboxSystem.Tests.csproj
+```
 
-UniTest 기반 테이블 흐름 테스트를 Unity 밖에서 확인하려면 sibling 패키지인 `Packages/com.blackthunder.unitest`를 함께 둔 뒤 `Tests/ExternalNUnitExecutor~/ExternalNUnitExecutor.csproj`를 사용한다.
+테스트 계획 문서는 `docs/Tests.ko` 폴더에 있으며, 영어 문서는 `docs/Tests.en` 폴더에 있다.
 
 ## 라이선스
 
