@@ -6,8 +6,18 @@ The format follows Keep a Changelog, and version numbers follow Semantic Version
 
 ## [Unreleased]
 
+## [0.1.2] - 2026-10-15
+
+### Added
+
+- Added NuGet package metadata for `BlackThunder.BlackboxSystem`, including the MIT license, README, and source repository commit.
+- Added an explicit local NuGet feed for pinned framework release packages and their provenance records.
+
 ### Changed
 
+- Changed Blackbox tests to consume `BlackThunder.UniTest` `0.2.0` as a private, exact-version package dependency instead of linking sibling source files.
+- Selected `ExecutionMode.Inline` for the Blackbox table project while preserving `BLACKBOX_TESTS` exporter hooks.
+- Excluded generated `bin` and `obj` files from the Blackbox runtime sources compiled by its tests.
 - Converted the active library, tests, samples, and documentation to a .NET-only repository layout.
 - Changed the library target to `netstandard2.1` and the tests and console sample to `net9.0`.
 - Removed the Unity package metadata, assemblies, assets, and editor-only log exporter.

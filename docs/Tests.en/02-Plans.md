@@ -8,8 +8,8 @@ Blackbox is a POCO-centered recording framework, so tests run as pure NUnit test
 
 - Write test code in `tests/BlackThunder.BlackboxSystem.Tests`.
 - Run `dotnet test tests/BlackThunder.BlackboxSystem.Tests/BlackThunder.BlackboxSystem.Tests.csproj` from the repository root.
-- The `BlackThunder.BlackboxSystem.Tests` assembly references the `BlackThunder.BlackboxSystem` assembly, and verifies internal types through `InternalsVisibleTo("BlackThunder.BlackboxSystem.Tests")` in `AssemblyInfo.cs`.
-- The test project source-links Blackbox and sibling UniTest runtime sources and compiles them with `BLACKBOX_TESTS`, `UNITEST`, and `UNITEST_SINGLETHREAD`.
+- The test project source-links Blackbox runtime sources and compiles them with `BLACKBOX_TESTS` for exporter hooks and internal-type verification.
+- UniTest is pinned to the stable `BlackThunder.UniTest` package at exactly version `0.2.0`. `BlackboxTableProject` selects `ExecutionMode.Inline` to preserve the existing execution behavior around global Blackbox state.
 - NUnit 3.14.0 is the test API contract for this project.
 - Recording-disabled fallback behavior is verified through the `UseBlackbox=false` runtime setting, not through a separate build axis.
 

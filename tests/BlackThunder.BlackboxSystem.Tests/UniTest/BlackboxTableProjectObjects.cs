@@ -15,6 +15,7 @@ namespace BlackThunder.BlackboxSystem.Tests
         public string Name { get; private set; }
 
         public BlackboxTableProject(string name, bool continuous, int continuousSeed, IReadOnlyList<TableScenario> scenarios)
+            : base(UniTest.ExecutionMode.Inline)
         {
             Name = name;
             _continuous = continuous;

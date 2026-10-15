@@ -27,13 +27,15 @@ Thank you for using Blackbox.
 
 ## Installation
 
-There is no separate NuGet package yet. Add this repository as a local dependency or submodule, then reference the library project.
+Consumers reference a pinned stable release of `BlackThunder.BlackboxSystem`. Register the directory containing the released `.nupkg` as a NuGet feed before restoring it.
 
 ```xml
 <ItemGroup>
-  <ProjectReference Include="path/to/blackbox-system/src/BlackThunder.BlackboxSystem/BlackThunder.BlackboxSystem.csproj" />
+  <PackageReference Include="BlackThunder.BlackboxSystem" Version="[0.1.2]" />
 </ItemGroup>
 ```
+
+Samples in the Blackbox development repository use a `ProjectReference` to the current library project. The runtime library has no dependency on UniTest.
 
 Configure the log output location and logger early in execution.
 
@@ -127,7 +129,9 @@ Korean documentation is available in `docs/Wiki.ko`.
 
 Test code is in `tests/BlackThunder.BlackboxSystem.Tests` and uses NUnit.
 
-The test project source-links both the Blackbox runtime and the sibling UniTest runtime so its compile-time feature symbols apply to both codebases.
+The test project compiles Blackbox runtime sources with `BLACKBOX_TESTS` for exporter hooks and references the stable `BlackThunder.UniTest` package at version `0.2.0`. `BlackboxTableProject` selects `ExecutionMode.Inline` to preserve the existing execution behavior around global Blackbox state.
+
+The root `NuGet.config` uses the `packages/` local feed and nuget.org. `packages/` contains the pinned UniTest release package and its provenance record, and the framework package IDs map exclusively to the local feed. General restore caches and `bin/obj` remain outside version control.
 
 ```powershell
 dotnet test tests/BlackThunder.BlackboxSystem.Tests/BlackThunder.BlackboxSystem.Tests.csproj

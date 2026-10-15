@@ -14,9 +14,11 @@ Blackbox uses an SDK-style .NET solution.
 Basic checklist:
 
 - Install a .NET 9 SDK.
-- Keep the sibling `unitest` repository available when building the Blackbox test project.
+- Restore the pinned `BlackThunder.UniTest` `0.2.0` package from the checked-in `packages/` local feed when building the Blackbox test project.
 - Restore and build `BlackThunder.BlackboxSystem.sln` from the repository root.
 - The library remains dependency-free and targets `netstandard2.1`.
+
+Consumers pin stable `BlackThunder.BlackboxSystem` packages. Blackbox's own sample keeps its `ProjectReference` so development builds use the current source. The checked-in `packages/` directory is limited to immutable release packages and their provenance records; general NuGet caches and generated build output are not committed. The root `NuGet.config` maps framework package IDs to this local feed and restores third-party dependencies from nuget.org.
 
 ## Code Style
 
@@ -38,7 +40,7 @@ Run the applicable verification for the changed area.
 
 - Documentation-only changes: check links, terminology, line endings, and trailing whitespace.
 - Code changes: run `dotnet test tests/BlackThunder.BlackboxSystem.Tests/BlackThunder.BlackboxSystem.Tests.csproj`.
-- UniTest table-flow changes: run the same test project and confirm the sibling UniTest source links resolve.
+- UniTest table-flow changes: run the same test project against the pinned package; `BlackboxTableProject` uses `ExecutionMode.Inline` to preserve its global-state execution contract.
 - Output or file-generation changes: verify both text and HTML output.
 - Changes to recording disable behavior: also verify fallback behavior with `UseBlackbox = false`.
 

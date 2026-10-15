@@ -8,8 +8,8 @@ Blackbox는 POCO 중심의 기록 프레임워크이므로, 테스트는 .NET에
 
 - 테스트 코드는 `tests/BlackThunder.BlackboxSystem.Tests`에 작성한다.
 - 저장소 루트에서 `dotnet test tests/BlackThunder.BlackboxSystem.Tests/BlackThunder.BlackboxSystem.Tests.csproj`를 실행한다.
-- `BlackThunder.BlackboxSystem.Tests` assembly는 `BlackThunder.BlackboxSystem` assembly를 참조하고, `AssemblyInfo.cs`의 `InternalsVisibleTo("BlackThunder.BlackboxSystem.Tests")`를 통해 internal 타입을 검증한다.
-- 테스트 프로젝트는 Blackbox와 형제 UniTest 런타임 소스를 링크하고 `BLACKBOX_TESTS`, `UNITEST`, `UNITEST_SINGLETHREAD`로 함께 컴파일한다.
+- 테스트 프로젝트는 exporter hook을 위해 Blackbox 런타임 소스를 링크하고 `BLACKBOX_TESTS`로 컴파일하여 internal 타입도 검증한다.
+- UniTest는 `BlackThunder.UniTest` 안정 버전 `0.2.0` 패키지를 정확히 고정하여 참조한다. `BlackboxTableProject`는 `ExecutionMode.Inline`을 선택하여 전역 Blackbox 상태를 사용하는 기존 실행 방식을 유지한다.
 - NUnit 3.14.0을 이 프로젝트의 테스트 API 계약으로 사용한다.
 - 기록 비활성 fallback 동작은 별도 빌드 축이 아니라 `UseBlackbox=false` 런타임 설정으로 확인한다.
 

@@ -27,13 +27,15 @@ Blackbox를 사용해 주셔서 감사합니다.
 
 ## 설치
 
-현재 별도 NuGet 패키지는 제공하지 않는다. 이 저장소를 로컬 의존성이나 서브모듈로 둔 뒤 라이브러리 프로젝트를 참조한다.
+소비 프로젝트는 안정 배포본 `BlackThunder.BlackboxSystem`의 버전을 고정하여 참조한다. 배포된 `.nupkg`를 보관한 폴더를 NuGet 피드로 등록한 뒤 사용한다.
 
 ```xml
 <ItemGroup>
-  <ProjectReference Include="path/to/blackbox-system/src/BlackThunder.BlackboxSystem/BlackThunder.BlackboxSystem.csproj" />
+  <PackageReference Include="BlackThunder.BlackboxSystem" Version="[0.1.2]" />
 </ItemGroup>
 ```
+
+Blackbox 자체를 개발하는 저장소의 샘플은 현재 라이브러리 프로젝트를 `ProjectReference`로 참조한다. 런타임 라이브러리는 UniTest에 의존하지 않는다.
 
 실행 초기에 로그 출력 위치와 로거를 설정한다.
 
@@ -127,7 +129,9 @@ dotnet run --project samples/Blackbox.NativeCSharp.Samples/Blackbox.NativeCSharp
 
 테스트 코드는 `tests/BlackThunder.BlackboxSystem.Tests`에 있으며 NUnit을 사용한다.
 
-테스트 프로젝트는 컴파일 심볼이 양쪽 코드에 동일하게 적용되도록 Blackbox 런타임과 형제 UniTest 런타임 소스를 링크한다.
+테스트 프로젝트는 exporter hook을 위해 Blackbox 런타임 소스를 `BLACKBOX_TESTS`로 컴파일하고, UniTest는 `BlackThunder.UniTest` 안정 버전 `0.2.0` 패키지를 참조한다. `BlackboxTableProject`는 `ExecutionMode.Inline`을 선택하여 전역 Blackbox 상태를 사용하는 기존 실행 방식을 유지한다.
+
+루트 `NuGet.config`는 `packages/` 로컬 피드와 nuget.org를 사용한다. `packages/`에는 고정된 UniTest 배포 패키지와 출처 기록을 보관하며, 자체 패키지 ID는 로컬 피드에만 매핑한다. 일반 복원 캐시와 `bin/obj`는 저장소에 포함하지 않는다.
 
 ```powershell
 dotnet test tests/BlackThunder.BlackboxSystem.Tests/BlackThunder.BlackboxSystem.Tests.csproj
