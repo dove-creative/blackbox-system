@@ -42,9 +42,9 @@ internal static class ScalabilityBenchmarks
         }
     }
 
-    internal static void RunRetention(bool cleanupEachBatch = true)
+    internal static void RunRetention(bool cleanupEachBatch = true, int maxLogCount = 100)
     {
-        Configure();
+        Configure(maxLogCount);
         // Warm runtime metadata and reflection separately from the retained-heap baseline.
         Churn(1_000);
         CountTrackers();
@@ -68,6 +68,8 @@ internal static class ScalabilityBenchmarks
         }
         if (!cleanupEachBatch)
         {
+            // With no new registrations or export, another GC cannot unlink registry entries.
+            PrintRetention("after_idle_gc", batches * 100_000, HeapAfterCollection(), baseline);
             // Model a long-lived default session with neither exports nor explicit maintenance.
             // Observe all six batches first; only then separate registry retention from tracker retention.
             BlackboxSession.CurrentState.Subjects.Cleanup();
@@ -77,11 +79,11 @@ internal static class ScalabilityBenchmarks
         PrintRetention("after_reset", batches * 100_000, HeapAfterCollection(), baseline);
     }
 
-    private static void Configure()
+    private static void Configure(int maxLogCount = 100)
     {
         BlackboxHandle.Configure(null, (Action<string>)null, openLogOption: OpenLogOption.Never,
             useBlackbox: UseBlackboxOption.Use);
-        BlackboxHandle.MaxLogCount = 100;
+        BlackboxHandle.MaxLogCount = maxLogCount;
     }
 
     [MethodImpl(MethodImplOptions.NoInlining)]

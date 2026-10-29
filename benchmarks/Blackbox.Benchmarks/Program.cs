@@ -8,10 +8,11 @@ if (args.Length != 0)
     switch (args[0])
     {
         case "--scopes": ScalabilityBenchmarks.RunScopes(); break;
-        case "--retention": ScalabilityBenchmarks.RunRetention(); break;
-        case "--retention-unmaintained": ScalabilityBenchmarks.RunRetention(cleanupEachBatch: false); break;
+        case "--retention": ScalabilityBenchmarks.RunRetention(maxLogCount: args.Length > 1 ? int.Parse(args[1]) : 100); break;
+        case "--retention-unmaintained": ScalabilityBenchmarks.RunRetention(cleanupEachBatch: false, maxLogCount: args.Length > 1 ? int.Parse(args[1]) : 100); break;
         case "--lookup": LookupBenchmark.Run(); break;
-        default: throw new ArgumentException("Expected --scopes, --retention, --retention-unmaintained or --lookup, or no argument for the original benchmark.");
+        case "--registration": RegistrationBenchmark.Run(); break;
+        default: throw new ArgumentException("Expected --scopes, --retention [maxLogCount], --retention-unmaintained [maxLogCount], --lookup or --registration, or no argument for the original benchmark.");
     }
     return;
 }

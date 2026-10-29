@@ -15,6 +15,7 @@ namespace BlackThunder.BlackboxSystem
 
     internal sealed class SubjectStore
     {
+        private const int CleanupBucketsPerInsertion = 16;
         private sealed class Node
         {
             internal readonly int Hash;
@@ -24,6 +25,10 @@ namespace BlackThunder.BlackboxSystem
         }
         private readonly Node[] _buckets;
         private readonly SessionState _state;
+        private int _cleanupCursor;
+#if BLACKBOX_TESTS
+        internal Action<int> BeforeCleanupPublish;
+#endif
         internal SubjectStore(SessionState state, int capacity)
         {
             if (capacity < 1 || (capacity & (capacity - 1)) != 0) throw new ArgumentOutOfRangeException(nameof(capacity));
@@ -54,7 +59,11 @@ namespace BlackThunder.BlackboxSystem
                         head = cleaned;
                     }
                     created ??= new Blackbox(subject, _state.Settings.StrongReference, _state);
-                    if (ReferenceEquals(Interlocked.CompareExchange(ref slot, new Node(hash, created, head), head), head)) return created;
+                    if (ReferenceEquals(Interlocked.CompareExchange(ref slot, new Node(hash, created, head), head), head))
+                    {
+                        CleanupNextBuckets();
+                        return created;
+                    }
                 }
             }
             finally { GC.KeepAlive(subject); }
@@ -80,12 +89,26 @@ namespace BlackThunder.BlackboxSystem
         }
         internal void Cleanup()
         {
-            for (int i = 0; i < _buckets.Length; i++)
-            {
-                var head = Volatile.Read(ref _buckets[i]);
-                var cleaned = RemoveDead(head);
-                if (!ReferenceEquals(cleaned, head)) Interlocked.CompareExchange(ref _buckets[i], cleaned, head);
-            }
+            for (int i = 0; i < _buckets.Length; i++) CleanupBucket(i);
+        }
+        private void CleanupNextBuckets()
+        {
+            // Reserve a disjoint range once per successful insertion, never for a hit or CAS retry.
+            // Overflow only wraps the cursor; masking still visits every bucket on each lap.
+            int count = Math.Min(CleanupBucketsPerInsertion, _buckets.Length);
+            int first = unchecked(Interlocked.Add(ref _cleanupCursor, count) - count);
+            for (int i = 0; i < count; i++) CleanupBucket(unchecked(first + i) & (_buckets.Length - 1));
+        }
+        private void CleanupBucket(int index)
+        {
+            var head = Volatile.Read(ref _buckets[index]);
+            var cleaned = RemoveDead(head);
+            if (ReferenceEquals(cleaned, head)) return;
+#if BLACKBOX_TESTS
+            BeforeCleanupPublish?.Invoke(index);
+#endif
+            // An insertion or another cleaner won: leave its chain intact and try on a later lap.
+            Interlocked.CompareExchange(ref _buckets[index], cleaned, head);
         }
         private static Node RemoveDead(Node head)
         {

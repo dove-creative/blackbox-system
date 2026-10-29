@@ -101,3 +101,55 @@ The original tracker count grew from 200,000 to 1,200,000. After the single fina
 
 Raw lookup data: ignored `artifacts/scalability-lookup-{before,after}-{1,2,3}.csv`. Final per-batch cleanup data: `artifacts/scalability-retention-final.csv`.
 Data without intermediate cleanup: `artifacts/scalability-retention-unmaintained-{before,after}.csv`.
+
+## 2026-10-30: rotating dead-entry maintenance
+
+The baseline for this comparison is `c3828a9`: shared trackers, 65,536 default buckets and hash-first hits, but cleanup only in the inserted bucket or during explicit maintenance. The revised store reserves a range of 16 buckets with Interlocked after each successful new registration. Each bucket uses one cleanup CAS attempt; a losing CAS leaves the newer chain intact. Existing hits and insertion CAS retries do not advance the cursor. Explicit sessions use the same policy; tables smaller than 16 buckets visit each bucket once per insertion.
+
+Both executables use the same updated harness, Windows x64, .NET SDK 9.0.320, Release and `DOTNET_TieredCompilation=0`. Measurements run in separate processes, with no concurrent builds or tests. The baseline runtime is preserved under ignored `artifacts/subject-sweep-baseline`.
+
+### Retained log buffers
+
+`--retention-unmaintained [maxLogCount]` repeats the six batches of 100,000 discarded objects, each with one Write. It forces GC after each batch without export, full cleanup or reset between batches. A second final GC with no registrations models stopping creation; a full Subject cleanup and GC then isolates the remaining registry retention. Values below are managed-heap deltas after 600,000 objects, not process working set or a memory ceiling. Each retention configuration was measured once.
+
+| MaxLogCount | Baseline after GC, MiB | Rotating sweep after GC, MiB | After another idle GC, MiB (baseline / sweep) |
+|---|---:|---:|---:|
+| 100 | 86.82 | 10.41 | 86.82 / 10.41 |
+| 1000 | 537.87 | 23.09 | 537.87 / 23.09 |
+
+All four runs retained 32 trackers and zero live Subjects. Full Subject cleanup followed by GC reduced each heap delta to 1,400 bytes. The lower observed retention is not an immediate-GC or fixed-memory guarantee: newly dead entries remain until later registrations or explicit maintenance. A completed lap takes 4,096 new registrations in the default table, but CAS conflicts, GC timing, other references and per-context buffer sizes affect actual collection. The number of buckets per registration is bounded; chain length, cleanup time and temporary allocations are not.
+
+### Lookup and registration costs
+
+Before/after processes alternate for three rounds; tables report medians. `--lookup` uses the same 4,096-index hot subset and 2,000,000 hits described above. These fresh paired results should be compared with each other, not directly with older runs taken at different times.
+
+| Live subjects | Baseline hit, ns | Sweep hit, ns |
+|---|---:|---:|
+| 1,000 | 6.90 | 6.61 |
+| 10,000 | 9.09 | 8.48 |
+| 100,000 | 31.78 | 31.60 |
+| 400,000 | 66.86 | 65.88 |
+
+Every lookup loop allocated zero bytes. This supports comparable lookup throughput, not a claimed lookup speedup.
+
+`--registration` keeps every existing and newly registered owner alive. It preallocates owners, initializes worker threads and forces GC before timing. It then registers 32,768 subjects with one worker, or 32,760 subjects split across 24 workers. Initial population is shown below; it grows during the measurement. Timed work includes canonical box creation, identity hashing, registry insertion and the new sweep, but no Write/log buffer allocation. Start signalling and worker joins are included. Parallel values are aggregate ns/registration, not individual latency.
+
+| Initial live subjects | Baseline, 1 worker ns | Sweep, 1 worker ns | Baseline, 24 workers ns | Sweep, 24 workers ns |
+|---|---:|---:|---:|---:|
+| 1,000 | 240.86 | 394.32 | 342.38 | 784.00 |
+| 10,000 | 149.50 | 313.54 | 586.16 | 333.57 |
+| 100,000 | 331.20 | 1146.49 | 848.18 | 313.68 |
+| 400,000 | 1033.10 | 6287.68 | 761.74 | 2351.81 |
+
+Single-worker registration is measurably more expensive, especially with dense live chains: at 400,000 initial subjects it rises from about 1.03 to 6.29 microseconds. This is the cost of inspecting owners in 16 additional buckets. Allocation in this all-live workload remains approximately 384 bytes/registration on both sides; dead-entry cleanup may additionally allocate copied prefixes. The short parallel runs are noisy: at 400,000 subjects baseline ranged from 294.69 to 1054.95 ns and sweep from 779.22 to 4908.23 ns. They do not establish a parallel speedup at any population or a stable slowdown ratio.
+
+```powershell
+$env:DOTNET_TieredCompilation = '0'
+dotnet build benchmarks/Blackbox.Benchmarks -c Release
+dotnet run --project benchmarks/Blackbox.Benchmarks -c Release --no-build -- --retention-unmaintained 100
+dotnet run --project benchmarks/Blackbox.Benchmarks -c Release --no-build -- --retention-unmaintained 1000
+dotnet run --project benchmarks/Blackbox.Benchmarks -c Release --no-build -- --lookup
+dotnet run --project benchmarks/Blackbox.Benchmarks -c Release --no-build -- --registration
+```
+
+Raw CSV: ignored `artifacts/subject-sweep-retention-{before,after}-{100,1000}.csv`, `artifacts/subject-sweep-lookup-{before,after}-{1,2,3}.csv` and `artifacts/subject-sweep-registration-{before,after}-{1,2,3}.csv`.

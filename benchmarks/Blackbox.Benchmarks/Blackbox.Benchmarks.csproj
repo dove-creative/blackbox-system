@@ -10,5 +10,6 @@
     <Compile Include="Program.cs" />
     <Compile Include="ScalabilityBenchmarks.cs" />
     <Compile Include="LookupBenchmark.cs" />
+    <Compile Include="RegistrationBenchmark.cs" />
   </ItemGroup>
 </Project>

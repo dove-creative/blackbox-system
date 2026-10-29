@@ -6,11 +6,6 @@ The format follows Keep a Changelog, and version numbers follow Semantic Version
 
 ## [Unreleased]
 
-### Fixed
-
-- Bounded handle tracker ownership to 16 shared stripes per handle type in each session generation, preventing write-only object churn from retaining a tracker pair per collected context. Registration/retirement still uses full IDs and lock-free CAS.
-- Expanded the default session's subject table to 65,536 buckets (explicit sessions remain at 256). Registered lookups check hashes before dereferencing owners; dead-entry inspection and cleanup occur only after a lookup miss or during explicit maintenance.
-
 ## [0.2.0] - 2026-10-29
 
 ### Added
@@ -36,6 +31,9 @@ The format follows Keep a Changelog, and version numbers follow Semantic Version
 - Prevented stale ring slots and delayed publications from being mistaken for the current logical record.
 - Reclaimed abandoned handle slots during session retirement, including registration racing retirement and contexts collected before their session.
 - Failed ordinary exports no longer disable recording; failed crash exports can be retried with ordinary export.
+- Bounded handle tracker ownership to 16 shared stripes per handle type in each session generation, preventing write-only object churn from retaining a tracker pair per collected context. Registration/retirement still uses full IDs and lock-free CAS.
+- Expanded the default session's subject table to 65,536 buckets (explicit sessions remain at 256). Registered lookups check hashes before dereferencing owners and do not perform cleanup.
+- Added a rotating, lock-free dead-entry sweep of up to 16 buckets after each successful new Subject registration. This reduces retained log buffers during object churn without adding work to registered lookups; it does not promise immediate collection when registrations stop or a fixed heap limit.
 
 ## [0.1.2] - 2026-10-15
 
