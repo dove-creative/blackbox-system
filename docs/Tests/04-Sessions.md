@@ -31,3 +31,17 @@ dotnet test tests/BlackThunder.BlackboxSystem.Tests -c Release -p:BlackboxLockHa
 초기 샌드박스 실행은 testhost 연결 시간 초과로 중단되었다. 샌드박스 밖의 기존 코드 실행은 159개 중 158개 통과, 약한 소유자의 자동 이름 변경에 의존하던 테이블 테스트 1개 실패였다. 변경 후에는 해당 검증을 명시적 이름 계약으로 이관했다. 결과 TRX는 무시되는 `tests/BlackThunder.BlackboxSystem.Tests/TestResults/`에 저장한다.
 
 측정 가능한 처리량·할당 비용은 [벤치마크 보고서](../../benchmarks/README.md)를 참고한다. 실행 중 출력은 근사 스냅샷이므로, 모든 동시 기록의 포함이나 여러 컨텍스트를 한 순간에 읽는 원자성을 테스트 계약으로 삼지 않는다.
+
+## 후속 세션 키 진단 단계
+
+핵심 구현을 `6d08696`으로 커밋한 뒤 `CurrentKey`, `DefaultKey`, 핸들의 `SessionKey`를 별도 단계로 추가했다. 기존 API 구현은 변경하지 않고 읽기 전용 속성만 추가했다.
+
+`SessionKeyTests`의 15개 검증은 다음을 포함한다.
+
+- 세션 밖의 기본 키, Begin 후 인스턴스 키, 중첩 Dispose 후 바깥 키 복원.
+- Task.Run·새 Thread·await에서 키 상속, Begin 전에 시작한 Task와 Thread의 기본 키 유지.
+- 생성자에서 보관한 기본 세션 핸들이 다른 세션에서도 원래 저장소에 기록하는 상황.
+- 기본값 및 리셋·종료·비활성화·동결로 무효화된 핸들의 Guid.Empty, 경고 없는 조회.
+- 리셋에도 유지되는 세션 키, 공개 세션 객체 속성 부재, 10,000회 조회에서 할당 0바이트.
+
+후속 변경을 포함한 Release 전체 테스트는 **209/209** 통과했다. 새 진단 테스트는 Debug와 잠금 핸들 풀 비교 구성에서 각각 **15/15** 통과했고 건너뜀은 없었다. 라이브러리와 콘솔 샘플 Release 빌드도 경고·오류 0개로 통과했다.

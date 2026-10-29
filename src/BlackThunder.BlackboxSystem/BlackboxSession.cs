@@ -20,6 +20,10 @@ namespace BlackThunder.BlackboxSystem
         private long _exportOrdinal;
 
         public Guid SessionKey { get; } = Guid.NewGuid();
+        /// <summary>The session key bound to this execution flow, or DefaultKey when unbound.</summary>
+        public static Guid CurrentKey => CurrentState.Session.SessionKey;
+        /// <summary>The shared default session's key. This key is unchanged by ForceReset.</summary>
+        public static Guid DefaultKey => Default.SessionKey;
         internal SessionState Current => Volatile.Read(ref _current);
         internal static SessionState CurrentState => Ambient.Value?.State ?? Default.Current;
         internal long NextExportOrdinal() => Interlocked.Increment(ref _exportOrdinal);

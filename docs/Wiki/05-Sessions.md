@@ -18,6 +18,8 @@ await system.RunAsync();
 
 `Of()`와 `Construct(out handle)`로 얻은 핸들은 생성 당시 세대에 고정된다. 다른 세션에서 사용해도 이동하지 않는다. 태그와 Exert 대상도 호출한 핸들의 저장소에서 조회한다. 세션을 넘나드는 객체의 스코프 자동 병합은 제공하지 않는다.
 
+진단용 `BlackboxSession.CurrentKey`는 실행 문맥에 바인딩된 세션의 키이며, 바인딩이 없으면 `DefaultKey`다. `BlackboxHandle.SessionKey`는 유효한 핸들이 고정된 세션 키이고 `IsValid == false`이면 `Guid.Empty`다. 세 속성은 읽기 전용 값만 반환하며 잠금·할당·경고 출력 없이 읽는다. 세션 객체를 반환하는 공개 Current API는 없다. 키는 세대 번호가 아니므로 리셋되지 않으며, 이전 세대에 남은 실행 문맥의 키가 같다고 해서 기록을 계속할 수 있다는 뜻은 아니다.
+
 ## 기본 세션과 리셋
 
 명시적 바인딩이 없는 코드는 공유된 기본 세션의 현재 세대를 사용한다. `Of`, `Configure`, `ForceReset`은 이 경우 AsyncLocal 바인딩을 만들지 않는다. 따라서 기본 세션의 SetUp 설정은 이후 바인딩 없는 코드에도 보인다. 기본 세션을 변경하는 테스트는 직렬 실행한다.

@@ -39,6 +39,17 @@ Create the objects inside their test session and await/join all child work befor
 
 Handles remain bound to the session and generation in which they were acquired, including handles cached by constructors. Using such an object in another session does not move its handle. Without `Begin()`, callers use the shared default session; tests that reset or configure that default must run serially.
 
+Use `BlackboxSession.CurrentKey` and `BlackboxSession.DefaultKey` to inspect the current/default session identity. If an object's constructor cached `_bb` before `Begin()`, its valid handle still reports the default key inside the new session. Diagnose that situation with:
+
+```csharp
+if (_bb.SessionKey != BlackboxSession.CurrentKey)
+{
+    // This object was created in another session.
+}
+```
+
+These read-only `Guid` properties expose no session object and perform no locking or allocation. An invalid handle (`IsValid == false`) returns `Guid.Empty`; check validity before interpreting a mismatch. Keys identify sessions, not reset generations.
+
 `Export()` can be repeated while recording continues. `CrashExport()` freezes only its own generation and exports once; a failed crash export can be retried with ordinary `Export()`. Live exports are approximate snapshots. After all work has completed, exports contain the stable records still retained by the ring buffers. Files have a short session key and export ordinal and never overwrite an earlier export; retention is the caller's responsibility.
 
 `ForceReset()` retires the current generation. Old handles stop recording. In an explicit session, existing child execution contexts also remain in the retired generation. Unbound default callers instead follow the shared current default generation. Retirement racing a writer does not reuse its buffers: an in-flight write may finish in the old generation, while later writes are rejected. Retained handles can still export old data.

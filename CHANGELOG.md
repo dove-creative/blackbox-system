@@ -12,6 +12,7 @@ The format follows Keep a Changelog, and version numbers follow Semantic Version
 
 - Added synchronous `BlackboxSession.Begin()` with ambient session/generation binding, copied settings, nested restoration and isolated crash/reset state.
 - Added `BlackboxHandle.Label(string)` for an explicit, set-once display name without invoking Subject code.
+- Added read-only `BlackboxSession.CurrentKey`, `BlackboxSession.DefaultKey` and `BlackboxHandle.SessionKey` diagnostics without exposing session objects or allocating during reads.
 - Added deterministic retirement/publication race tests, weak-reference lifetime checks and a reproducible recording benchmark.
 
 ### Changed

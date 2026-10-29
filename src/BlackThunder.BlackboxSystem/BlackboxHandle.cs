@@ -47,6 +47,8 @@ namespace BlackThunder.BlackboxSystem
         public readonly string OwnerString => _blackbox?.OwnerString ?? InvalidHandleMessage;
         public readonly long Id => _blackbox?.Id ?? -1;
         public readonly bool IsValid => _blackbox != null && _blackbox.State.CanWrite;
+        /// <summary>The bound session's key, or Guid.Empty when IsValid is false.</summary>
+        public readonly Guid SessionKey => IsValid ? _blackbox.State.Session.SessionKey : Guid.Empty;
         internal readonly bool CanRecord => Blackbox != null;
 
         private const string InvalidHandleMessage = "[BlackboxHandle] Invalid Handle";
