@@ -55,6 +55,7 @@ namespace BlackThunder.BlackboxSystem
         }
 
         public Tag[] Tags { get; internal set; }
+        internal System.Collections.Generic.IReadOnlyDictionary<Blackbox, string> DisplayNames { get; set; }
 
         // Content ----------
         internal LogData(
@@ -96,6 +97,7 @@ namespace BlackThunder.BlackboxSystem
             TaggedBy = taggedBy;
             TagTargetTypes = tagTargetTypes;
             Tags = tags;
+            DisplayNames = null;
         }
 
         public override readonly string ToString() => LogFormatter.RenderTextLine(this, ScopeDepth);

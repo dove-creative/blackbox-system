@@ -1,6 +1,6 @@
 using System;
 using System.Text;
-using System.Text.RegularExpressions;
+using System.Collections.Generic;
 
 namespace BlackThunder.BlackboxSystem
 {
@@ -15,7 +15,7 @@ namespace BlackThunder.BlackboxSystem
 
         internal static string RenderMessage(LogData log, bool includeTagInteractionIds)
         {
-            var message = ResolveTagMessage(log.Message, log.Tags, includeTagInteractionIds);
+            var message = ResolveTagMessage(log.Message, log.Tags, includeTagInteractionIds, log.DisplayNames);
 
             if (log.IsTagged)
                 return RenderTaggedMessage(log, message, includeTagInteractionIds);
@@ -42,11 +42,11 @@ namespace BlackThunder.BlackboxSystem
             var message = RenderMessage(log);
 
             if (log.ExertedBy != null && log.ExertingTo != null)
-                return $"{prefix}{message} (#{log.ExertedBy.Id}: {log.ExertedBy.OwnerString} {Arrow(true, log.InteractionId)} #{log.Owner.Id}: this {Arrow(true, log.InteractionId)} #{log.ExertingTo.Id}: {log.ExertingTo.OwnerString})";
+                return $"{prefix}{message} ({ObjectRef(log.ExertedBy, log.DisplayNames)} {Arrow(true, log.InteractionId)} #{log.Owner.Id}: this {Arrow(true, log.InteractionId)} {ObjectRef(log.ExertingTo, log.DisplayNames)})";
             if (log.ExertedBy != null)
-                return $"{prefix}{message} (#{log.Owner.Id}: this {Arrow(false, log.InteractionId)} #{log.ExertedBy.Id}: {log.ExertedBy.OwnerString})";
+                return $"{prefix}{message} (#{log.Owner.Id}: this {Arrow(false, log.InteractionId)} {ObjectRef(log.ExertedBy, log.DisplayNames)})";
             if (log.ExertingTo != null)
-                return $"{prefix}{message} (#{log.Owner.Id}: this {Arrow(true, log.InteractionId)} #{log.ExertingTo.Id}: {log.ExertingTo.OwnerString})";
+                return $"{prefix}{message} (#{log.Owner.Id}: this {Arrow(true, log.InteractionId)} {ObjectRef(log.ExertingTo, log.DisplayNames)})";
 
             return $"{prefix}{message}";
         }
@@ -65,23 +65,23 @@ namespace BlackThunder.BlackboxSystem
             };
         }
 
-        public static string ObjectRef(Blackbox blackbox)
+        public static string ObjectRef(Blackbox blackbox, IReadOnlyDictionary<Blackbox, string> names = null)
         {
             if (blackbox == null)
                 return "null";
 
-            return $"{blackbox.OwnerString} #{blackbox.Id}";
+            return names != null && names.TryGetValue(blackbox, out var name) ? name : blackbox.DisplayName;
         }
 
-        public static string TagRef(Blackbox blackbox, long interactionId)
+        public static string TagRef(Blackbox blackbox, long interactionId, IReadOnlyDictionary<Blackbox, string> names = null)
         {
             if (blackbox == null)
                 return "null";
 
             if (interactionId < 0)
-                return $"'{ObjectRef(blackbox)}'";
+                return $"'{ObjectRef(blackbox, names)}'";
 
-            return $"'{ObjectRef(blackbox)} [{interactionId}]'";
+            return $"'{ObjectRef(blackbox, names)} [{interactionId}]'";
         }
 
         public static string Arrow(bool right, long interactionId)
@@ -94,13 +94,13 @@ namespace BlackThunder.BlackboxSystem
 
         private static string RenderTaggedMessage(LogData log, string message, bool includeTagInteractionIds)
         {
-            var targetTypes = log.TagTargetTypes.Resolve();
+            var targetTypes = log.TagTargetTypes;
             var builder = new StringBuilder("tagged");
 
             if (Has(targetTypes, TargetTypes.Name))
             {
                 builder.Append(" by ");
-                builder.Append(TagRef(log.TaggedBy, -1));
+                builder.Append(TagRef(log.TaggedBy, -1, log.DisplayNames));
             }
             else if (includeTagInteractionIds && Has(targetTypes, TargetTypes.InteractionId) && log.InteractionId >= 0)
             {
@@ -118,25 +118,32 @@ namespace BlackThunder.BlackboxSystem
             return builder.ToString();
         }
 
-        private static string ResolveTagMessage(string message, LogData.Tag[] tags, bool includeTagInteractionIds)
+        private static string ResolveTagMessage(string message, LogData.Tag[] tags, bool includeTagInteractionIds, IReadOnlyDictionary<Blackbox, string> names)
         {
             if (tags == null || tags.Length == 0)
                 return message ?? string.Empty;
 
             var usedTags = new bool[tags.Length];
-            var resolved = Regex.Replace(
-                message ?? string.Empty,
-                @"%(\d+)",
-                match =>
+            var text = message ?? string.Empty;
+            var builder = new StringBuilder(text.Length);
+            for (int position = 0; position < text.Length;)
+            {
+                if (text[position] != '%' || position + 1 == text.Length || !char.IsDigit(text[position + 1]))
                 {
-                    if (!int.TryParse(match.Groups[1].Value, out int tagIndex) || tagIndex >= tags.Length)
-                        return match.Value;
-
+                    builder.Append(text[position++]);
+                    continue;
+                }
+                int end = position + 1;
+                while (end < text.Length && char.IsDigit(text[end])) end++;
+                if (int.TryParse(text.AsSpan(position + 1, end - position - 1), out int tagIndex) && tagIndex < tags.Length)
+                {
                     usedTags[tagIndex] = true;
-                    return FormatTag(tags[tagIndex], includeTagInteractionIds);
-                });
+                    builder.Append(FormatTag(tags[tagIndex], includeTagInteractionIds, names));
+                }
+                else builder.Append(text, position, end - position);
+                position = end;
+            }
 
-            var builder = new StringBuilder(resolved);
             for (int i = 0; i < tags.Length; i++)
             {
                 if (usedTags[i])
@@ -150,7 +157,7 @@ namespace BlackThunder.BlackboxSystem
                 builder.Append("(tag %");
                 builder.Append(i);
                 builder.Append(": ");
-                builder.Append(FormatTag(tags[i], includeTagInteractionIds));
+                builder.Append(FormatTag(tags[i], includeTagInteractionIds, names));
                 builder.Append(')');
             }
 
@@ -159,8 +166,8 @@ namespace BlackThunder.BlackboxSystem
 
         private static bool IsMessageOnlyTag(LogData.Tag tag) => tag.Target != null && tag.Id < 0;
 
-        private static string FormatTag(LogData.Tag tag, bool includeTagInteractionIds) =>
-            TagRef(tag.Target, includeTagInteractionIds ? tag.Id : -1);
+        private static string FormatTag(LogData.Tag tag, bool includeTagInteractionIds, IReadOnlyDictionary<Blackbox, string> names) =>
+            TagRef(tag.Target, includeTagInteractionIds ? tag.Id : -1, names);
 
         private static bool Has(TargetTypes targetTypes, TargetTypes flag) => (targetTypes & flag) == flag;
     }

@@ -9,6 +9,7 @@ namespace BlackThunder.BlackboxSystem.Samples.NativeCSharp
     {
         public static void Run()
         {
+            using var session = BlackboxSession.Begin();
             SampleEnvironment.Configure("2-Exert");
 
             var player = new Player("Rin", 100);
@@ -33,7 +34,7 @@ namespace BlackThunder.BlackboxSystem.Samples.NativeCSharp
                 HP = hp;
 
                 // Construct starts this object's Blackbox history.
-                using var _ = BlackboxHandle.Of(this).Construct();
+                using var _ = BlackboxHandle.Of(this).Label(Name).Construct();
             }
 
             public void TakeDamage(int damage)
@@ -49,7 +50,7 @@ namespace BlackThunder.BlackboxSystem.Samples.NativeCSharp
             public void Drink(Potion potion)
             {
                 // Scope records the player's full drink flow.
-                using var _ = BlackboxHandle.Of(this).Scope($"Drink (HP={HP}, Potion={potion})");
+                using var _ = BlackboxHandle.Of(this).Scope($"Drink (HP={HP}, Potion={potion?.Name})");
                 int heal;
 
                 // Exert links this call range to the potion's own behavior.
@@ -61,8 +62,6 @@ namespace BlackThunder.BlackboxSystem.Samples.NativeCSharp
                 BlackboxHandle.Of(this).Write($"HP Change: {HP} -> {HP + heal}");
                 HP += heal;
             }
-
-            public override string ToString() => Name;
         }
 
         private class Potion
@@ -76,7 +75,7 @@ namespace BlackThunder.BlackboxSystem.Samples.NativeCSharp
                 HealAmount = healAmount;
 
                 // Construct gives the potion its own Blackbox history.
-                using var _ = BlackboxHandle.Of(this).Construct();
+                using var _ = BlackboxHandle.Of(this).Label(Name).Construct();
             }
 
             public int Drink()
@@ -91,8 +90,6 @@ namespace BlackThunder.BlackboxSystem.Samples.NativeCSharp
 
                 return healAmount;
             }
-
-            public override string ToString() => Name;
         }
     }
 }

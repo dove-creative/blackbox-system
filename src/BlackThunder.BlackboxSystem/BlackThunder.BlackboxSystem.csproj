@@ -3,7 +3,7 @@
     <TargetFramework>netstandard2.1</TargetFramework>
     <AssemblyName>BlackThunder.BlackboxSystem</AssemblyName>
     <RootNamespace>BlackThunder.BlackboxSystem</RootNamespace>
-    <Version>0.1.2</Version>
+    <Version>0.2.0</Version>
     <PackageId>BlackThunder.BlackboxSystem</PackageId>
     <Authors>dove-creative</Authors>
     <Description>Object activity, execution scope, and interaction tracing for .NET.</Description>

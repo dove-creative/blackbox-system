@@ -25,13 +25,39 @@ Thank you for using Blackbox.
 - Export: writes recorded logs to text or HTML files.
 - Runtime switch: set `BlackboxHandle.UseBlackbox` to control whether recording handles are created and logs are written.
 
+## Test sessions
+
+```csharp
+using var session = BlackboxSession.Begin();
+BlackboxHandle.Configure(logDirectory, Console.WriteLine,
+    openLogOption: OpenLogOption.Never);
+var system = new SystemUnderTest();
+await system.RunAsync();
+```
+
+Create the objects inside their test session and await/join all child work before disposing it. `Begin()` is synchronous; ordinary Task/Thread execution-context flow inherits the session. Open sessions in test bodies rather than relying on NUnit SetUp to propagate AsyncLocal values. A session copies its parent's settings and isolates its storage, crash state and resets.
+
+Handles remain bound to the session and generation in which they were acquired, including handles cached by constructors. Using such an object in another session does not move its handle. Without `Begin()`, callers use the shared default session; tests that reset or configure that default must run serially.
+
+`Export()` can be repeated while recording continues. `CrashExport()` freezes only its own generation and exports once; a failed crash export can be retried with ordinary `Export()`. Live exports are approximate snapshots. After all work has completed, exports contain the stable records still retained by the ring buffers. Files have a short session key and export ordinal and never overwrite an earlier export; retention is the caller's responsibility.
+
+`ForceReset()` retires the current generation. Old handles stop recording. In an explicit session, existing child execution contexts also remain in the retired generation. Unbound default callers instead follow the shared current default generation. Retirement racing a writer does not reuse its buffers: an in-flight write may finish in the old generation, while later writes are rejected. Retained handles can still export old data.
+
+Subject `ToString()` is never called automatically. Assign an optional name once:
+
+```csharp
+using var scope = BlackboxHandle.Of(this).Label(Name).Construct(out _bb);
+```
+
+The display is `Forest (MonsterHome #2)`, or `MonsterHome #2` without a label. The first nonblank label wins. Record changing domain state explicitly in messages. Subjects are weakly held by default; `StrongReference` keeps them alive while their Blackbox remains reachable, including through retained handles after Dispose. Internal recording and registration use no locks, but immutable log publication allocates; runtime, GC, I/O and caller-provided formatting/loggers are outside that guarantee.
+
 ## Installation
 
 Consumers reference a pinned stable release of `BlackThunder.BlackboxSystem`. Register the directory containing the released `.nupkg` as a NuGet feed before restoring it.
 
 ```xml
 <ItemGroup>
-  <PackageReference Include="BlackThunder.BlackboxSystem" Version="[0.1.2]" />
+  <PackageReference Include="BlackThunder.BlackboxSystem" Version="[0.2.0]" />
 </ItemGroup>
 ```
 
@@ -58,7 +84,7 @@ public class Loader
 {
     public Loader()
     {
-        BlackboxHandle.Of(this).Construct("Loader");
+        using var scope = BlackboxHandle.Of(this).Label("Loader").Construct();
     }
 
     public void Load(Worker worker)
@@ -100,6 +126,8 @@ The sample runs with the default `UseBlackbox = true` setting. Logs are written 
 ## Main APIs
 
 - `BlackboxHandle.Of(subject)`: gets the recording entry point for the target object.
+- `BlackboxSession.Begin()`: begins an isolated test/debug session.
+- `Label(name)`: assigns the first nonblank display label and returns the same handle.
 - `Write(message)`: records a one-line activity log.
 - `Write(message).With(targets)`: attaches related targets to an activity log.
 - `Scope(message)`: records a scope-start log and returns a `ScopeHandle`.
@@ -109,21 +137,11 @@ The sample runs with the default `UseBlackbox = true` setting. Logs are written 
 - `WriteError(message)`: records an error message and returns the same string.
 - `Export(...)`: writes log files centered on the current object.
 - `CrashExport(...)`: records an error and creates export output in one call.
-- `ForceReset()`: clears internal state for tests or repeated experiments.
+- `ForceReset()`: replaces the current session's generation and invalidates its old recording handles.
 
 ## Documentation
 
-Detailed documentation is available in `docs/Wiki.en`.
-
-- [01-Overview.md](docs/Wiki.en/01-Overview.md): purpose and overall flow
-- [02-Implementations.md](docs/Wiki.en/02-Implementations.md): implementation structure
-- [02.1-Tag-Flow.md](docs/Wiki.en/02.1-Tag-Flow.md): tag-linking flow
-- [02.2-Export-Pipeline.md](docs/Wiki.en/02.2-Export-Pipeline.md): export pipeline
-- [02.3-Handle-Lifecycle.md](docs/Wiki.en/02.3-Handle-Lifecycle.md): handle lifecycle
-- [03-Object-Diagram.md](docs/Wiki.en/03-Object-Diagram.md): object relationship diagram
-- [04-Usage.md](docs/Wiki.en/04-Usage.md): usage examples and call guidelines
-
-Korean documentation is available in `docs/Wiki.ko`.
+See the [0.2.0 session and recording contract](docs/Wiki/05-Sessions.md) for lifecycle, default-session, lock-free recording and export details (Korean).
 
 ## Tests
 
@@ -137,7 +155,7 @@ The root `NuGet.config` uses the `packages/` local feed and nuget.org. `packages
 dotnet test tests/BlackThunder.BlackboxSystem.Tests/BlackThunder.BlackboxSystem.Tests.csproj
 ```
 
-Test planning documents are in `docs/Tests.en`; Korean documents are in `docs/Tests.ko`.
+See the [session validation report](docs/Tests/04-Sessions.md) and [recording benchmark](benchmarks/README.md).
 
 ## License
 

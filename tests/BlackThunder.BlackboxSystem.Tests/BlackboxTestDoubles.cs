@@ -6,6 +6,7 @@ using NUnit.Framework;
 
 namespace BlackThunder.BlackboxSystem.Tests
 {
+    [NonParallelizable]
     internal abstract class BlackboxTestBase
     {
         [SetUp]
@@ -27,6 +28,7 @@ namespace BlackThunder.BlackboxSystem.Tests
         public sealed class NamedOwner
         {
             private readonly string _name;
+            public string Name => _name;
 
             public NamedOwner(string name)
             {
@@ -87,8 +89,14 @@ namespace BlackThunder.BlackboxSystem.Tests
 
         public static Blackbox BlackboxFor(object owner)
         {
-            return BlackboxRegistry.GetBlackbox(owner);
+            var box = BlackboxRegistry.GetBlackbox(owner);
+            if (box != null && box.State.CanWrite) box.SetLabel(NameOf(owner));
+            return box;
         }
+
+        public static BlackboxHandle HandleFor<T>(T owner) where T : class => BlackboxHandle.Of(owner).Label(NameOf(owner));
+        private static string NameOf(object owner) => owner is NamedOwner named ? named.Name :
+            owner is global::BlackThunder.BlackboxSystem.Tests.NamedOwner table ? table.Name : null;
 
         public static List<LogData> Logs(Blackbox blackbox)
         {

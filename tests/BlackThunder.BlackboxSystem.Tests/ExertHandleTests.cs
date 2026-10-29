@@ -91,7 +91,7 @@ namespace BlackThunder.BlackboxSystem.Tests
             var target = BlackboxTestDoubles.Blackbox("target");
             var handle = source.Exert(target, "call", "Send");
             target.WriteScope("scope", "Receive");
-            Assert.That(Infrastructure.TryMarkPrinted(), Is.True);
+            Assert.That(BlackboxSession.CurrentState.TryFreeze(new CrashInfo("test", string.Empty)), Is.True);
 
             // Table 2-3 / Alive x Dispose.Printed
             handle.Dispose();

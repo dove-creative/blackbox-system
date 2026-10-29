@@ -12,29 +12,21 @@ namespace BlackThunder.BlackboxSystem.Exporters
         internal static Action<ProcessStartInfo> OpenLogProcess = startInfo => Process.Start(startInfo);
 #endif
 
-        public static void Export(Blackbox blackbox, int recursionDepth, bool isCrash, bool fullExport, bool openLog, long maxSequence = -1)
+        public static void Export(Blackbox blackbox, int recursionDepth, bool isCrash, bool fullExport, bool openLog, long maxSequence = -1, SessionSettings settings = null)
         {
-            if (string.IsNullOrWhiteSpace(Infrastructure.LogDirectory))
-                throw new InvalidOperationException($"[HtmlExporter] LogDirectory is empty.");
-
-            Directory.CreateDirectory(Infrastructure.LogDirectory);
-
+            settings ??= blackbox.State.Settings;
             var sb = new StringBuilder();
             var nodes = Tools.BuildExportGraph(blackbox, recursionDepth, fullExport, maxSequence);
 
             AppendDocumentStart(sb);
+            var crash = blackbox.State.Crash;
+            if (crash != null) sb.Append("<pre>" + HtmlEncode($"[Error] {crash.Message}\n[STACK TRACE]\n{crash.Stack}") + "</pre>");
             BuildHtml(nodes, sb);
             AppendDocumentEnd(sb);
 
-            // Save
-            var ext = ".html";
-            var fileName = $"Blackbox {Tools.TrimSmart(blackbox.OwnerString)} ({blackbox.Id}){ext}";
-            if (isCrash) fileName = "[CRASH] " + fileName;
+            var fullPath = Tools.WriteExportFile(blackbox, settings, ".html", isCrash, sb.ToString());
 
-            var fullPath = Path.Combine(Infrastructure.LogDirectory, fileName);
-            File.WriteAllText(fullPath, sb.ToString());
-
-            Infrastructure.Log($"[HtmlExporter] Exported to '{fullPath}'");
+            settings.Log($"[HtmlExporter] Exported to '{fullPath}'");
 
             if (openLog)
             {
@@ -49,7 +41,7 @@ namespace BlackThunder.BlackboxSystem.Exporters
                 }
                 catch (Exception ex)
                 {
-                    Infrastructure.Log(
+                    settings.Log(
                         $"[HtmlExporter] Failed to open the file automatically.\n{ex.ToString()}",
                         LogLevel.Warning);
                 }
@@ -67,7 +59,7 @@ namespace BlackThunder.BlackboxSystem.Exporters
                 var parent = node.ParentBlackbox;
                 sb.AppendLine($"<div class='box' id='b{current.Id}'>");
                 var parentInfo = node.HasParent ? $" <span style='color:#888'>&larr; Called by <a href='#b{parent.Id}' style='color:#888'>#{parent.Id}</a></span>" : "";
-                sb.AppendLine($"<div class='header'><div><span class='id-badge'>#{current.Id}</span> {HtmlEncode(current.OwnerString)}{parentInfo}</div></div>");
+                sb.AppendLine($"<div class='header'><div><span class='id-badge'>#{current.Id}</span> {HtmlEncode(LogFormatter.ObjectRef(current, node.Names))}{parentInfo}</div></div>");
                 sb.AppendLine("<div class='log-container'>");
 
                 foreach (var log in node.Logs)
@@ -100,12 +92,12 @@ namespace BlackThunder.BlackboxSystem.Exporters
 
                     // Interaction Links LATER
                     if (log.ExertedBy != null)
-                        AppendInteraction(sb, log.ExertedBy, false, log.InteractionId, includedBlackboxes);
+                        AppendInteraction(sb, log.ExertedBy, false, log.InteractionId, includedBlackboxes, node.Names);
 
                     if (log.ExertingTo != null)
-                        AppendInteraction(sb, log.ExertingTo, true, log.InteractionId, includedBlackboxes);
+                        AppendInteraction(sb, log.ExertingTo, true, log.InteractionId, includedBlackboxes, node.Names);
 
-                    AppendTagInteractions(sb, current, log, includedBlackboxes);
+                    AppendTagInteractions(sb, current, log, includedBlackboxes, node.Names);
 
                     sb.AppendLine("</div></div>");
                 }
@@ -119,10 +111,10 @@ namespace BlackThunder.BlackboxSystem.Exporters
             Blackbox peer,
             bool right,
             long interactionId,
-            HashSet<Blackbox> includedBlackboxes)
+            HashSet<Blackbox> includedBlackboxes, IReadOnlyDictionary<Blackbox, string> names)
         {
             var peerId = peer.Id;
-            var peerName = HtmlEncode(peer.OwnerString);
+            var peerName = HtmlEncode(LogFormatter.ObjectRef(peer, names));
             var arrow = HtmlEncode(LogFormatter.Arrow(right, interactionId));
 
             if (includedBlackboxes.Contains(peer))
@@ -154,10 +146,10 @@ namespace BlackThunder.BlackboxSystem.Exporters
             StringBuilder sb,
             Blackbox current,
             LogData log,
-            HashSet<Blackbox> includedBlackboxes)
+            HashSet<Blackbox> includedBlackboxes, IReadOnlyDictionary<Blackbox, string> names)
         {
             if (log.IsTagged && log.TaggedBy != null && log.InteractionId >= 0)
-                AppendTagInteraction(sb, log.TaggedBy, log.InteractionId, includedBlackboxes);
+                AppendTagInteraction(sb, log.TaggedBy, log.InteractionId, includedBlackboxes, names);
 
             if (log.Tags == null)
                 return;
@@ -167,7 +159,7 @@ namespace BlackThunder.BlackboxSystem.Exporters
                 if (tag.Id < 0 || tag.Target == null || tag.Target == current)
                     continue;
 
-                AppendTagInteraction(sb, tag.Target, tag.Id, includedBlackboxes);
+                AppendTagInteraction(sb, tag.Target, tag.Id, includedBlackboxes, names);
             }
         }
 
@@ -175,10 +167,10 @@ namespace BlackThunder.BlackboxSystem.Exporters
             StringBuilder sb,
             Blackbox peer,
             long interactionId,
-            HashSet<Blackbox> includedBlackboxes)
+            HashSet<Blackbox> includedBlackboxes, IReadOnlyDictionary<Blackbox, string> names)
         {
             var peerId = peer.Id;
-            var peerName = HtmlEncode(peer.OwnerString);
+            var peerName = HtmlEncode(LogFormatter.ObjectRef(peer, names));
             var label = interactionId >= 0 ? $"[{interactionId}]" : "[?]";
 
             if (includedBlackboxes.Contains(peer))

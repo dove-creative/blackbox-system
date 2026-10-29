@@ -25,13 +25,39 @@ Blackbox를 사용해 주셔서 감사합니다.
 - 출력: 기록된 로그를 텍스트 또는 HTML 파일로 내보낸다.
 - 런타임 스위치: `BlackboxHandle.UseBlackbox`로 기록 핸들 생성과 로그 저장 여부를 제어한다.
 
+## 테스트 세션
+
+```csharp
+using var session = BlackboxSession.Begin();
+BlackboxHandle.Configure(logDirectory, Console.WriteLine,
+    openLogOption: OpenLogOption.Never);
+var system = new SystemUnderTest();
+await system.RunAsync();
+```
+
+세션 안에서 객체를 만들고 모든 자식 작업을 await/join한 뒤 Dispose한다. `Begin()`은 동기 메서드이며 일반적인 Task·Thread의 실행 문맥 전파를 따라 세션이 전달된다. NUnit에서는 SetUp의 AsyncLocal 전파에 의존하지 않고 테스트 본문에서 세션을 연다. 각 세션은 부모 설정을 복사하고 저장소·크래시 동결·리셋을 격리한다.
+
+생성자에서 보관한 핸들을 포함해 모든 핸들은 획득 당시 세션과 세대에 고정된다. 객체를 다른 세션에서 사용해도 핸들이 이동하지 않는다. `Begin()` 없는 코드는 공유 기본 세션을 사용하므로 기본 세션을 리셋·설정하는 테스트는 직렬 실행한다.
+
+일반 `Export()`는 기록을 중단하지 않으며 반복할 수 있다. `CrashExport()`는 해당 세대만 동결하고 최초 한 번 출력한다. 크래시 출력 실패 후에는 일반 Export로 재시도할 수 있다. 실행 중 출력은 근사 스냅샷이며 작업 종료 뒤에는 링 버퍼에 남아 있는 안정된 기록을 출력한다. 파일명에 짧은 세션 키와 출력 일련번호를 넣어 덮어쓰지 않는다. 누적 파일 정리는 호출자가 담당한다.
+
+`ForceReset()`은 현재 세션을 새 세대로 바꾸며 기존 핸들의 기록을 거부한다. 명시적 세션의 기존 자식 실행 문맥도 이전 세대에 남는다. 바인딩 없는 기본 세션 호출은 공유된 현재 세대를 따른다. 작업과 종료가 겹쳐도 이전 버퍼를 재사용하지 않으며, 진행 중이던 기록은 이전 세대 안에서 완료될 수 있다. 보관된 핸들로 이전 기록을 출력하는 것은 가능하다.
+
+Subject의 `ToString()`을 자동 호출하지 않는다. 객체 이름은 한 번 명시한다.
+
+```csharp
+using var scope = BlackboxHandle.Of(this).Label(Name).Construct(out _bb);
+```
+
+이름이 있으면 `Forest (MonsterHome #2)`, 없으면 `MonsterHome #2`로 표시한다. 최초의 공백 아닌 이름이 유지된다. 변하는 도메인 상태는 메시지에 명시한다. 기본 Subject 참조는 약하며, `StrongReference`는 Blackbox가 도달 가능한 동안 Subject를 유지하므로 Dispose 후 보관한 핸들도 수명을 늘릴 수 있다. 내부 기록·등록에는 잠금을 사용하지 않지만 불변 로그 게시에는 할당이 필요하다. 런타임·GC·I/O·명시적 포맷팅과 외부 로거는 이 보장의 범위 밖이다.
+
 ## 설치
 
 소비 프로젝트는 안정 배포본 `BlackThunder.BlackboxSystem`의 버전을 고정하여 참조한다. 배포된 `.nupkg`를 보관한 폴더를 NuGet 피드로 등록한 뒤 사용한다.
 
 ```xml
 <ItemGroup>
-  <PackageReference Include="BlackThunder.BlackboxSystem" Version="[0.1.2]" />
+  <PackageReference Include="BlackThunder.BlackboxSystem" Version="[0.2.0]" />
 </ItemGroup>
 ```
 
@@ -58,7 +84,7 @@ public class Loader
 {
     public Loader()
     {
-        BlackboxHandle.Of(this).Construct("Loader");
+        using var scope = BlackboxHandle.Of(this).Label("Loader").Construct();
     }
 
     public void Load(Worker worker)
@@ -100,6 +126,8 @@ dotnet run --project samples/Blackbox.NativeCSharp.Samples/Blackbox.NativeCSharp
 ## 주요 API
 
 - `BlackboxHandle.Of(subject)`: 대상 객체의 기록 진입점을 얻는다.
+- `BlackboxSession.Begin()`: 격리된 테스트·디버그 세션을 시작한다.
+- `Label(name)`: 최초의 공백 아닌 이름을 저장하고 같은 핸들을 반환한다.
 - `Write(message)`: 한 줄 활동 로그를 남긴다.
 - `Write(message).With(targets)`: 활동 로그에 관련 대상을 붙인다.
 - `Scope(message)`: 스코프 시작 로그를 남기고 `ScopeHandle`을 반환한다.
@@ -109,21 +137,11 @@ dotnet run --project samples/Blackbox.NativeCSharp.Samples/Blackbox.NativeCSharp
 - `WriteError(message)`: 오류 메시지를 로그로 남기고 같은 문자열을 반환한다.
 - `Export(...)`: 현재 객체를 중심으로 로그 파일을 출력한다.
 - `CrashExport(...)`: 오류 기록과 출력 생성을 함께 수행한다.
-- `ForceReset()`: 테스트나 반복 실험용 초기화 지점에서 내부 상태를 비운다.
+- `ForceReset()`: 현재 세션을 새 세대로 교체하고 이전 핸들의 기록을 무효화한다.
 
 ## 문서
 
-자세한 설명은 `docs/Wiki.ko` 폴더에 있다.
-
-- [01-Overview.md](docs/Wiki.ko/01-Overview.md): 기능의 목적과 큰 흐름
-- [02-Implementations.md](docs/Wiki.ko/02-Implementations.md): 전체 구현 구조
-- [02.1-Tag-Flow.md](docs/Wiki.ko/02.1-Tag-Flow.md): 태그 연결 흐름
-- [02.2-Export-Pipeline.md](docs/Wiki.ko/02.2-Export-Pipeline.md): 출력 파이프라인
-- [02.3-Handle-Lifecycle.md](docs/Wiki.ko/02.3-Handle-Lifecycle.md): 핸들 생명주기
-- [03-Object-Diagram.md](docs/Wiki.ko/03-Object-Diagram.md): 객체 관계 다이어그램
-- [04-Usage.md](docs/Wiki.ko/04-Usage.md): 사용 예시와 호출 기준
-
-영어 문서는 `docs/Wiki.en` 폴더에 있다.
+[0.2.0 세션과 기록 계약](docs/Wiki/05-Sessions.md)에서 수명·기본 세션·무잠금 기록·출력 규칙을 설명한다.
 
 ## 테스트
 
@@ -137,7 +155,7 @@ dotnet run --project samples/Blackbox.NativeCSharp.Samples/Blackbox.NativeCSharp
 dotnet test tests/BlackThunder.BlackboxSystem.Tests/BlackThunder.BlackboxSystem.Tests.csproj
 ```
 
-테스트 계획 문서는 `docs/Tests.ko` 폴더에 있으며, 영어 문서는 `docs/Tests.en` 폴더에 있다.
+[세션 검증 결과](docs/Tests/04-Sessions.md)와 [성능 측정](benchmarks/README.md)을 참고한다.
 
 ## 라이선스
 

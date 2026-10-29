@@ -92,7 +92,7 @@ namespace BlackThunder.BlackboxSystem.Tests
         {
             var blackbox = BlackboxTestDoubles.Blackbox("owner");
             blackbox.Write("before", "Run");
-            Assert.That(Infrastructure.TryMarkPrinted(), Is.True);
+            Assert.That(BlackboxSession.CurrentState.TryFreeze(new CrashInfo("test", string.Empty)), Is.True);
 
             // Table 4-2 / Printed x Write
             var message = blackbox.Write("after", "Run").With();
@@ -146,30 +146,25 @@ namespace BlackThunder.BlackboxSystem.Tests
         }
 
         [Test]
-        public void OwnerStringFallsBackWhenOwnerReferenceIsLost()
+        public void ExplicitLabelRemainsWhenOwnerReferenceIsLost()
         {
             var weakCase = CreateWeakOwnerCase();
 
             BlackboxTestDoubles.ForceFullCollection();
 
             // Table 4-2 / OwnerReferenceLost x GetLogs
-            if (weakCase.WeakReference.IsAlive)
-            {
-                Assert.That(weakCase.Blackbox.OwnerString, Is.EqualTo("weak-owner"));
-                Assert.That(weakCase.Blackbox.GetLogs().Single().ToString(), Does.Contain("weak-owner"));
-                return;
-            }
-
+            Assert.That(weakCase.WeakReference.IsAlive, Is.False);
             Assert.That(weakCase.Blackbox.OwnerString, Does.Contain("weak-owner"));
-            Assert.That(weakCase.Blackbox.OwnerString, Does.Contain("Reference Lost"));
+            Assert.That(weakCase.Blackbox.OwnerString, Does.Not.Contain("Reference Lost"));
             Assert.That(weakCase.Blackbox.GetLogs().Single().ToString(), Does.Contain("weak-owner"));
         }
 
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
         private static WeakOwnerCase CreateWeakOwnerCase()
         {
             var owner = BlackboxTestDoubles.Owner("weak-owner");
             var weakReference = new System.WeakReference(owner);
-            var blackbox = BlackboxRegistry.GetBlackbox(owner);
+            var blackbox = BlackboxTestDoubles.BlackboxFor(owner);
             blackbox.ExertMessage(blackbox, "message", "Run");
             owner = null;
 

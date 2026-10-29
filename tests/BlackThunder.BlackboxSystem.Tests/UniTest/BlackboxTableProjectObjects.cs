@@ -106,7 +106,7 @@ namespace BlackThunder.BlackboxSystem.Tests
 
         public Blackbox NewBlackbox(string role)
         {
-            return BlackboxRegistry.GetBlackbox(NewOwner(role));
+            return BlackboxTestDoubles.BlackboxFor(NewOwner(role));
         }
 
         public string CreateTempDirectory()
@@ -135,6 +135,7 @@ namespace BlackThunder.BlackboxSystem.Tests
     internal sealed class NamedOwner
     {
         private readonly string _name;
+        public string Name => _name;
 
         public NamedOwner(string name)
         {

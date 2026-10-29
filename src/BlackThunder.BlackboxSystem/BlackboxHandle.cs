@@ -43,10 +43,11 @@ namespace BlackThunder.BlackboxSystem
     public partial struct BlackboxHandle
     {
         // Forwarders
-        public readonly object Owner => Blackbox?.Owner;
-        public readonly string OwnerString => Blackbox?.OwnerString ?? InvalidHandleMessage;
-        public readonly long Id => Blackbox?.Id ?? -1;
-        public readonly bool IsValid => Blackbox != null;
+        public readonly object Owner => _blackbox?.Owner;
+        public readonly string OwnerString => _blackbox?.OwnerString ?? InvalidHandleMessage;
+        public readonly long Id => _blackbox?.Id ?? -1;
+        public readonly bool IsValid => _blackbox != null && _blackbox.State.CanWrite;
+        internal readonly bool CanRecord => Blackbox != null;
 
         private const string InvalidHandleMessage = "[BlackboxHandle] Invalid Handle";
 
@@ -109,31 +110,15 @@ namespace BlackThunder.BlackboxSystem
             set => Infrastructure.TagTargetTypes = value;
         }
 
-        // Internal
-        private readonly Blackbox Blackbox
-        {
-            get
-            {
-                if (Infrastructure.UseBlackbox == UseBlackboxOption.DoNotUse) return null;
-                if (_blackbox != null) return _blackbox;
-                if (_subject == null) return null;
-                return BlackboxRegistry.GetBlackbox(_subject);
-            }
-        }
         private readonly Blackbox _blackbox;
-        private readonly object _subject;
+        private readonly Blackbox Blackbox => _blackbox != null && _blackbox.State.CheckWrite() ? _blackbox : null;
+        private BlackboxHandle(Blackbox blackbox) { _blackbox = blackbox; }
 
-
-        // Content
-        private BlackboxHandle(object subject)
+        /// <summary>Assign an optional, immutable display label. The first nonblank label wins.</summary>
+        public readonly BlackboxHandle Label(string label)
         {
-            _blackbox = null;
-            _subject = subject;
-        }
-        private BlackboxHandle(object subject, Blackbox blackbox)
-        {
-            _blackbox = blackbox;
-            _subject = subject;
+            _blackbox?.SetLabel(label);
+            return this;
         }
 
         #region Configuration
@@ -163,24 +148,26 @@ namespace BlackThunder.BlackboxSystem
             TargetTypes tagTargetTypes = TargetTypes.BasedOnSettings,
             UseBlackboxOption useBlackbox = UseBlackboxOption.BasedOnSettings)
         {
-            Infrastructure.LogDirectory = logDirectory;
-            Infrastructure.NormalLogger = normalLogger;
-            Infrastructure.WarningLogger = warningLogger;
-            Infrastructure.StrongReference = strongReference;
-            Infrastructure.UseBlackbox = useBlackbox;
-
-            Infrastructure.ExportFormat = exportFormat;
-            Infrastructure.FullExportOption = fullExportOption;
-            Infrastructure.OpenLogOption = openLogOption;
-            Infrastructure.ExceptionHandlingOption = exceptionHandlingOption;
-            Infrastructure.TagTargetTypes = tagTargetTypes;
+            BlackboxSession.CurrentState.UpdateSettings(s =>
+            {
+                s.LogDirectory = logDirectory;
+                s.NormalLogger = normalLogger;
+                s.WarningLogger = warningLogger;
+                s.StrongReference = strongReference;
+                if (useBlackbox != UseBlackboxOption.BasedOnSettings) s.UseBlackbox = useBlackbox;
+                if (exportFormat != ExportFormat.BasedOnSettings) s.ExportFormat = exportFormat;
+                if (fullExportOption != FullExportOption.BasedOnSettings) s.FullExportOption = fullExportOption;
+                if (openLogOption != OpenLogOption.BasedOnSettings) s.OpenLogOption = openLogOption;
+                if (exceptionHandlingOption != ExceptionHandlingOption.BasedOnSettings) s.ExceptionHandlingOption = exceptionHandlingOption;
+                if ((tagTargetTypes & TargetTypes.BasedOnSettings) == 0) s.TagTargetTypes = tagTargetTypes;
+            });
         }
         /// <summary>
         /// Debug-only reset helper for clearing registry and runtime state.
         /// </summary>
         /// <remarks>
-        /// Call this only from a safe point where no other thread can read from or
-        /// write to the Blackbox registry.
+        /// Retires the current generation without modifying other sessions or reusing its buffers.
+        /// Existing handles remain bound to the retired generation.
         /// </remarks>
         public static void ForceReset() => BlackboxRegistry.ForceReset();
         #endregion
@@ -188,15 +175,15 @@ namespace BlackThunder.BlackboxSystem
         #region Helpers
         public static BlackboxHandle Of<T>(T subject) where T : class
         {
-            if (Infrastructure.UseBlackbox != UseBlackboxOption.Use)
-                return default;
+            var state = BlackboxSession.CurrentState;
+            if (state.Settings.UseBlackbox != UseBlackboxOption.Use) return default;
 
             if (subject == null)
                 throw new ArgumentNullException(
                     nameof(subject),
                     $"{nameof(subject)} cannot be null.");
 
-            return new BlackboxHandle(subject);
+            return new BlackboxHandle(state.Subjects.GetOrAdd(subject));
         }
 
         public ScopeHandle Construct([CallerMemberName] string methodName = "") => Construct(out _, methodName);
@@ -225,11 +212,11 @@ namespace BlackThunder.BlackboxSystem
                 return default;
             }
 
-            var constructMessage = $"[Ctor: {blackbox.OwnerString}]";
+            var constructMessage = $"[Ctor: {blackbox.DisplayName}]";
             if (!string.IsNullOrWhiteSpace(message))
                 constructMessage += $" {message}";
 
-            blackboxHandle = new BlackboxHandle(_subject, blackbox);
+            blackboxHandle = new BlackboxHandle(blackbox);
             return blackbox.WriteScope(constructMessage, methodName);
         }
 
@@ -261,12 +248,12 @@ namespace BlackThunder.BlackboxSystem
             var blackbox = Blackbox;
             if (blackbox == null) return default;
 
-            var disposerMessage = $"[Disposed: {blackbox.OwnerString}]";
+            var disposerMessage = $"[Disposed: {blackbox.DisplayName}]";
             if (!string.IsNullOrWhiteSpace(message))
                 disposerMessage += $" {message}";
 
             blackbox.Write(disposerMessage, methodName);
-            return new BlackboxHandle(_subject, blackbox);
+            return new BlackboxHandle(blackbox);
         }
         #endregion
 
@@ -297,7 +284,7 @@ namespace BlackThunder.BlackboxSystem
         }
         public readonly string ExertMessage<T>(T other, string message, [CallerMemberName] string methodName = "") where T : class
         {
-            return Blackbox?.ExertMessage(BlackboxRegistry.GetBlackbox(other), message, methodName) ?? message;
+            return Blackbox?.ExertMessage(_blackbox.State.Subjects.GetOrAdd(other), message, methodName) ?? message;
         }
 
         public readonly ExertHandle Exert<T>(T other, [InterpolatedStringHandlerArgument("")] ref WriteHandler handler, [CallerMemberName] string methodName = "") where T : class
@@ -307,7 +294,7 @@ namespace BlackThunder.BlackboxSystem
         }
         public readonly ExertHandle Exert<T>(T other, string message, [CallerMemberName] string methodName = "") where T : class
         {
-            return Blackbox?.Exert(BlackboxRegistry.GetBlackbox(other), message, methodName) ?? default;
+            return Blackbox?.Exert(_blackbox.State.Subjects.GetOrAdd(other), message, methodName) ?? default;
         }
 
 
@@ -322,7 +309,8 @@ namespace BlackThunder.BlackboxSystem
         {
             var messageStr = ToMessageString(message);
             
-            if (exceptionHandlingOption.Resolve() == ExceptionHandlingOption.CrashExport)
+            var settings = _blackbox?.State.Settings ?? BlackboxSession.CurrentState.Settings;
+            if ((exceptionHandlingOption == ExceptionHandlingOption.BasedOnSettings ? settings.ExceptionHandlingOption : exceptionHandlingOption) == ExceptionHandlingOption.CrashExport)
             {
                 CrashExport(messageStr, others, methodName: methodName);
                 return messageStr;
@@ -335,11 +323,22 @@ namespace BlackThunder.BlackboxSystem
         {
             var messageStr = ToMessageString(message);
 
-            Infrastructure.Log($"[Blackbox] CRASH: {messageStr}", LogLevel.Warning);
-            WriteErrorToBlackbox(messageStr, others, methodName);
-            Write($"[STACK TRACE]\n{new StackTrace(true)}\n");
-
-            ExportInternal(recursionDepth ?? DefaultRecursionDepth, true, format, fullExport, openLog);
+            var box = Blackbox;
+            if (box == null) return messageStr;
+            var settings = box.State.Settings;
+            var crashMessage = messageStr;
+            // Capture explicit target identities before freezing, without invoking Subject.ToString().
+            if (others.HasValue && others.Value.Targets != null)
+                foreach (var target in others.Value.Targets)
+                    if (target.target != null)
+                    {
+                        var peer = box.State.Subjects.GetOrAdd(target.target);
+                        if (peer != null) crashMessage += $" ({target.context}: {peer.DisplayName})";
+                    }
+            var crash = new CrashInfo(crashMessage, new StackTrace(true).ToString());
+            if (!box.State.TryFreeze(crash)) return messageStr;
+            settings.Log($"[Blackbox] CRASH: {messageStr}", LogLevel.Warning);
+            ExportInternal(recursionDepth ?? settings.DefaultRecursionDepth, true, format, fullExport, openLog);
             return messageStr;
         }
         private readonly void WriteErrorToBlackbox(string message, ErrorContainer? others, string methodName)
@@ -375,52 +374,26 @@ namespace BlackThunder.BlackboxSystem
         }
 
         public readonly void Export(int? recursionDepth = null, ExportFormat format = ExportFormat.BasedOnSettings, FullExportOption fullExportOption = FullExportOption.BasedOnSettings, OpenLogOption openLogOption = OpenLogOption.BasedOnSettings) =>
-            ExportInternal(recursionDepth ?? DefaultRecursionDepth, false, format, fullExportOption, openLogOption);
+            ExportInternal(recursionDepth ?? (_blackbox?.State.Settings.DefaultRecursionDepth ?? DefaultRecursionDepth), false, format, fullExportOption, openLogOption);
 
         private readonly void ExportInternal(int recursionDepth, bool isCrash, ExportFormat format, FullExportOption fullExportOption, OpenLogOption openLogOption)
         {
-            var blackbox = Blackbox;
+            var blackbox = _blackbox;
             if (blackbox == null)
             {
-                Infrastructure.Log(FormatLogMessage(
-                    $"Cannot export because the handle is invalid."),
-                    LogLevel.Warning);
+                Infrastructure.Log("Cannot export because the handle is invalid.", LogLevel.Warning);
                 return;
             }
-
-            if (!Infrastructure.TryMarkPrinted())
-            {
-                Infrastructure.Log(FormatLogMessage(
-                    $"Blackbox has already been exported. Skipping duplicate export."),
-                    LogLevel.Warning);
-                return;
-            }
-
-            var maxSequence = Blackbox.GetCurrentSequence();
-
-            var fullExport = fullExportOption.Resolve() switch
-            {
-                FullExportOption.Full => true,
-                FullExportOption.Focused => false,
-                _ => false,
-            };
-            var openLog = openLogOption.Resolve() switch
-            {
-                OpenLogOption.Open => true,
-                OpenLogOption.Never => false,
-                _ => false,
-            };
-
-            switch (format.Resolve())
-            {
-                case ExportFormat.Html:
-                    HtmlExporter.Export(blackbox, recursionDepth, isCrash, fullExport, openLog, maxSequence);
-                    break;
-
-                default:
-                    TxtExporter.Export(blackbox, recursionDepth, isCrash, fullExport, openLog, maxSequence);
-                    break;
-            }
+            var settings = blackbox.State.Settings;
+            var full = (fullExportOption == FullExportOption.BasedOnSettings ? settings.FullExportOption : fullExportOption) == FullExportOption.Full;
+            var open = (openLogOption == OpenLogOption.BasedOnSettings ? settings.OpenLogOption : openLogOption) == OpenLogOption.Open;
+            var resolvedFormat = format == ExportFormat.BasedOnSettings ? settings.ExportFormat : format;
+            var maxSequence = blackbox.State.CurrentSequence;
+            blackbox.State.Subjects.Cleanup();
+            if (resolvedFormat == ExportFormat.Html)
+                HtmlExporter.Export(blackbox, recursionDepth, isCrash, full, open, maxSequence, settings);
+            else
+                TxtExporter.Export(blackbox, recursionDepth, isCrash, full, open, maxSequence, settings);
         }
 
         private readonly string ToMessageString(object obj) => obj?.ToString() ?? "null";

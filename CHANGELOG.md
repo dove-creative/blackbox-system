@@ -6,6 +6,31 @@ The format follows Keep a Changelog, and version numbers follow Semantic Version
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-10-29
+
+### Added
+
+- Added synchronous `BlackboxSession.Begin()` with ambient session/generation binding, copied settings, nested restoration and isolated crash/reset state.
+- Added `BlackboxHandle.Label(string)` for an explicit, set-once display name without invoking Subject code.
+- Added deterministic retirement/publication race tests, weak-reference lifetime checks and a reproducible recording benchmark.
+
+### Changed
+
+- Ordinary exports are repeatable and keep recording active. Crash export freezes only its own generation, with crash metadata retained separately from the ring buffers.
+- Handles stay bound to their original generation. Reset invalidates all old recording handles without resetting the global slot pools. Retained handles can still export their old records.
+- Replaced ConditionalWeakTable/ThreadLocal registration with CAS-published identity buckets and context lists. Published ring entries are immutable, and updates replace entries atomically.
+- Removed automatic Subject `ToString()` calls. Object references now render as `Type #Id` or `Label (Type #Id)`; `OwnerString` returns the label or type name.
+- Strong-reference mode now retains Subjects while their Blackboxes remain reachable; it no longer has ConditionalWeakTable ephemeron semantics.
+- Export files include session keys and ordinals and use exclusive creation. Files accumulate until the caller removes them.
+- Warnings are emitted once per generation and cause, including cross-thread scope/exert disposal.
+
+### Fixed
+
+- Prevented negative scope depth when a ring buffer has overwritten a scope's opening record.
+- Prevented stale ring slots and delayed publications from being mistaken for the current logical record.
+- Reclaimed abandoned handle slots during session retirement, including registration racing retirement and contexts collected before their session.
+- Failed ordinary exports no longer disable recording; failed crash exports can be retried with ordinary export.
+
 ## [0.1.2] - 2026-10-15
 
 ### Added

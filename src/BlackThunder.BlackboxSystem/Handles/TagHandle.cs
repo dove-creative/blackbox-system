@@ -69,7 +69,7 @@ namespace BlackThunder.BlackboxSystem
         /// </param>
         public string With(params object[] tags)
         {
-            if (_context == null)
+            if (_context == null || !_context.State.CheckWrite())
                 return _fallbackMessage ?? string.Empty;
 
             tags ??= new object[1];
@@ -87,7 +87,7 @@ namespace BlackThunder.BlackboxSystem
             {
                 var tag = tags[i];
                 if (tag != null)
-                    targets[i] = BlackboxRegistry.GetBlackbox(tag);
+                    targets[i] = _context.State.Subjects.GetOrAdd(tag);
             }
 
             _context.ResolveWith(

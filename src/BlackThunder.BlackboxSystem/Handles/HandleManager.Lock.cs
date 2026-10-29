@@ -49,6 +49,19 @@ namespace BlackThunder.BlackboxSystem
         // Number of slots that have ever been created since last Reset().
         private static int _slotCount;
 
+#if BLACKBOX_TESTS
+        internal static int LiveCountForTests
+        {
+            get
+            {
+                int count = 0;
+                for (int i = 0; i < Volatile.Read(ref _slotCount); i++)
+                    if (Volatile.Read(ref _slotStates[i]) > 0) count++;
+                return count;
+            }
+        }
+#endif
+
         // Number of entries currently stored in _freeSlots.
         private static int _freeCount;
 
@@ -147,35 +160,6 @@ namespace BlackThunder.BlackboxSystem
             //   -same generation => disposed
             //   different generation => stale/reused slot
             return Volatile.Read(ref _slotStates[slot]) == generation;
-        }
-
-        public static void WarnIfThreadMismatch(int createdThreadId, int currentThreadId)
-        {
-            if (createdThreadId != currentThreadId)
-                Infrastructure.Log(
-                    "[Blackbox] Handle was disposed on a different thread than it was created. " +
-                    "Log scope or merge data may be unstable.",
-                    LogLevel.Warning);
-        }
-
-        /// <summary>
-        /// Clears live handle ids and restarts the handle slot/generation state for debug or test reruns.
-        /// </summary>
-        /// <remarks>
-        /// Call this only from a safe point where all previously issued handles are no longer used.
-        /// Disposing or checking a stale handle after Reset() is unsupported because a new handle may
-        /// reuse the same slot and generation.
-        /// </remarks>
-        public static void Reset()
-        {
-            lock (_gate)
-            {
-                Array.Clear(_slotStates, 0, _slotStates.Length);
-
-                // No need to clear _freeSlots; _freeCount=0 makes previous contents unreachable.
-                _slotCount = 0;
-                _freeCount = 0;
-            }
         }
 
         private static long Pack(int slot, long generation)

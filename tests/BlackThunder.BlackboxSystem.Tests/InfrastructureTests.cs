@@ -68,16 +68,16 @@ namespace BlackThunder.BlackboxSystem.Tests
         public void TryMarkPrintedSucceedsOnceAndResetAllowsPrintingAgain()
         {
             // Table 3-3 / Ready x TryMarkPrinted
-            Assert.That(Infrastructure.TryMarkPrinted(), Is.True);
-            Assert.That(Infrastructure.IsPrinted, Is.True);
+            Assert.That(BlackboxSession.CurrentState.TryFreeze(new CrashInfo("test", string.Empty)), Is.True);
+            Assert.That((BlackboxSession.CurrentState.Crash != null), Is.True);
 
             // Table 3-3 / Printed x TryMarkPrinted
-            Assert.That(Infrastructure.TryMarkPrinted(), Is.False);
+            Assert.That(BlackboxSession.CurrentState.TryFreeze(new CrashInfo("test", string.Empty)), Is.False);
 
             // Table 3-3 / Printed x ForceResetRuntimeState
-            Infrastructure.ForceResetRuntimeState();
-            Assert.That(Infrastructure.IsPrinted, Is.False);
-            Assert.That(Infrastructure.TryMarkPrinted(), Is.True);
+            BlackboxHandle.ForceReset();
+            Assert.That((BlackboxSession.CurrentState.Crash != null), Is.False);
+            Assert.That(BlackboxSession.CurrentState.TryFreeze(new CrashInfo("test", string.Empty)), Is.True);
         }
     }
 }

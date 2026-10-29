@@ -13,7 +13,7 @@ namespace BlackThunder.BlackboxSystem
 
             public WriteHandler(int literalLength, int formattedCount, BlackboxHandle handle, out bool shouldLog)
             {
-                ShouldLog = handle.IsValid;
+                ShouldLog = handle.CanRecord;
                 shouldLog = ShouldLog;
 
                 if (ShouldLog)

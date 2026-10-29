@@ -57,6 +57,19 @@ namespace BlackThunder.BlackboxSystem
         // Number of slots that have ever been reserved since last Reset().
         private static int _slotCount;
 
+#if BLACKBOX_TESTS
+        internal static int LiveCountForTests
+        {
+            get
+            {
+                int count = 0;
+                for (int i = 0; i < Volatile.Read(ref _slotCount); i++)
+                    if (Volatile.Read(ref _slotStates[i]) > 0) count++;
+                return count;
+            }
+        }
+#endif
+
         public static long GetHandleId()
         {
             while (true)
@@ -139,32 +152,6 @@ namespace BlackThunder.BlackboxSystem
             //   -same generation => disposed
             //   different generation => stale/reused slot
             return AtomicRead(ref _slotStates[slot]) == generation;
-        }
-
-        public static void WarnIfThreadMismatch(int createdThreadId, int currentThreadId)
-        {
-            if (createdThreadId != currentThreadId)
-                Infrastructure.Log(
-                    "[Blackbox] Handle was disposed on a different thread than it was created. " +
-                    "Log scope or merge data may be unstable.",
-                    LogLevel.Warning);
-        }
-
-        /// <summary>
-        /// Clears live handle ids and restarts the handle slot/generation state for debug or test reruns.
-        /// </summary>
-        /// <remarks>
-        /// Call this only from a safe point where all previously issued handles are no longer used.
-        /// This method intentionally has no lock; concurrent Reset() with Get/Dispose/IsAlive is unsupported.
-        /// Disposing or checking a stale handle after Reset() is unsupported because a new handle may
-        /// reuse the same slot and generation.
-        /// </remarks>
-        public static void Reset()
-        {
-            Array.Clear(_slotStates, 0, _slotStates.Length);
-            Array.Clear(_freeNext, 0, _freeNext.Length);
-            Interlocked.Exchange(ref _freeHead, 0L);
-            Interlocked.Exchange(ref _slotCount, 0);
         }
 
         private static bool TryReserveFreshSlot(out int slot)

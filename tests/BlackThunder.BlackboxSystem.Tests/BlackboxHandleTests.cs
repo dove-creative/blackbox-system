@@ -13,7 +13,7 @@ namespace BlackThunder.BlackboxSystem.Tests
             var owner = BlackboxTestDoubles.Owner("owner");
 
             // Table 5-1 / Valid x Of.ValidSubject
-            var handle = BlackboxHandle.Of(owner);
+            var handle = BlackboxTestDoubles.HandleFor(owner);
 
             Assert.That(handle.IsValid, Is.True);
             Assert.That(handle.Owner, Is.SameAs(owner));
@@ -21,24 +21,24 @@ namespace BlackThunder.BlackboxSystem.Tests
             Assert.That(handle.Id, Is.EqualTo(0));
 
             // Table 5-1 / Valid x Of.NullSubject
-            Assert.That(() => BlackboxHandle.Of<object>(null), Throws.TypeOf<ArgumentNullException>());
+            Assert.That(() => BlackboxTestDoubles.HandleFor<object>(null), Throws.TypeOf<ArgumentNullException>());
         }
 
         [Test]
         public void UseBlackboxFalseDisablesNewAndExistingHandles()
         {
             var owner = BlackboxTestDoubles.Owner("owner");
-            var handle = BlackboxHandle.Of(owner);
+            var handle = BlackboxTestDoubles.HandleFor(owner);
             Assert.That(handle.IsValid, Is.True);
 
-            var blackbox = BlackboxRegistry.GetBlackbox(owner);
+            var blackbox = BlackboxTestDoubles.BlackboxFor(owner);
 
             BlackboxHandle.UseBlackbox = false;
 
             Assert.That(BlackboxHandle.UseBlackbox, Is.False);
             Assert.That(handle.IsValid, Is.False);
-            Assert.That(BlackboxHandle.Of(owner).IsValid, Is.False);
-            Assert.DoesNotThrow(() => BlackboxHandle.Of<object>(null));
+            Assert.That(BlackboxTestDoubles.HandleFor(owner).IsValid, Is.False);
+            Assert.DoesNotThrow(() => BlackboxTestDoubles.HandleFor<object>(null));
 
             handle.Write("skipped", "Run").With();
             Assert.That(BlackboxTestDoubles.Logs(blackbox), Is.Empty);
@@ -75,24 +75,24 @@ namespace BlackThunder.BlackboxSystem.Tests
         public void ConstructWritesCtorScopeAndCachesHandle()
         {
             var owner = BlackboxTestDoubles.Owner("owner");
-            var handle = BlackboxHandle.Of(owner);
+            var handle = BlackboxTestDoubles.HandleFor(owner);
 
             // Table 5-1 / Valid x Construct
             var scope = handle.Construct("created", out var cachedHandle, "Ctor");
 
-            var logs = BlackboxTestDoubles.Logs(BlackboxRegistry.GetBlackbox(owner));
+            var logs = BlackboxTestDoubles.Logs(BlackboxTestDoubles.BlackboxFor(owner));
             Assert.That(scope.IsAlive, Is.True);
             Assert.That(cachedHandle.IsValid, Is.True);
             Assert.That(cachedHandle.Id, Is.EqualTo(handle.Id));
             Assert.That(logs.Single().ScopeType, Is.EqualTo(ScopeType.Open));
-            Assert.That(logs.Single().Message, Does.Contain("[Ctor: owner]"));
+            Assert.That(logs.Single().Message, Does.Contain("[Ctor: owner (BlackboxTestDoubles.NamedOwner #0)]"));
             Assert.That(logs.Single().Message, Does.Contain("created"));
         }
 
         [Test]
         public void WhenReturnsValidOrSkippedHandle()
         {
-            var handle = BlackboxHandle.Of(BlackboxTestDoubles.Owner("owner"));
+            var handle = BlackboxTestDoubles.HandleFor(BlackboxTestDoubles.Owner("owner"));
 
             // Table 5-1 / Valid x When.True
             Assert.That(handle.When(true).IsValid, Is.True);
@@ -109,14 +109,14 @@ namespace BlackThunder.BlackboxSystem.Tests
         public void DisposeWritesDisposedLog()
         {
             var owner = BlackboxTestDoubles.Owner("owner");
-            var handle = BlackboxHandle.Of(owner);
+            var handle = BlackboxTestDoubles.HandleFor(owner);
 
             // Table 5-1 / Valid x Dispose
             var next = handle.Dispose("done", "DisposeCall");
 
-            var log = BlackboxTestDoubles.Logs(BlackboxRegistry.GetBlackbox(owner)).Single();
+            var log = BlackboxTestDoubles.Logs(BlackboxTestDoubles.BlackboxFor(owner)).Single();
             Assert.That(next.IsValid, Is.True);
-            Assert.That(log.Message, Does.Contain("[Disposed: owner]"));
+            Assert.That(log.Message, Does.Contain("[Disposed: owner (BlackboxTestDoubles.NamedOwner #0)]"));
             Assert.That(log.Message, Does.Contain("done"));
         }
 
@@ -124,12 +124,12 @@ namespace BlackThunder.BlackboxSystem.Tests
         public void WriteReturnsMessageAndStoresLog()
         {
             var owner = BlackboxTestDoubles.Owner("owner");
-            var handle = BlackboxHandle.Of(owner);
+            var handle = BlackboxTestDoubles.HandleFor(owner);
 
             // Table 5-1 / Valid x Write
             var message = handle.Write("hello", "Run").With();
 
-            var log = BlackboxTestDoubles.Logs(BlackboxRegistry.GetBlackbox(owner)).Single();
+            var log = BlackboxTestDoubles.Logs(BlackboxTestDoubles.BlackboxFor(owner)).Single();
             Assert.That(message, Is.EqualTo("hello"));
             Assert.That(log.Message, Is.EqualTo("hello"));
         }
@@ -138,12 +138,12 @@ namespace BlackThunder.BlackboxSystem.Tests
         public void WriteScopeReturnsAliveScopeHandle()
         {
             var owner = BlackboxTestDoubles.Owner("owner");
-            var handle = BlackboxHandle.Of(owner);
+            var handle = BlackboxTestDoubles.HandleFor(owner);
 
             // Table 5-1 / Valid x WriteScope
             var scope = handle.Scope("scope", "Run");
 
-            var log = BlackboxTestDoubles.Logs(BlackboxRegistry.GetBlackbox(owner)).Single();
+            var log = BlackboxTestDoubles.Logs(BlackboxTestDoubles.BlackboxFor(owner)).Single();
             Assert.That(scope.IsAlive, Is.True);
             Assert.That(log.ScopeType, Is.EqualTo(ScopeType.Open));
         }
@@ -153,7 +153,7 @@ namespace BlackThunder.BlackboxSystem.Tests
         {
             var sourceOwner = BlackboxTestDoubles.Owner("source");
             var targetOwner = BlackboxTestDoubles.Owner("target");
-            var handle = BlackboxHandle.Of(sourceOwner);
+            var handle = BlackboxTestDoubles.HandleFor(sourceOwner);
 
             // Table 5-1 / Valid x ExertMessage.OtherNull
             Assert.That(() => handle.ExertMessage<object>(null, "call"), Throws.TypeOf<ArgumentNullException>());
@@ -161,8 +161,8 @@ namespace BlackThunder.BlackboxSystem.Tests
             // Table 5-1 / Valid x ExertMessage.OtherPeer
             Assert.That(handle.ExertMessage(targetOwner, "call", "Run"), Is.EqualTo("call"));
 
-            Assert.That(BlackboxTestDoubles.Logs(BlackboxRegistry.GetBlackbox(sourceOwner)).Single().ExertingTo.Owner, Is.SameAs(targetOwner));
-            Assert.That(BlackboxTestDoubles.Logs(BlackboxRegistry.GetBlackbox(targetOwner)).Single().ExertedBy.Owner, Is.SameAs(sourceOwner));
+            Assert.That(BlackboxTestDoubles.Logs(BlackboxTestDoubles.BlackboxFor(sourceOwner)).Single().ExertingTo.Owner, Is.SameAs(targetOwner));
+            Assert.That(BlackboxTestDoubles.Logs(BlackboxTestDoubles.BlackboxFor(targetOwner)).Single().ExertedBy.Owner, Is.SameAs(sourceOwner));
         }
 
         [Test]
@@ -170,7 +170,7 @@ namespace BlackThunder.BlackboxSystem.Tests
         {
             var sourceOwner = BlackboxTestDoubles.Owner("source");
             var targetOwner = BlackboxTestDoubles.Owner("target");
-            var handle = BlackboxHandle.Of(sourceOwner);
+            var handle = BlackboxTestDoubles.HandleFor(sourceOwner);
 
             // Table 5-1 / Valid x Exert.OtherNull
             Assert.That(() => handle.Exert<object>(null, "call"), Throws.TypeOf<ArgumentNullException>());
@@ -179,7 +179,7 @@ namespace BlackThunder.BlackboxSystem.Tests
             var exert = handle.Exert(targetOwner, "call", "Run");
 
             Assert.That(exert.IsAlive, Is.True);
-            Assert.That(BlackboxTestDoubles.Logs(BlackboxRegistry.GetBlackbox(targetOwner)).Single().ExertedBy.Owner, Is.SameAs(sourceOwner));
+            Assert.That(BlackboxTestDoubles.Logs(BlackboxTestDoubles.BlackboxFor(targetOwner)).Single().ExertedBy.Owner, Is.SameAs(sourceOwner));
         }
 
         [Test]
@@ -187,7 +187,7 @@ namespace BlackThunder.BlackboxSystem.Tests
         {
             var owner = BlackboxTestDoubles.Owner("owner");
             var targetOwner = BlackboxTestDoubles.Owner("target");
-            var handle = BlackboxHandle.Of(owner);
+            var handle = BlackboxTestDoubles.HandleFor(owner);
 
             // Table 5-1 / Valid x WriteError.ErrorTargetsEmpty
             Assert.That(handle.WriteError("empty", methodName: "Run"), Is.EqualTo("empty"));
@@ -195,8 +195,8 @@ namespace BlackThunder.BlackboxSystem.Tests
             // Table 5-1 / Valid x WriteError.ErrorTargetsPresent
             Assert.That(handle.WriteError("targeted", new BlackboxHandle.ErrorContainer(("target", targetOwner)), methodName: "Run"), Is.EqualTo("targeted"));
 
-            var ownerLines = BlackboxTestDoubles.Lines(BlackboxRegistry.GetBlackbox(owner));
-            var targetLines = BlackboxTestDoubles.Lines(BlackboxRegistry.GetBlackbox(targetOwner));
+            var ownerLines = BlackboxTestDoubles.Lines(BlackboxTestDoubles.BlackboxFor(owner));
+            var targetLines = BlackboxTestDoubles.Lines(BlackboxTestDoubles.BlackboxFor(targetOwner));
             Assert.That(ownerLines.Any(line => line.Contains("[Error] empty")), Is.True);
             Assert.That(ownerLines.Any(line => line.Contains("target:")), Is.True);
             Assert.That(targetLines.Single(), Does.Contain("tagged by"));
@@ -207,7 +207,7 @@ namespace BlackThunder.BlackboxSystem.Tests
         {
             var directory = BlackboxTestDoubles.CreateTempDirectory();
             BlackboxTestDoubles.Reset(logDirectory: directory);
-            var handle = BlackboxHandle.Of(BlackboxTestDoubles.Owner("owner"));
+            var handle = BlackboxTestDoubles.HandleFor(BlackboxTestDoubles.Owner("owner"));
 
             // Table 5-1 / Valid x WriteError.ExceptionHandlingCrashExport
             var message = handle.WriteError("boom", exceptionHandlingOption: ExceptionHandlingOption.CrashExport, methodName: "Run");
@@ -222,7 +222,7 @@ namespace BlackThunder.BlackboxSystem.Tests
         {
             var directory = BlackboxTestDoubles.CreateTempDirectory();
             BlackboxTestDoubles.Reset(logDirectory: directory);
-            var handle = BlackboxHandle.Of(BlackboxTestDoubles.Owner("owner"));
+            var handle = BlackboxTestDoubles.HandleFor(BlackboxTestDoubles.Owner("owner"));
 
             // Table 5-1 / Valid x CrashExport
             var message = handle.CrashExport("boom", openLog: OpenLogOption.Never, methodName: "Run");
@@ -231,7 +231,7 @@ namespace BlackThunder.BlackboxSystem.Tests
             var html = File.ReadAllText(file);
             Assert.That(message, Is.EqualTo("boom"));
             Assert.That(html, Does.Contain("[STACK TRACE]"));
-            Assert.That(Infrastructure.IsPrinted, Is.True);
+            Assert.That((BlackboxSession.CurrentState.Crash != null), Is.True);
 
             // Table 5-1 / Printed x CrashExport
             handle.CrashExport("again", openLog: OpenLogOption.Never, methodName: "Run");
@@ -239,7 +239,7 @@ namespace BlackThunder.BlackboxSystem.Tests
         }
 
         [Test]
-        public void ExportWarnsForInvalidOrDuplicateExport()
+        public void ExportWarnsForInvalidAndAllowsRepeatedExports()
         {
             var directory = BlackboxTestDoubles.CreateTempDirectory();
             BlackboxTestDoubles.Reset(logDirectory: directory);
@@ -248,7 +248,7 @@ namespace BlackThunder.BlackboxSystem.Tests
             default(BlackboxHandle).Export(openLogOption: OpenLogOption.Never);
             Assert.That(BlackboxTestDoubles.WarningLogs.Last(), Does.Contain("invalid"));
 
-            var handle = BlackboxHandle.Of(BlackboxTestDoubles.Owner("owner"));
+            var handle = BlackboxTestDoubles.HandleFor(BlackboxTestDoubles.Owner("owner"));
             handle.Write("hello", "Run");
 
             // Table 5-1 / Valid x Export.FirstExport
@@ -257,7 +257,10 @@ namespace BlackThunder.BlackboxSystem.Tests
 
             // Table 5-1 / Printed x Export.DuplicateExport
             handle.Export(format: ExportFormat.Txt, openLogOption: OpenLogOption.Never);
-            Assert.That(BlackboxTestDoubles.WarningLogs.Last(), Does.Contain("already been exported"));
+            Assert.That(BlackboxTestDoubles.GetFiles(directory, "*.txt").Length, Is.EqualTo(2));
+            Assert.That(BlackboxSession.CurrentState.Crash, Is.Null);
+            handle.Write("after export", "Run");
+            Assert.That(handle.IsValid, Is.True);
         }
 
         [Test]
@@ -266,23 +269,23 @@ namespace BlackThunder.BlackboxSystem.Tests
             var directory = BlackboxTestDoubles.CreateTempDirectory();
             BlackboxTestDoubles.Reset(logDirectory: directory);
             var owner = BlackboxTestDoubles.Owner("owner");
-            var handle = BlackboxHandle.Of(owner);
+            var handle = BlackboxTestDoubles.HandleFor(owner);
             handle.Write("before", "Run");
             handle.Export(format: ExportFormat.Txt, openLogOption: OpenLogOption.Never);
 
             // Table 5-1 / Valid x ForceReset
             BlackboxHandle.ForceReset();
 
-            Assert.That(Infrastructure.IsPrinted, Is.False);
+            Assert.That((BlackboxSession.CurrentState.Crash != null), Is.False);
             Assert.That(BlackboxRegistry.Count(), Is.EqualTo(0));
-            Assert.That(BlackboxHandle.Of(owner).Write("after", "Run").With(), Is.EqualTo("after"));
+            Assert.That(BlackboxTestDoubles.HandleFor(owner).Write("after", "Run").With(), Is.EqualTo("after"));
         }
 
         [Test]
         public void WriteHandlerFormatsInterpolatedValuesForValidHandle()
         {
             var owner = BlackboxTestDoubles.Owner("owner");
-            var handle = BlackboxHandle.Of(owner);
+            var handle = BlackboxTestDoubles.HandleFor(owner);
 
             // Table 1-3 / Active x Construct.ValidHandle
             var handler = new BlackboxHandle.WriteHandler(8, 2, handle, out var shouldLog);

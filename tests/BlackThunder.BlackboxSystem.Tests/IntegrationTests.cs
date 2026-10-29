@@ -12,7 +12,7 @@ namespace BlackThunder.BlackboxSystem.Tests
             var directory = BlackboxTestDoubles.CreateTempDirectory();
             BlackboxTestDoubles.Reset(logDirectory: directory);
             var owner = BlackboxTestDoubles.Owner("owner");
-            var handle = BlackboxHandle.Of(owner);
+            var handle = BlackboxTestDoubles.HandleFor(owner);
 
             // Table 7 / SingleOwnerHistory x Run
             using (handle.Scope("scope", "Run"))
@@ -36,13 +36,13 @@ namespace BlackThunder.BlackboxSystem.Tests
             BlackboxTestDoubles.Reset(logDirectory: directory);
             var sourceOwner = BlackboxTestDoubles.Owner("source");
             var targetOwner = BlackboxTestDoubles.Owner("target");
-            var source = BlackboxHandle.Of(sourceOwner);
+            var source = BlackboxTestDoubles.HandleFor(sourceOwner);
 
             // Table 7 / TwoOwnerInteraction x Run
             using (source.Exert(targetOwner, "call", "Send"))
-            using (BlackboxHandle.Of(targetOwner).Scope("receive", "Receive"))
+            using (BlackboxTestDoubles.HandleFor(targetOwner).Scope("receive", "Receive"))
             {
-                BlackboxHandle.Of(targetOwner).Write("inside", "Receive");
+                BlackboxTestDoubles.HandleFor(targetOwner).Write("inside", "Receive");
             }
 
             source.Export(format: ExportFormat.Txt, fullExportOption: FullExportOption.Full, openLogOption: OpenLogOption.Never);
@@ -59,8 +59,8 @@ namespace BlackThunder.BlackboxSystem.Tests
         {
             var sourceOwner = BlackboxTestDoubles.Owner("source");
             var targetOwner = BlackboxTestDoubles.Owner("target");
-            var source = BlackboxHandle.Of(sourceOwner);
-            BlackboxHandle.Of(targetOwner);
+            var source = BlackboxTestDoubles.HandleFor(sourceOwner);
+            BlackboxTestDoubles.HandleFor(targetOwner);
 
             // Table 7 / TagTargetFlow x Run
             source.Write("hello %0", "Run").With(targetOwner, TargetTypes.Full);
@@ -68,8 +68,8 @@ namespace BlackThunder.BlackboxSystem.Tests
             {
             }
 
-            var sourceLines = BlackboxTestDoubles.Lines(BlackboxRegistry.GetBlackbox(sourceOwner));
-            var targetLines = BlackboxTestDoubles.Lines(BlackboxRegistry.GetBlackbox(targetOwner));
+            var sourceLines = BlackboxTestDoubles.Lines(BlackboxTestDoubles.BlackboxFor(sourceOwner));
+            var targetLines = BlackboxTestDoubles.Lines(BlackboxTestDoubles.BlackboxFor(targetOwner));
 
             Assert.That(sourceLines.Any(line => line.Contains("target")), Is.True);
             Assert.That(targetLines.Count(line => line.Contains("tagged by")), Is.EqualTo(2));
@@ -82,7 +82,7 @@ namespace BlackThunder.BlackboxSystem.Tests
             BlackboxTestDoubles.Reset(logDirectory: directory);
             var owner = BlackboxTestDoubles.Owner("owner");
             var target = BlackboxTestDoubles.Owner("target");
-            var handle = BlackboxHandle.Of(owner);
+            var handle = BlackboxTestDoubles.HandleFor(owner);
 
             // Table 7 / ErrorFlow x Run
             handle.WriteError("minor", new BlackboxHandle.ErrorContainer(("target", target)), methodName: "Run");
@@ -101,18 +101,18 @@ namespace BlackThunder.BlackboxSystem.Tests
             var directory = BlackboxTestDoubles.CreateTempDirectory();
             BlackboxTestDoubles.Reset(logDirectory: directory);
             var owner = BlackboxTestDoubles.Owner("owner");
-            var first = BlackboxHandle.Of(owner);
+            var first = BlackboxTestDoubles.HandleFor(owner);
             first.Write("first", "Run");
             first.Export(format: ExportFormat.Txt, openLogOption: OpenLogOption.Never);
 
             // Table 7 / ResetAndRerun x Run
             BlackboxHandle.ForceReset();
             BlackboxTestDoubles.Reset(logDirectory: directory);
-            var second = BlackboxHandle.Of(owner);
+            var second = BlackboxTestDoubles.HandleFor(owner);
             second.Write("second", "Run");
 
             Assert.That(second.Id, Is.EqualTo(0));
-            Assert.That(BlackboxTestDoubles.Logs(BlackboxRegistry.GetBlackbox(owner)).Single().Message, Is.EqualTo("second"));
+            Assert.That(BlackboxTestDoubles.Logs(BlackboxTestDoubles.BlackboxFor(owner)).Single().Message, Is.EqualTo("second"));
         }
 
         [Test]
@@ -120,14 +120,14 @@ namespace BlackThunder.BlackboxSystem.Tests
         {
             BlackboxTestDoubles.Reset(maxLogCount: 2);
             var owner = BlackboxTestDoubles.Owner("owner");
-            var handle = BlackboxHandle.Of(owner);
+            var handle = BlackboxTestDoubles.HandleFor(owner);
 
             // Table 7 / RingBufferLimit x Run
             handle.Write("one", "Run");
             handle.Write("two", "Run");
             handle.Write("three", "Run");
 
-            var logs = BlackboxTestDoubles.Logs(BlackboxRegistry.GetBlackbox(owner));
+            var logs = BlackboxTestDoubles.Logs(BlackboxTestDoubles.BlackboxFor(owner));
             Assert.That(logs.Count, Is.EqualTo(2));
             Assert.That(logs[0].Message, Is.EqualTo("two"));
             Assert.That(logs[1].Message, Is.EqualTo("three"));

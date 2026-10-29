@@ -10,6 +10,7 @@ namespace BlackThunder.BlackboxSystem.Exporters
         public bool HasParent => ParentBlackbox != null;
         public int Depth { get; }
         public IReadOnlyList<LogData> Logs { get; }
+        internal IReadOnlyDictionary<Blackbox, string> Names { get; set; }
 
         public ExportNode(Blackbox current, int depth, IReadOnlyList<LogData> logs) : this(current, null, depth, logs) { }
         public ExportNode(Blackbox current, Blackbox parent, int depth, IReadOnlyList<LogData> logs)
@@ -30,6 +31,7 @@ namespace BlackThunder.BlackboxSystem.Exporters
             long maxSequence = -1)
         {
             var nodes = new List<ExportNode>();
+            var names = new Dictionary<Blackbox, string>();
             var visited = new HashSet<Blackbox>();
             var maxDepth = recursionDepth >= 0 ? recursionDepth : int.MaxValue;
 
@@ -41,7 +43,8 @@ namespace BlackThunder.BlackboxSystem.Exporters
 
                 visited.Add(current);
 
-                // Build the export node for the current blackbox.
+                CaptureName(current);
+                // Copy retained entries before converting output-only values.
                 var logs = Blackbox.MergeLogContext(
                     current
                         .GetLogsByContext(maxSequence)
@@ -49,9 +52,21 @@ namespace BlackThunder.BlackboxSystem.Exporters
                         .Select(ResolveScopeDepths)
                     );
 
+                for (int i = 0; i < logs.Count; i++)
+                {
+                    var log = logs[i];
+                    CaptureName(log.Owner);
+                    CaptureName(log.ExertedBy);
+                    CaptureName(log.ExertingTo);
+                    CaptureName(log.TaggedBy);
+                    if (log.Tags != null) foreach (var tag in log.Tags) CaptureName(tag.Target);
+                    log.DisplayNames = names;
+                    logs[i] = log;
+                }
                 nodes.Add(parent != null
                     ? new ExportNode(current, parent, depth, logs)
                     : new ExportNode(current, depth, logs));
+                nodes[nodes.Count - 1].Names = names;
 
                 if (depth >= maxDepth)
                     return;
@@ -81,6 +96,11 @@ namespace BlackThunder.BlackboxSystem.Exporters
             }
 
             return nodes;
+
+            void CaptureName(Blackbox box)
+            {
+                if (box != null && !names.ContainsKey(box)) names.Add(box, box.DisplayName);
+            }
         }
     }
 }

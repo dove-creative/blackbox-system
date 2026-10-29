@@ -9,7 +9,7 @@ namespace BlackThunder.BlackboxSystem.Tests
         public void GetBlackboxRejectsNull()
         {
             // Table 3-2 / Empty x GetBlackbox.NullSubject
-            Assert.That(() => BlackboxRegistry.GetBlackbox(null), Throws.TypeOf<ArgumentNullException>());
+            Assert.That(() => BlackboxTestDoubles.BlackboxFor(null), Throws.TypeOf<ArgumentNullException>());
 
             // Table 3-2 / Registered x Contains.NullSubject
             Assert.That(() => BlackboxRegistry.Contains(null), Throws.TypeOf<ArgumentNullException>());
@@ -21,10 +21,10 @@ namespace BlackThunder.BlackboxSystem.Tests
             var owner = BlackboxTestDoubles.Owner("owner");
 
             // Table 3-2 / Empty x GetBlackbox.ValidSubject
-            var first = BlackboxRegistry.GetBlackbox(owner);
+            var first = BlackboxTestDoubles.BlackboxFor(owner);
 
             // Table 3-2 / Registered x GetBlackbox.ValidSubject
-            var second = BlackboxRegistry.GetBlackbox(owner);
+            var second = BlackboxTestDoubles.BlackboxFor(owner);
 
             Assert.That(first, Is.SameAs(second));
             Assert.That(first.Owner, Is.SameAs(owner));
@@ -39,7 +39,7 @@ namespace BlackThunder.BlackboxSystem.Tests
             // Table 3-2 / Empty x Contains.ValidSubject
             Assert.That(BlackboxRegistry.Contains(owner), Is.False);
 
-            BlackboxRegistry.GetBlackbox(owner);
+            BlackboxTestDoubles.BlackboxFor(owner);
 
             // Table 3-2 / Registered x Contains.ValidSubject
             Assert.That(BlackboxRegistry.Contains(owner), Is.True);
@@ -52,7 +52,7 @@ namespace BlackThunder.BlackboxSystem.Tests
         public void ForceResetClearsRegistryRuntimeAndHandles()
         {
             var owner = BlackboxTestDoubles.Owner("owner");
-            var blackbox = BlackboxRegistry.GetBlackbox(owner);
+            var blackbox = BlackboxTestDoubles.BlackboxFor(owner);
             var scope = blackbox.WriteScope("scope", "Run");
             Assert.That(scope.IsAlive, Is.True);
             Assert.That(BlackboxRuntime.GetNextSequence(), Is.GreaterThanOrEqualTo(0));
@@ -63,7 +63,7 @@ namespace BlackThunder.BlackboxSystem.Tests
             Assert.That(BlackboxRegistry.Count(), Is.EqualTo(0));
             Assert.That(scope.IsAlive, Is.False);
             Assert.That(BlackboxRuntime.GetNextSequence(), Is.EqualTo(0));
-            Assert.That(Infrastructure.IsPrinted, Is.False);
+            Assert.That((BlackboxSession.CurrentState.Crash != null), Is.False);
         }
 
         [Test]
@@ -73,7 +73,7 @@ namespace BlackThunder.BlackboxSystem.Tests
             var owner = BlackboxTestDoubles.Owner("owner");
 
             // Table 3-2 / Empty x GetBlackbox.StrongReferenceOn
-            var blackbox = BlackboxRegistry.GetBlackbox(owner);
+            var blackbox = BlackboxTestDoubles.BlackboxFor(owner);
 
             Assert.That(blackbox.Owner, Is.SameAs(owner));
             Assert.That(blackbox.OwnerString, Is.EqualTo("owner"));
@@ -83,20 +83,22 @@ namespace BlackThunder.BlackboxSystem.Tests
         public void WeakReferencePolicyStoresWeakOwnerReference()
         {
             var weakCase = CreateWeakOwnerCase();
+            BlackboxTestDoubles.ForceFullCollection();
 
             // Table 3-2 / Empty x GetBlackbox.StrongReferenceOff
-            Assert.That(weakCase.WeakReference.Target, Is.Not.Null);
+            Assert.That(weakCase.WeakReference.IsAlive, Is.False);
             Assert.That(GetField(weakCase.Blackbox, "_strongOwner"), Is.Null);
             Assert.That(GetField(weakCase.Blackbox, "_weakOwner"), Is.Not.Null);
             Assert.That(weakCase.Blackbox.OwnerString, Is.EqualTo("weak-owner"));
         }
 
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
         private static WeakOwnerCase CreateWeakOwnerCase()
         {
             BlackboxHandle.StrongReference = false;
             var owner = BlackboxTestDoubles.Owner("weak-owner");
             var weakReference = new WeakReference(owner);
-            var blackbox = BlackboxRegistry.GetBlackbox(owner);
+            var blackbox = BlackboxTestDoubles.BlackboxFor(owner);
             owner = null;
 
             return new WeakOwnerCase(weakReference, blackbox);

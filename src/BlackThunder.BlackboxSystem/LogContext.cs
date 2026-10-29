@@ -7,331 +7,238 @@ namespace BlackThunder.BlackboxSystem
 {
     internal class LogContext
     {
-        // Internal
+        // The value is copied for updates/export; the published wrapper and its tag array never change.
+        private sealed class PublishedLog
+        {
+            internal readonly long Index;
+            internal readonly LogData Value;
+            internal PublishedLog(long index, LogData value) { Index = index; Value = value; }
+        }
+        private sealed class ScopeInfo
+        {
+            internal readonly long Id;
+            internal readonly string Method;
+            internal readonly ScopeInfo Next;
+            internal int Closed;
+            internal ScopeInfo(long id, string method, ScopeInfo next) { Id = id; Method = method; Next = next; }
+        }
         private readonly Blackbox _blackbox;
-        private readonly LogData[] _logBuffer;
+        private readonly PublishedLog[] _logBuffer;
         private long _currentLogIndex = -1;
-
         private readonly int _threadId;
         private readonly string _threadName;
+        private readonly ThreadToken _token;
+        private ScopeInfo _openScopes;
+        internal SessionState State => _blackbox.State;
+        internal readonly HandleTracker<ScopeHandle> ScopeHandles;
+        internal readonly HandleTracker<ExertHandle> ExertHandles;
+        internal bool IsCurrentThread => ReferenceEquals(_token, ThreadToken.Current);
 
-        private readonly List<ScopeInfo> _openScopes = new();
-        private struct ScopeInfo
-        {
-            public readonly bool HasValue;
-
-            public long ScopeId;
-            public string MethodName;
-            public bool IsAlive;
-
-            public ScopeInfo(long scopeId, string methodName)
-            {
-                HasValue = true;
-
-                ScopeId = scopeId;
-                MethodName = methodName;
-                IsAlive = true;
-            }
-        }
-
-
-        // Content
         public LogContext(Blackbox blackbox, int bufferSize)
         {
+            if (bufferSize < 1) throw new ArgumentOutOfRangeException(nameof(bufferSize));
             _blackbox = blackbox;
-            _logBuffer = new LogData[bufferSize];
-            _threadId = Thread.CurrentThread.ManagedThreadId;
+            _logBuffer = new PublishedLog[bufferSize];
+            _threadId = Environment.CurrentManagedThreadId;
             _threadName = Thread.CurrentThread.Name;
+            _token = ThreadToken.Current;
+            ScopeHandles = new HandleTracker<ScopeHandle>(State);
+            ExertHandles = new HandleTracker<ExertHandle>(State);
         }
 
-        #region Enqueue Log
         public TagHandle EnqueueLog(string message, long sequence, string methodName, long scopeId = -1, long interactionId = -1, Blackbox exertingTo = null, Blackbox exertedBy = null)
         {
-            EnqueueLog(message, sequence, methodName, ScopeType.None, scopeId, out var logIndex, interactionId, exertingTo, exertedBy);
-            return new TagHandle(this, logIndex, message);
+            var index = Enqueue(message, sequence, methodName, ScopeType.None, scopeId, interactionId, exertingTo, exertedBy);
+            return index < 0 ? TagHandle.FromMessage(message) : new TagHandle(this, index, message);
         }
         public void EnqueueTagLog(string message, long sequence, string methodName, long interactionId, Blackbox taggedBy = null) =>
             EnqueueTagLog(message, sequence, methodName, interactionId, taggedBy, new[] { new LogData.Tag(interactionId, taggedBy) }, TargetTypes.BasedOnSettings);
-
-        public void EnqueueTagLog(string message, long sequence, string methodName, long interactionId, Blackbox taggedBy, LogData.Tag[] tags, TargetTypes tagTargetTypes) =>
-            EnqueueLog(message, sequence, methodName, ScopeType.None, -1, out _, interactionId, null, null, tags, taggedBy, tagTargetTypes.Resolve());
+        public void EnqueueTagLog(string message, long sequence, string methodName, long interactionId, Blackbox taggedBy, LogData.Tag[] tags, TargetTypes targetTypes) =>
+            Enqueue(message, sequence, methodName, ScopeType.None, -1, interactionId, null, null, tags, taggedBy, State.Settings.Resolve(targetTypes));
 
         public TagHandle OpenScope(string message, long sequence, string methodName, long scopeId)
         {
-            var foundScope = _openScopes.FirstOrDefault(scope => scope.ScopeId == scopeId);
-            if (foundScope.HasValue)
+            if (!State.CheckWrite()) return TagHandle.FromMessage(message);
+            while (true)
             {
-                Infrastructure.Log(
-                    $"[LogContext] Scope '{scopeId}' is already open from '{foundScope.MethodName}'.",
-                    LogLevel.Warning);
-                return TagHandle.FromMessage(message);
-            }
-
-            _openScopes.Add(new ScopeInfo(scopeId, methodName));
-            EnqueueLog(message, sequence, methodName, ScopeType.Open, scopeId, out var logIndex);
-            return new TagHandle(this, logIndex, message);
-        }
-
-        public void CloseScope(long scopeId, long sequence)
-        {
-            // Sequence Provider
-            bool inputSequenceUsed = false;
-            long GetSequence()
-            {
-                if (!inputSequenceUsed)
-                {
-                    inputSequenceUsed = true;
-                    return sequence;
-                }
-                else
-                    return BlackboxRuntime.GetNextSequence();
-            }
-
-
-            ScopeInfo foundScope = default;
-            int index = _openScopes.Count - 1;
-            string warningMessage = string.Empty;
-
-            for (; index >= 0; index--)
-            {
-                foundScope = _openScopes[index];
-                if (foundScope.ScopeId == scopeId)
-                    break;
-            }
-
-            if (index < 0)
-            {
-                Infrastructure.Log(
-                    $"[LogContext] Scope '{scopeId}' cannot be closed because it is not open.",
-                    LogLevel.Warning);
-                return;
-            }
-
-            if (!foundScope.IsAlive)
-            {
-                _openScopes.Remove(foundScope);
-                return;
-            }
-
-            var isClosedFromDifferentThread = Environment.CurrentManagedThreadId != _threadId;
-            if (isClosedFromDifferentThread)
-                warningMessage += $"[LogContext] Scope '{scopeId}' is being closed from a different thread.";
-
-            int lastIndex = _openScopes.Count - 1;
-            if (index < lastIndex)
-            {
-                if (isClosedFromDifferentThread)
-                    warningMessage += $"\n- Newer scopes remain open because cross-thread close does not auto-close them.";
-                else
-                {
-                    if (!string.IsNullOrEmpty(warningMessage)) warningMessage += "\n- ";
-                    warningMessage += "Newer scopes found. They will be closed automatically.";
-
-                    for (int i = lastIndex; i > index; i--)
+                var head = Volatile.Read(ref _openScopes);
+                for (var n = head; n != null; n = n.Next)
+                    if (n.Id == scopeId && Volatile.Read(ref n.Closed) == 0)
                     {
-                        var scope = _openScopes[i];
-                        if (!scope.IsAlive) continue;
-
-                        scope.IsAlive = false;
-                        _openScopes[i] = scope;
-
-                        EnqueueLog("Closed automatically because an outer scope closed first.", GetSequence(), scope.MethodName, ScopeType.Close, scope.ScopeId, out _);
+                        State.WarnOnce(SessionWarning.DuplicateScope, $"[LogContext] Scope '{scopeId}' is already open from '{n.Method}'.");
+                        return TagHandle.FromMessage(message);
                     }
-                }
+                if (ReferenceEquals(Interlocked.CompareExchange(ref _openScopes, new ScopeInfo(scopeId, methodName, head), head), head)) break;
             }
-
-            _openScopes.Remove(foundScope);
-            EnqueueLog(string.Empty, GetSequence(), foundScope.MethodName, ScopeType.Close, scopeId, out _);
-
-            if (!string.IsNullOrEmpty(warningMessage))
-                Infrastructure.Log(warningMessage, LogLevel.Warning);
+            var index = Enqueue(message, sequence, methodName, ScopeType.Open, scopeId);
+            return index < 0 ? TagHandle.FromMessage(message) : new TagHandle(this, index, message);
         }
 
-
-        private void EnqueueLog(
-            string message,
-            long sequence,
-            string methodName,
-            ScopeType scopeType,
-            long scopeId,
-            out long logIndex,
-            long interactionId = -1,
-            Blackbox exertingTo = null,
-            Blackbox exertedBy = null,
-            LogData.Tag[] tags = null,
-            Blackbox taggedBy = null,
-            TargetTypes tagTargetTypes = TargetTypes.Full)
+        public void CloseScope(long scopeId, long sequence = -1)
         {
-            var time = DateTime.UtcNow;
-            logIndex = ++_currentLogIndex;
-
-            SetLog(logIndex, new LogData(
-                _blackbox,
-                message,
-                time,
-                sequence,
-                methodName,
-                scopeType,
-                scopeId,
-                _threadId,
-                _threadName,
-                interactionId,
-                exertingTo,
-                exertedBy,
-                tags,
-                taggedBy,
-                tagTargetTypes));
+            if (!State.CheckWrite()) return;
+            var head = Volatile.Read(ref _openScopes);
+            var found = head;
+            while (found != null && found.Id != scopeId) found = found.Next;
+            if (found == null)
+            {
+                State.WarnOnce(SessionWarning.MissingScope, $"[LogContext] Scope '{scopeId}' cannot be closed because it is not open.");
+                return;
+            }
+            if (Volatile.Read(ref found.Closed) != 0) { PruneScopes(); return; }
+            if (!IsCurrentThread) WarnThreadMismatch();
+            else if (!ReferenceEquals(head, found))
+            {
+                bool autoClosed = false;
+                for (var n = head; !ReferenceEquals(n, found); n = n.Next)
+                    if (Interlocked.Exchange(ref n.Closed, 1) == 0)
+                    {
+                        autoClosed = true;
+                        Enqueue("Closed automatically because an outer scope closed first.", sequence, n.Method, ScopeType.Close, n.Id);
+                        sequence = -1;
+                    }
+                if (autoClosed) State.WarnOnce(SessionWarning.OuterScopeClose, "[LogContext] Newer scopes found. They will be closed automatically.");
+            }
+            if (Interlocked.Exchange(ref found.Closed, 1) == 0)
+                Enqueue(string.Empty, sequence, found.Method, ScopeType.Close, found.Id);
+            PruneScopes();
         }
-        #endregion
+        private void PruneScopes()
+        {
+            while (true)
+            {
+                var head = Volatile.Read(ref _openScopes);
+                if (head == null || Volatile.Read(ref head.Closed) == 0) return;
+                Interlocked.CompareExchange(ref _openScopes, head.Next, head);
+            }
+        }
+        internal void WarnThreadMismatch()
+        {
+            if (!IsCurrentThread) State.WarnOnce(SessionWarning.CrossThreadClose,
+                "[Blackbox] Handle disposed on a different thread; newer scopes remain open.");
+        }
 
+        private long Enqueue(string message, long sequence, string methodName, ScopeType scopeType, long scopeId,
+            long interactionId = -1, Blackbox exertingTo = null, Blackbox exertedBy = null,
+            LogData.Tag[] tags = null, Blackbox taggedBy = null, TargetTypes targetTypes = TargetTypes.Full)
+        {
+            if (!State.CheckWrite()) return -1;
+            long index = Interlocked.Increment(ref _currentLogIndex);
+            if (sequence < 0) sequence = State.NextSequence();
+            var value = new LogData(_blackbox, message, DateTime.UtcNow, sequence, methodName, scopeType, scopeId,
+                _threadId, _threadName, interactionId, exertingTo, exertedBy,
+                tags == null ? null : (LogData.Tag[])tags.Clone(), taggedBy, targetTypes);
+            var entry = new PublishedLog(index, value);
+#if BLACKBOX_TESTS
+            State.BeforeLogPublication?.Invoke(index);
+#endif
+            ref var slot = ref _logBuffer[ToBufferIndex(index)];
+            while (true)
+            {
+                var old = Volatile.Read(ref slot);
+                if (old != null && old.Index >= index) return -1;
+                if (ReferenceEquals(Interlocked.CompareExchange(ref slot, entry, old), old)) return index;
+            }
+        }
 
         public IEnumerable<LogData> GetLogs(long maxSequence = -1)
         {
-            GetBufferedLogIndexRange(out var firstLogIndex, out var lastLogIndex);
-
-            for (var logIndex = firstLogIndex; logIndex <= lastLogIndex; logIndex++)
+            GetRange(out var first, out var last);
+            for (long i = first; i <= last; i++)
             {
-                var log = GetLog(logIndex);
-                if (!log.IsValid) continue;
-
-                if (maxSequence >= 0 && log.Sequence > maxSequence)
-                    yield break;
-
+                var entry = Read(i);
+                if (entry == null || !entry.Value.IsValid) continue;
+                var log = entry.Value;
+                if (maxSequence >= 0 && log.Sequence > maxSequence) continue;
+                if (log.Tags != null) log.Tags = (LogData.Tag[])log.Tags.Clone();
                 yield return log;
             }
         }
-
-        #region Resolve Tags
-        public string RenderMessage(long logIndex, string fallbackMessage)
+        public string RenderMessage(long index, string fallback)
         {
-            if (!TryGetLog(logIndex, out var log))
-                return fallbackMessage ?? string.Empty;
-
-            return LogFormatter.RenderMessage(log);
+            var entry = Read(index);
+            return entry != null && entry.Value.IsValid ? LogFormatter.RenderMessage(entry.Value) : fallback ?? string.Empty;
+        }
+        public void ResolveWith(long index, IEnumerable<Blackbox> targets, TargetTypes targetTypes)
+        {
+            if (!State.CheckWrite() || Read(index) == null) return;
+            var resolved = targets?.ToArray() ?? Array.Empty<Blackbox>();
+            if (resolved.Length == 0) return;
+            var types = State.Settings.Resolve(targetTypes);
+            var tags = new LogData.Tag[resolved.Length];
+            for (int i = 0; i < tags.Length; i++)
+            {
+                var target = resolved[i];
+                if (target != null && !ReferenceEquals(target.State, State)) return;
+                tags[i] = new LogData.Tag(target != null && target != _blackbox ? State.NextInteractionId() : -1, target);
+            }
+            LogData updated;
+            while (true)
+            {
+                var old = Read(index);
+                if (old == null || !old.Value.IsValid) return;
+                updated = old.Value;
+                updated.Tags = tags;
+                if (Replace(old, updated)) break;
+            }
+            foreach (var tag in tags)
+                if (tag.Target != null && tag.Target != _blackbox)
+                    tag.Target.Tag(updated.Message, updated.MethodName, _blackbox, tag.Id, tags, types);
         }
 
-        public void ResolveWith(long logIndex, IEnumerable<Blackbox> tags, TargetTypes targetTypes)
-        {
-            if (!TryGetLog(logIndex, out var log))
-                return;
-
-            var resolvedTags = tags?.ToList() ?? new List<Blackbox>();
-            if (resolvedTags.Count == 0) return;
-
-            var resolvedTargetTypes = targetTypes.Resolve();
-
-            var logTags = new LogData.Tag[resolvedTags.Count];
-            for (int i = 0; i < resolvedTags.Count; i++)
-            {
-                var target = resolvedTags[i];
-                var interactionId = target != null && target != _blackbox
-                    ? BlackboxRuntime.GetNextInteractionId()
-                    : -1;
-
-                logTags[i] = new LogData.Tag(interactionId, target);
-            }
-
-            log.Tags = logTags;
-            SetLog(logIndex, log);
-
-            for (int i = 0; i < logTags.Length; i++)
-            {
-                var tag = logTags[i];
-                var target = tag.Target;
-                if (target == null || target == _blackbox)
-                    continue;
-
-                target.Tag(
-                    log.Message,
-                    log.MethodName,
-                    _blackbox,
-                    tag.Id,
-                    logTags,
-                    resolvedTargetTypes);
-            }
-        }
-        #endregion
-
-        #region Merge Scopes
         public bool TryMergeScope(long interactionId)
         {
-            if (interactionId < 0)
-                return false;
-
-            GetBufferedLogIndexRange(out var firstLogIndex, out var lastLogIndex);
-            for (var interactionIndex = lastLogIndex - 1; interactionIndex >= firstLogIndex; interactionIndex--)
+            if (interactionId < 0 || !State.CheckWrite()) return false;
+            GetRange(out var first, out var last);
+            for (long index = last - 1; index >= first; index--)
             {
-                var scopeIndex = interactionIndex + 1;
-
-                var interactionLog = GetLog(interactionIndex);
-                var scopeLog = GetLog(scopeIndex);
-
-                if (!CanMergeScope(interactionId, interactionLog, scopeLog))
-                    continue;
-
-                if (!string.IsNullOrEmpty(interactionLog.Message))
+                while (true)
                 {
-                    if (string.IsNullOrEmpty(scopeLog.Message))
-                        scopeLog.Message = interactionLog.Message;
-                    else if (scopeLog.Message != interactionLog.Message)
-                        scopeLog.Message = $"{scopeLog.Message} (from: {interactionLog.Message})";
+                    var interaction = Read(index);
+                    var scope = Read(index + 1);
+                    if (interaction == null || scope == null) break;
+                    var from = interaction.Value;
+                    var into = scope.Value;
+                    if (!from.IsValid || !into.IsValid || from.ScopeType != ScopeType.None ||
+                        into.ScopeType != ScopeType.Open || from.InteractionId != interactionId || into.ScopeId < 0) break;
+                    if (!string.IsNullOrEmpty(from.Message))
+                        into.Message = string.IsNullOrEmpty(into.Message) ? from.Message :
+                            into.Message == from.Message ? into.Message : $"{into.Message} (from: {from.Message})";
+                    into.InteractionId = from.InteractionId;
+                    into.ExertedBy = from.ExertedBy ?? into.ExertedBy;
+                    into.ExertingTo = from.ExertingTo ?? into.ExertingTo;
+                    if (!Replace(scope, into)) continue;
+#if BLACKBOX_TESTS
+                    State.AfterScopeMerge?.Invoke();
+#endif
+                    // Publish the replacement before invalidating the interaction.
+                    while ((interaction = Read(index)) != null && interaction.Value.IsValid)
+                    {
+                        from = interaction.Value;
+                        from.IsValid = false;
+                        if (Replace(interaction, from)) break;
+                    }
+                    return true;
                 }
-
-                scopeLog.InteractionId = interactionLog.InteractionId;
-                scopeLog.ExertedBy = interactionLog.ExertedBy ?? scopeLog.ExertedBy;
-                scopeLog.ExertingTo = interactionLog.ExertingTo ?? scopeLog.ExertingTo;
-
-                interactionLog.IsValid = false;
-                SetLog(interactionIndex, interactionLog);
-                SetLog(scopeIndex, scopeLog);
-
-                return true;
             }
-
             return false;
-
-            bool CanMergeScope(
-                long interactionId,
-                LogData interactionLog,
-                LogData scopeLog)
-            {
-                return interactionLog.IsValid
-                    && scopeLog.IsValid
-                    && interactionLog.Owner == _blackbox
-                    && scopeLog.Owner == _blackbox
-                    && interactionLog.ScopeType == ScopeType.None
-                    && scopeLog.ScopeType == ScopeType.Open
-                    && interactionLog.InteractionId == interactionId
-                    && scopeLog.ScopeId >= 0;
-            }
         }
-        #endregion
-
-
-        // Ring buffer helpers
-        private void GetBufferedLogIndexRange(out long firstLogIndex, out long lastLogIndex)
+        private void GetRange(out long first, out long last)
         {
-            lastLogIndex = _currentLogIndex;
-            firstLogIndex = Math.Max(0, lastLogIndex - _logBuffer.Length + 1);
+            last = Volatile.Read(ref _currentLogIndex);
+            first = Math.Max(0, last - _logBuffer.Length + 1);
         }
-
-        private LogData GetLog(long logIndex) => _logBuffer[ToBufferIndex(logIndex)];
-        private void SetLog(long logIndex, LogData log) => _logBuffer[ToBufferIndex(logIndex)] = log;
-
-        private bool TryGetLog(long logIndex, out LogData log)
+        private PublishedLog Read(long index)
         {
-            GetBufferedLogIndexRange(out var firstLogIndex, out var lastLogIndex);
-
-            if (logIndex < firstLogIndex || logIndex > lastLogIndex)
-            {
-                log = default;
-                return false;
-            }
-
-            log = GetLog(logIndex);
-            return log.IsValid;
+            if (index < 0) return null;
+            GetRange(out var first, out var last);
+            if (index < first || index > last) return null;
+            var entry = Volatile.Read(ref _logBuffer[ToBufferIndex(index)]);
+            // A reservation may still contain the preceding lap's entry.
+            return entry != null && entry.Index == index ? entry : null;
         }
-
-        private int ToBufferIndex(long logIndex) => (int)(logIndex % _logBuffer.Length);
+        private bool Replace(PublishedLog old, LogData value) =>
+            ReferenceEquals(Interlocked.CompareExchange(ref _logBuffer[ToBufferIndex(old.Index)], new PublishedLog(old.Index, value), old), old);
+        private int ToBufferIndex(long index) => (int)(index % _logBuffer.Length);
     }
 }

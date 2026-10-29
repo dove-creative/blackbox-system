@@ -12,7 +12,6 @@ namespace BlackThunder.BlackboxSystem.Samples.NativeCSharp
         {
             var logDirectory = Path.Combine(BaseLogDirectory, sampleName);
 
-            BlackboxHandle.ForceReset();
             BlackboxHandle.Configure(
                 logDirectory: logDirectory,
                 normalLogger: Console.WriteLine,

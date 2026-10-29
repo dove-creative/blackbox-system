@@ -1,155 +1,58 @@
 using System;
-using System.Threading;
 
 namespace BlackThunder.BlackboxSystem
 {
-    public enum LogLevel
-    {
-        Normal,
-        Warning,
-    }
-
+    public enum LogLevel { Normal, Warning }
     internal static class Infrastructure
     {
-        // Front
-        public static string LogDirectory
-        {
-            get => _logDirectory;
-            set => _logDirectory = value;
-        }
-        public static Action<string> NormalLogger
-        {
-            get => _normalLogger;
-            set => _normalLogger = value;
-        }
-        public static Action<string> WarningLogger
-        {
-            get => _warningLogger;
-            set => _warningLogger = value;
-        }
-
+        private static SessionSettings Settings => BlackboxSession.CurrentState.Settings;
+        private static void Update(Action<SessionSettings> change) => BlackboxSession.CurrentState.UpdateSettings(change);
+        public static string LogDirectory { get => Settings.LogDirectory; set => Update(s => s.LogDirectory = value); }
+        public static Action<string> NormalLogger { get => Settings.NormalLogger; set => Update(s => s.NormalLogger = value); }
+        public static Action<string> WarningLogger { get => Settings.WarningLogger; set => Update(s => s.WarningLogger = value); }
         public static int MaxLogCount
         {
-            get => _maxLogCount;
-            set => _maxLogCount = value;
+            get => Settings.MaxLogCount;
+            set { if (value < 1) throw new ArgumentOutOfRangeException(nameof(value)); Update(s => s.MaxLogCount = value); }
         }
-        public static bool StrongReference
-        {
-            get => _strongReference;
-            set => _strongReference = value;
-        }
-        public static int DefaultRecursionDepth
-        {
-            get => _defaultRecursionDepth;
-            set => _defaultRecursionDepth = value;
-        }
-
-        public static bool IsPrinted => Volatile.Read(ref _isPrinted) != 0;
-        private static int _isPrinted = 0;
-
+        public static bool StrongReference { get => Settings.StrongReference; set => Update(s => s.StrongReference = value); }
+        public static int DefaultRecursionDepth { get => Settings.DefaultRecursionDepth; set => Update(s => s.DefaultRecursionDepth = value); }
         public static UseBlackboxOption UseBlackbox
         {
-            get => _useBlackbox;
-            set
-            {
-                if (value != UseBlackboxOption.BasedOnSettings)
-                    _useBlackbox = value;
-            }
+            get => Settings.UseBlackbox;
+            set { if (value != UseBlackboxOption.BasedOnSettings) Update(s => s.UseBlackbox = value); }
         }
         public static ExportFormat ExportFormat
         {
-            get => _exportFormat;
-            set
-            {
-                if (value != ExportFormat.BasedOnSettings)
-                    _exportFormat = value;
-            }
+            get => Settings.ExportFormat;
+            set { if (value != ExportFormat.BasedOnSettings) Update(s => s.ExportFormat = value); }
         }
         public static FullExportOption FullExportOption
         {
-            get => _fullExportOption;
-            set
-            {
-                if (value != FullExportOption.BasedOnSettings)
-                    _fullExportOption = value;
-            }
+            get => Settings.FullExportOption;
+            set { if (value != FullExportOption.BasedOnSettings) Update(s => s.FullExportOption = value); }
         }
         public static OpenLogOption OpenLogOption
         {
-            get => _openLogOption;
-            set
-            {
-                if (value != OpenLogOption.BasedOnSettings)
-                    _openLogOption = value;
-            }
+            get => Settings.OpenLogOption;
+            set { if (value != OpenLogOption.BasedOnSettings) Update(s => s.OpenLogOption = value); }
         }
         public static ExceptionHandlingOption ExceptionHandlingOption
         {
-            get => _exceptionHandlingOption;
-            set
-            {
-                if (value != ExceptionHandlingOption.BasedOnSettings)
-                    _exceptionHandlingOption = value;
-            }
+            get => Settings.ExceptionHandlingOption;
+            set { if (value != ExceptionHandlingOption.BasedOnSettings) Update(s => s.ExceptionHandlingOption = value); }
         }
         public static TargetTypes TagTargetTypes
         {
-            get => _tagTargetTypes;
-            set
-            {
-                if ((value & TargetTypes.BasedOnSettings) != TargetTypes.BasedOnSettings)
-                    _tagTargetTypes = value;
-            }
+            get => Settings.TagTargetTypes;
+            set { if ((value & TargetTypes.BasedOnSettings) == 0) Update(s => s.TagTargetTypes = value); }
         }
-
-        private static volatile string _logDirectory;
-        private static volatile Action<string> _normalLogger;
-        private static volatile Action<string> _warningLogger;
-        private static volatile int _maxLogCount = 100;
-        private static volatile bool _strongReference = false;
-        private static volatile int _defaultRecursionDepth = 100;
-        private static volatile UseBlackboxOption _useBlackbox = UseBlackboxOption.Use;
-        private static volatile ExportFormat _exportFormat = ExportFormat.Html;
-        private static volatile FullExportOption _fullExportOption = FullExportOption.Full;
-        private static volatile OpenLogOption _openLogOption = OpenLogOption.Open;
-        private static volatile ExceptionHandlingOption _exceptionHandlingOption = ExceptionHandlingOption.None;
-        private static volatile TargetTypes _tagTargetTypes = TargetTypes.Full;
-
-        public static bool TryMarkPrinted() => Interlocked.CompareExchange(ref _isPrinted, 1, 0) == 0;
-
-        /// <summary>
-        /// Resets the export-completion flag for debug or test reruns.
-        /// </summary>
-        /// <remarks>
-        /// Call this only from a safe point, normally through BlackboxRegistry.ForceReset.
-        /// It does not synchronize with active logging or export work.
-        /// </remarks>
-        public static void ForceResetRuntimeState() => Volatile.Write(ref _isPrinted, 0);
-
-        public static bool Log(string message, LogLevel logLevel = LogLevel.Normal)
-        {
-            var logger = logLevel switch
-            {
-                LogLevel.Normal => NormalLogger,
-                LogLevel.Warning => WarningLogger,
-                _ => NormalLogger,
-            };
-
-            if (logger == null)
-                return false;
-
-            logger(message);
-            return true;
-        }
-
-        public static UseBlackboxOption Resolve(this UseBlackboxOption useBlackbox) => useBlackbox == UseBlackboxOption.BasedOnSettings ? UseBlackbox : useBlackbox;
-        public static ExportFormat Resolve(this ExportFormat format) => format == ExportFormat.BasedOnSettings ? ExportFormat : format;
+        public static bool Log(string message, LogLevel level = LogLevel.Normal) => Settings.Log(message, level);
+        public static UseBlackboxOption Resolve(this UseBlackboxOption option) => option == UseBlackboxOption.BasedOnSettings ? UseBlackbox : option;
+        public static ExportFormat Resolve(this ExportFormat option) => option == ExportFormat.BasedOnSettings ? ExportFormat : option;
         public static FullExportOption Resolve(this FullExportOption option) => option == FullExportOption.BasedOnSettings ? FullExportOption : option;
         public static OpenLogOption Resolve(this OpenLogOption option) => option == OpenLogOption.BasedOnSettings ? OpenLogOption : option;
         public static ExceptionHandlingOption Resolve(this ExceptionHandlingOption option) => option == ExceptionHandlingOption.BasedOnSettings ? ExceptionHandlingOption : option;
-        public static TargetTypes Resolve(this TargetTypes targetTypes) =>
-            (targetTypes & TargetTypes.BasedOnSettings) == TargetTypes.BasedOnSettings
-                ? TagTargetTypes | (targetTypes & ~TargetTypes.BasedOnSettings)
-                : targetTypes;
+        public static TargetTypes Resolve(this TargetTypes option) => Settings.Resolve(option);
     }
 }

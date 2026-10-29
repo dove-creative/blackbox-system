@@ -1,37 +1,24 @@
-using System;
-
 namespace BlackThunder.BlackboxSystem
 {
-    public readonly struct ExertHandle : IDisposable
+    public readonly struct ExertHandle : System.IDisposable
     {
-        public readonly bool IsAlive => HandleManager<ExertHandle>.IsAlive(_id);
-        public readonly bool IsDisposed => !IsAlive;
-
-        private readonly long _id;
-        private readonly int _createdThreadId;
-
+        private readonly HandleLease<ExertHandle> _lease;
         private readonly LogContext _targetContext;
         private readonly long _interactionId;
-
-
+        public bool IsAlive => _targetContext != null && _targetContext.State.IsCurrent && HandleManager<ExertHandle>.IsAlive(_lease.Id);
+        public bool IsDisposed => !IsAlive;
         internal ExertHandle(LogContext targetContext, long interactionId)
         {
-            _id = HandleManager<ExertHandle>.GetHandleId();
-            _createdThreadId = Environment.CurrentManagedThreadId;
-
             _targetContext = targetContext;
             _interactionId = interactionId;
+            _lease = targetContext.ExertHandles.Register(targetContext.State);
         }
-
-        public readonly void Dispose()
+        public void Dispose()
         {
-            if (_id <= 0 || !HandleManager<ExertHandle>.TryDisposeHandleId(_id))
-                return;
-
-            if (Infrastructure.IsPrinted)
-                return;
-
-            HandleManager<ExertHandle>.WarnIfThreadMismatch(_createdThreadId, Environment.CurrentManagedThreadId);
+            if (_targetContext == null) return;
+            var released = _lease.Release();
+            if (!_targetContext.State.CheckWrite() || !released) return;
+            _targetContext.WarnThreadMismatch();
             _targetContext.TryMergeScope(_interactionId);
         }
     }

@@ -6,6 +6,7 @@ using UniTest;
 
 namespace BlackThunder.BlackboxSystem.Tests
 {
+    [NonParallelizable]
     internal sealed class BlackboxTableUniTests
     {
         private const int ScenarioDepth = 10;

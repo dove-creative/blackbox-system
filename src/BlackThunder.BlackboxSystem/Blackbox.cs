@@ -5,190 +5,149 @@ using System.Threading;
 
 namespace BlackThunder.BlackboxSystem
 {
+    internal sealed class ThreadToken
+    {
+        [ThreadStatic] private static ThreadToken _current;
+        internal static ThreadToken Current => _current ??= new ThreadToken();
+    }
+
     internal class Blackbox
     {
-        // Front
-        public object Owner
+        private sealed class ContextNode
         {
-            get
-            {
-                if (_strongOwner != null) return _strongOwner;
-                if (_weakOwner?.TryGetTarget(out var owner) ?? false) return owner;
-                return null;
-            }
+            internal readonly ThreadToken Token;
+            internal readonly LogContext Context;
+            internal readonly ContextNode Next;
+            internal ContextNode(ThreadToken token, LogContext context, ContextNode next)
+            { Token = token; Context = context; Next = next; }
         }
-
-        public string OwnerString
-        {
-            get
-            {
-                try
-                {
-                    var owner = Owner;
-
-                    if (owner != null)
-                        return owner.ToString() ?? "null";
-
-                    if (!string.IsNullOrEmpty(_ownerDescription))
-                        return $"{_ownerDescription} (Reference Lost)";
-
-                    return "null";
-                }
-                catch (Exception ex)
-                {
-                    if (!string.IsNullOrEmpty(_ownerDescription))
-                        return $"{_ownerDescription} (Fallback: {ex.GetType().Name})";
-
-                    return "null";
-                }
-            }
-        }
-
-        public long Id { get; }
-
-        internal IList<LogContext> LogContexts => _logContext.Values;
-
-
-        // Internal
         private readonly object _strongOwner;
         private readonly WeakReference<object> _weakOwner;
-        private readonly string _ownerDescription;
-
-        private readonly ThreadLocal<LogContext> _logContext;
+        private readonly int _bufferSize;
+        private ContextNode _contexts;
+        private string _label;
         private long _scopeId = -1;
-
-
-        // Content
-        public Blackbox(object owner, bool strongReference)
+        internal readonly SessionState State;
+        internal readonly string TypeName;
+        public long Id { get; }
+        public object Owner => _strongOwner ?? (_weakOwner?.TryGetTarget(out var owner) == true ? owner : null);
+        public string OwnerString => Volatile.Read(ref _label) ?? TypeName;
+        internal string DisplayName
         {
-            if (owner == null)
-                throw new ArgumentNullException(nameof(owner), "[Blackbox] Owner must not be null");
-
-            if (strongReference)
-                _strongOwner = owner;
-            else
-                _weakOwner = new(owner);
-
-            Id = BlackboxRuntime.GetNextBlackboxId();
-            _ownerDescription = owner.ToString();
-
-            var bufferSize = Infrastructure.MaxLogCount;
-            _logContext = new ThreadLocal<LogContext>(() => new LogContext(this, bufferSize), true);
+            get
+            {
+                var label = Volatile.Read(ref _label);
+                return label == null ? $"{TypeName} #{Id}" : $"{label} ({TypeName} #{Id})";
+            }
         }
-
-        public static long GetCurrentSequence() => BlackboxRuntime.CurrentSequence;
-
-
+        internal IList<LogContext> LogContexts
+        {
+            get
+            {
+                var result = new List<LogContext>();
+                for (var n = Volatile.Read(ref _contexts); n != null; n = n.Next) result.Add(n.Context);
+                result.Reverse();
+                return result;
+            }
+        }
+        internal LogContext CurrentContext
+        {
+            get
+            {
+                var token = ThreadToken.Current;
+                var head = Volatile.Read(ref _contexts);
+                for (var n = head; n != null; n = n.Next)
+                    if (ReferenceEquals(n.Token, token)) return n.Context;
+                var context = new LogContext(this, _bufferSize);
+                while (true)
+                {
+                    var node = new ContextNode(token, context, head);
+                    var observed = Interlocked.CompareExchange(ref _contexts, node, head);
+                    if (ReferenceEquals(observed, head)) return context;
+                    head = observed;
+                }
+            }
+        }
+        public Blackbox(object owner, bool strongReference) : this(owner, strongReference, BlackboxSession.CurrentState) { }
+        internal Blackbox(object owner, bool strongReference, SessionState state)
+        {
+            if (owner == null) throw new ArgumentNullException(nameof(owner));
+            State = state;
+            if (strongReference) _strongOwner = owner;
+            else _weakOwner = new WeakReference<object>(owner);
+            TypeName = TypeDisplayName.Format(owner.GetType());
+            Id = state.NextBoxId();
+            _bufferSize = state.Settings.MaxLogCount;
+        }
+        internal void SetLabel(string label)
+        {
+            if (!State.CheckWrite() || string.IsNullOrWhiteSpace(label)) return;
+            // A string Subject must not become strongly rooted by its own label.
+            if (_strongOwner == null && ReferenceEquals(Owner, label)) label = new string(label.ToCharArray());
+            var old = Interlocked.CompareExchange(ref _label, label, null);
+            if (old != null && !string.Equals(old, label, StringComparison.Ordinal))
+                State.WarnOnce(SessionWarning.LabelAlreadySet, "[Blackbox] Label was already assigned; keeping the first label.");
+        }
+        public static long GetCurrentSequence() => BlackboxSession.CurrentState.CurrentSequence;
         public TagHandle Write(string message, string methodName)
         {
-            if (Infrastructure.IsPrinted)
-                return TagHandle.FromMessage(message);
-
-            return EnqueueLog(message, methodName);
+            if (!State.CheckWrite()) return TagHandle.FromMessage(message);
+            return CurrentContext.EnqueueLog(message, -1, methodName);
         }
-
         internal string Tag(string message, string methodName, Blackbox taggedBy, long interactionId, LogData.Tag[] tags, TargetTypes targetTypes)
         {
-            if (Infrastructure.IsPrinted)
-                return message;
-
-            EnqueueTagLog(message, methodName, interactionId, taggedBy, tags, targetTypes);
+            if (State.CheckWrite()) CurrentContext.EnqueueTagLog(message, -1, methodName, interactionId, taggedBy, tags, targetTypes);
             return message;
         }
-
         public ScopeHandle WriteScope(string message, string methodName)
         {
-            if (Infrastructure.IsPrinted)
-                return default;
-
-            var context = _logContext.Value;
+            if (!State.CheckWrite()) return default;
+            var context = CurrentContext;
             var scopeId = Interlocked.Increment(ref _scopeId);
-
-            var tagHandle = context.OpenScope(message, BlackboxRuntime.GetNextSequence(), methodName, scopeId);
-            return new ScopeHandle(context, scopeId, tagHandle);
+            var tag = context.OpenScope(message, -1, methodName, scopeId);
+            return new ScopeHandle(context, scopeId, tag);
         }
-
         public string ExertMessage(Blackbox other, string message, string methodName)
         {
-            if (Infrastructure.IsPrinted)
-                return message;
-
-            EnqueueInteraction(other, out _, message, methodName);
+            if (State.CheckWrite()) EnqueueInteraction(other, out _, message, methodName);
             return message;
         }
-
         public ExertHandle Exert(Blackbox other, string message, string methodName)
         {
-            if (Infrastructure.IsPrinted)
-                return default;
-
-            var interactionId = EnqueueInteraction(other, out var targetContext, message, methodName);
-            return new ExertHandle(targetContext, interactionId);
+            if (!State.CheckWrite()) return default;
+            var id = EnqueueInteraction(other, out var target, message, methodName);
+            return target == null ? default : new ExertHandle(target, id);
         }
-
-        private long EnqueueInteraction(Blackbox other, out LogContext targetContext, string message, string methodName)
+        private long EnqueueInteraction(Blackbox other, out LogContext target, string message, string methodName)
         {
-            if (Infrastructure.IsPrinted)
-            {
-                targetContext = default;
-                return -1;
-            }
-
-            if (other == null)
-                throw new ArgumentNullException(nameof(other));
-
-            var context = _logContext.Value;
-            var interactionId = BlackboxRuntime.GetNextInteractionId();
-
+            target = null;
+            if (!State.CanWrite) return -1;
+            if (other == null) throw new ArgumentNullException(nameof(other));
+            if (!ReferenceEquals(other.State, State)) return -1;
+            var context = CurrentContext;
+            target = other.CurrentContext;
+            var id = State.NextInteractionId();
             if (other != this)
             {
-                other.EnqueueLog(out targetContext, message, methodName, interactionId, null, this);
-                EnqueueLog(context, message, methodName, interactionId, other, null);
+                target.EnqueueLog(message, -1, methodName, -1, id, null, this);
+                context.EnqueueLog(message, -1, methodName, -1, id, other);
             }
-            else
-            {
-                targetContext = context;
-                EnqueueLog(context, message, methodName, interactionId, this, this);
-            }
-
-            return interactionId;
+            else context.EnqueueLog(message, -1, methodName, -1, id, this, this);
+            return id;
         }
-
-
-        #region Enqueue Log
-        private TagHandle EnqueueLog(string message, string methodName) =>
-            EnqueueLog(_logContext.Value, message, methodName, -1, null, null);
-        private void EnqueueLog(out LogContext context, string message, string methodName, long interactionId, Blackbox exertingTo, Blackbox exertedBy)
-        {
-            context = _logContext.Value;
-            EnqueueLog(context, message, methodName, interactionId, exertingTo, exertedBy);
-        }
-        private TagHandle EnqueueLog(LogContext context, string message, string methodName, long interactionId, Blackbox exertingTo, Blackbox exertedBy) =>
-            context.EnqueueLog(message, BlackboxRuntime.GetNextSequence(), methodName, -1, interactionId, exertingTo, exertedBy);
-
-        private void EnqueueTagLog(string message, string methodName, long interactionId, Blackbox taggedBy, LogData.Tag[] tags, TargetTypes targetTypes) =>
-            _logContext.Value.EnqueueTagLog(message, BlackboxRuntime.GetNextSequence(), methodName, interactionId, taggedBy, tags, targetTypes);
-        #endregion
-
-
         public List<LogData>[] GetLogsByContext(long maxSequence = -1)
         {
-            var contexts = _logContext.Values;
+            var contexts = LogContexts;
             var logs = new List<LogData>[contexts.Count];
-
             for (int i = 0; i < logs.Length; i++)
-                logs[i] = contexts[i].GetLogs(maxSequence).ToList();
-
+                logs[i] = contexts[i].GetLogs(maxSequence).OrderBy(log => log.Sequence).ToList();
             return logs;
         }
-
         public List<LogData> GetLogs(long maxSequence = -1) => MergeLogContext(GetLogsByContext(maxSequence));
-
         public static List<LogData> MergeLogContext(IEnumerable<IEnumerable<LogData>> contextLogs)
         {
-            var logs = contextLogs.SelectMany(contextLogs => contextLogs).ToList();
-            logs.Sort((left, right) => left.Sequence.CompareTo(right.Sequence));
-
+            var logs = contextLogs.SelectMany(logs => logs).ToList();
+            logs.Sort((a, b) => a.Sequence.CompareTo(b.Sequence));
             return logs;
         }
     }

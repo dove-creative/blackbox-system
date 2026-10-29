@@ -17,7 +17,7 @@ namespace BlackThunder.BlackboxSystem.Exporters
                 if (current.ScopeType == ScopeType.Open)
                     current.ScopeDepth = depth++;
                 else if (current.ScopeType == ScopeType.Close)
-                    current.ScopeDepth = --depth;
+                    current.ScopeDepth = depth = System.Math.Max(0, depth - 1);
                 else
                     current.ScopeDepth = depth;
 

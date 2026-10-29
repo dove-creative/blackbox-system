@@ -12,27 +12,21 @@ namespace BlackThunder.BlackboxSystem.Exporters
         internal static Action<ProcessStartInfo> OpenLogProcess = startInfo => Process.Start(startInfo);
 #endif
 
-        public static void Export(Blackbox blackbox, int recursionDepth, bool isCrash, bool fullExport, bool openLog, long maxSequence = -1)
+        public static void Export(Blackbox blackbox, int recursionDepth, bool isCrash, bool fullExport, bool openLog, long maxSequence = -1, SessionSettings settings = null)
         {
-            if (string.IsNullOrWhiteSpace(Infrastructure.LogDirectory))
-                throw new InvalidOperationException($"[TxtExporter] LogDirectory is empty.");
-
-            Directory.CreateDirectory(Infrastructure.LogDirectory);
-
-            var fileName = $"Blackbox {Tools.TrimSmart(blackbox.OwnerString)} ({blackbox.Id}).txt";
-            if (isCrash) fileName = "[CRASH] " + fileName;
-
+            settings ??= blackbox.State.Settings;
             var sb = new StringBuilder();
             var nodes = Tools.BuildExportGraph(blackbox, recursionDepth, fullExport, maxSequence);
 
+            var crash = blackbox.State.Crash;
+            if (crash != null) sb.AppendLine($"[Error] {crash.Message}\n[STACK TRACE]\n{crash.Stack}");
             BuildText(nodes, sb);
 
             var result = sb.ToString();
 
-            var fullPath = Path.Combine(Infrastructure.LogDirectory, fileName);
-            File.WriteAllText(fullPath, result);
+            var fullPath = Tools.WriteExportFile(blackbox, settings, ".txt", isCrash, result);
 
-            Infrastructure.Log($"[TxtExporter] Log successfully exported to '{fullPath}'");
+            settings.Log($"[TxtExporter] Log successfully exported to '{fullPath}'");
 
             if (openLog)
             {
@@ -47,7 +41,7 @@ namespace BlackThunder.BlackboxSystem.Exporters
                 }
                 catch (Exception ex)
                 {
-                    Infrastructure.Log(
+                    settings.Log(
                         $"[TxtExporter] Failed to open the file automatically.\n{ex.ToString()}",
                         LogLevel.Warning);
                 }
@@ -63,8 +57,8 @@ namespace BlackThunder.BlackboxSystem.Exporters
             {
                 var current = node.Blackbox;
                 var parent = node.ParentBlackbox;
-                var fromInfo = node.HasParent ? $" | From = #{parent.Id}: {parent.OwnerString}" : "";
-                var header = $"========= #{current.Id}: {current.OwnerString} (Depth = {node.Depth}{fromInfo}) =========";
+                var fromInfo = node.HasParent ? $" | From = {LogFormatter.ObjectRef(parent, node.Names)}" : "";
+                var header = $"========= {LogFormatter.ObjectRef(current, node.Names)} (Depth = {node.Depth}{fromInfo}) =========";
 
                 sb.AppendLine(header);
                 sb.AppendLine(new string('-', 40));

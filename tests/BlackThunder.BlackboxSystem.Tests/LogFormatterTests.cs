@@ -50,7 +50,7 @@ namespace BlackThunder.BlackboxSystem.Tests
             var fullMessage = LogFormatter.RenderMessage(full);
 
             Assert.That(LogFormatter.RenderMessage(nameOnly), Does.Contain("tagged by"));
-            Assert.That(fullMessage, Is.EqualTo("tagged by 'source #1': message"));
+            Assert.That(fullMessage, Is.EqualTo("tagged by 'source (BlackboxTestDoubles.NamedOwner #1)': message"));
             Assert.That(LogFormatter.RenderMessage(none), Is.EqualTo("tagged"));
         }
 

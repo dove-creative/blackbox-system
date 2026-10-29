@@ -10,6 +10,7 @@ namespace BlackThunder.BlackboxSystem.Samples.NativeCSharp
     {
         public static void Run()
         {
+            using var session = BlackboxSession.Begin();
             SampleEnvironment.Configure("3-Tag");
 
             var player = new Player("Rin", 100);
@@ -41,20 +42,18 @@ namespace BlackThunder.BlackboxSystem.Samples.NativeCSharp
                 HP = hp;
 
                 // Construct starts this object's Blackbox history.
-                using var _ = BlackboxHandle.Of(this).Construct();
+                using var _ = BlackboxHandle.Of(this).Label(Name).Construct();
             }
 
             public void Attack(Monster monster, int damage)
             {
                 // Scope records the player-side attack flow.
-                using var _ = BlackboxHandle.Of(this).Scope($"Attack (monster={monster}, damage={damage})");
+                using var _ = BlackboxHandle.Of(this).Scope($"Attack (monster={monster.Name}, damage={damage})");
 
                 // Exert links the attack call range to the monster's damage flow.
                 using (BlackboxHandle.Of(this).Exert(monster, "Attack"))
                 monster.TakeDamage(damage);
             }
-
-            public override string ToString() => Name;
         }
 
         private class Monster
@@ -71,7 +70,7 @@ namespace BlackThunder.BlackboxSystem.Samples.NativeCSharp
                 HP = hp;
 
                 // Construct stores a reusable handle for this monster's logs.
-                using var _ = BlackboxHandle.Of(this).Construct(out _bb);
+                using var _ = BlackboxHandle.Of(this).Label(Name).Construct(out _bb);
             }
 
             public void TakeDamage(int damage)
@@ -92,8 +91,6 @@ namespace BlackThunder.BlackboxSystem.Samples.NativeCSharp
                 using var _ = _bb.Scope("Set Home (home=%0)").With(home);
                 Home = home;
             }
-
-            public override string ToString() => Name;
         }
 
         private class MonsterHome
@@ -108,21 +105,19 @@ namespace BlackThunder.BlackboxSystem.Samples.NativeCSharp
                 Name = name;
 
                 // Construct stores a reusable handle for this home's logs.
-                using var _ = BlackboxHandle.Of(this).Construct(out _bb);
+                using var _ = BlackboxHandle.Of(this).Label(Name).Construct(out _bb);
             }
 
             public void Register(Monster monster)
             {
                 // Scope records which monster is added to this home.
-                using var _ = _bb.Scope($"Register (monster={monster})");
+                using var _ = _bb.Scope($"Register (monster={monster.Name})");
                 Monsters.Add(monster);
 
                 // Exert links the home-side register flow to the monster update.
                 using (_bb.Exert(monster, "Register"))
                 monster.SetHome(this);
             }
-
-            public override string ToString() => Name;
         }
     }
 }

@@ -9,6 +9,7 @@ namespace BlackThunder.BlackboxSystem.Samples.NativeCSharp
     {
         public static void Run()
         {
+            using var session = BlackboxSession.Begin();
             SampleEnvironment.Configure("1-Write");
 
             var player = new Player("Rin", 100);
@@ -31,8 +32,8 @@ namespace BlackThunder.BlackboxSystem.Samples.NativeCSharp
                 Name = name;
                 HP = hp;
 
-                // Construct runs after field assignment so ToString() and the initial state are ready.
-                using var _ = BlackboxHandle.Of(this).Construct();
+                // Assign the explicit label after the object's name has been initialized.
+                using var _ = BlackboxHandle.Of(this).Label(Name).Construct();
             }
 
             public void TakeDamage(int damage)
@@ -62,8 +63,6 @@ namespace BlackThunder.BlackboxSystem.Samples.NativeCSharp
                 using var _ = BlackboxHandle.Of(this).Scope("Shine");
                 Console.WriteLine("Shine!");
             }
-
-            public override string ToString() => Name;
         }
     }
 }

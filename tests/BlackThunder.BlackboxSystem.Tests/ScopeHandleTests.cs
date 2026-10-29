@@ -89,7 +89,7 @@ namespace BlackThunder.BlackboxSystem.Tests
         {
             var blackbox = BlackboxTestDoubles.Blackbox("owner");
             var handle = blackbox.WriteScope("scope", "Run");
-            Assert.That(Infrastructure.TryMarkPrinted(), Is.True);
+            Assert.That(BlackboxSession.CurrentState.TryFreeze(new CrashInfo("test", string.Empty)), Is.True);
 
             // Table 2-2 / Alive x Dispose.Printed
             handle.Dispose();
