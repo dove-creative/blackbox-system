@@ -30,3 +30,33 @@ dotnet run --project benchmarks/Blackbox.Benchmarks -c Release
 Build before timing, then repeat with `--no-build`. The harness prints CSV containing elapsed time, aggregate cost and process allocation deltas. It compiles the runtime sources directly to include the registry lookup case. The registration case uses the default session's 4,096 buckets; explicit sessions use 256. The harness does not measure export I/O, label updates, cold type initialization, unusually large subject sets or cross-session application workloads.
 
 Raw CSV from this local run is in ignored `artifacts/benchmark-{before,after}-{1,2,3}.csv`. The comparison source copy under `artifacts/benchmark-baseline` was reconstructed from the baseline commit and is not shipped.
+
+## 2026-10-30: bounded session trackers
+
+The baseline is `1d18d06` (the initial 0.2.0 session implementation). The revised implementation owns 16 trackers per handle type per generation, selected by thread-token hash, instead of retaining two new trackers for every context. Both versions use the new `--scopes` and `--retention` modes in the same harness. Windows x64, .NET SDK 9.0.320, Release, `DOTNET_TieredCompilation=0`; no tests ran during measurement.
+
+Scope open/close warms up 2,000 times per worker, then measures 100,000 operations per worker. Before/after processes alternate for three rounds; the table reports medians. Parallel values remain aggregate ns/op, not per-thread latency. The variation between rounds means these results indicate comparable throughput, not an established speedup.
+
+| Scope open/close | Per-context trackers | Shared trackers |
+|---|---:|---:|
+| 1 worker, ns/op | 391.40 | 388.15 |
+| 24 workers, ns/op | 781.63 | 742.26 |
+| Allocation, bytes/op | 352 | 352 |
+
+The retention test warms up first, resets once, then creates and discards 100,000 objects per batch in the **default session**, each with one Write and a 100-entry buffer. It measures GC alone, then dead-subject cleanup followed by GC, without resetting between batches. The latter separates tracker ownership from dead registry entries awaiting cleanup. These are retained managed-heap deltas from the warmed baseline, not total allocated bytes or process working set.
+
+| Cumulative objects | Old tracker count | New tracker count | Old retained bytes after cleanup | New retained bytes after cleanup |
+|---|---:|---:|---:|---:|
+| 100,000 | 200,000 | 32 | 73,604,472 | 1,400 |
+| 200,000 | 400,000 | 32 | 147,204,472 | 1,400 |
+| 300,000 | 600,000 | 32 | 220,804,472 | 1,400 |
+
+With GC alone, the new implementation retained 11,839,064 / 11,747,048 / 11,876,648 bytes at those checkpoints. Dead registry nodes still hold their Blackboxes until cleanup; these measurements must not be described as immediate zero retention after GC. Tracker segments can also grow with outstanding scopes/exerts and are reused afterward; the fixed count bounds tracker objects, not every possible workload's total memory.
+
+```powershell
+$env:DOTNET_TieredCompilation = '0'
+dotnet run --project benchmarks/Blackbox.Benchmarks -c Release -- --scopes
+dotnet run --project benchmarks/Blackbox.Benchmarks -c Release -- --retention
+```
+
+Use `--no-build` after building to repeat measurements. Raw data is in ignored `artifacts/scalability-scopes-{before,after}-{1,2,3}.csv` and `artifacts/scalability-retention-{before,after}.csv`. The baseline source copy is `artifacts/scalability-baseline`.

@@ -3,6 +3,17 @@ using System.Diagnostics;
 using System.Threading;
 using BlackThunder.BlackboxSystem;
 
+if (args.Length != 0)
+{
+    switch (args[0])
+    {
+        case "--scopes": ScalabilityBenchmarks.RunScopes(); break;
+        case "--retention": ScalabilityBenchmarks.RunRetention(); break;
+        default: throw new ArgumentException("Expected --scopes or --retention, or no argument for the original benchmark.");
+    }
+    return;
+}
+
 Console.WriteLine("operation,threads,operations,elapsed_ms,ns_per_operation,allocated_bytes");
 foreach (var workers in new[] { 1, Environment.ProcessorCount })
 foreach (var operation in new[] { "register", "lookup", "write", "scope", "exert" })

@@ -6,6 +6,10 @@ The format follows Keep a Changelog, and version numbers follow Semantic Version
 
 ## [Unreleased]
 
+### Fixed
+
+- Bounded handle tracker ownership to 16 shared stripes per handle type in each session generation, preventing write-only object churn from retaining a tracker pair per collected context. Registration/retirement still uses full IDs and lock-free CAS.
+
 ## [0.2.0] - 2026-10-29
 
 ### Added

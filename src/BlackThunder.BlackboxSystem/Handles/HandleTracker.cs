@@ -2,9 +2,8 @@ using System.Threading;
 
 namespace BlackThunder.BlackboxSystem
 {
-    internal interface IHandleTracker { void Close(); }
-    // No reference to LogContext: retirement can reclaim IDs after their contexts are collected.
-    internal sealed class HandleTracker<T> : IHandleTracker
+    // Shared by contexts in one session stripe; never holds a context or subject reference.
+    internal sealed class HandleTracker<T>
     {
         internal sealed class Segment
         {
@@ -14,7 +13,6 @@ namespace BlackThunder.BlackboxSystem
         }
         private static readonly Segment Closed = new(null);
         private Segment _head = new(null);
-        internal HandleTracker(SessionState state) { state.RegisterTracker(this); }
         internal HandleLease<T> Register(SessionState state)
         {
             if (!state.CheckWrite()) return default;

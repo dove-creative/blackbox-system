@@ -42,8 +42,8 @@ namespace BlackThunder.BlackboxSystem
             _threadId = Environment.CurrentManagedThreadId;
             _threadName = Thread.CurrentThread.Name;
             _token = ThreadToken.Current;
-            ScopeHandles = new HandleTracker<ScopeHandle>(State);
-            ExertHandles = new HandleTracker<ExertHandle>(State);
+            ScopeHandles = State.GetScopeTracker(_token);
+            ExertHandles = State.GetExertTracker(_token);
         }
 
         public TagHandle EnqueueLog(string message, long sequence, string methodName, long scopeId = -1, long interactionId = -1, Blackbox exertingTo = null, Blackbox exertedBy = null)

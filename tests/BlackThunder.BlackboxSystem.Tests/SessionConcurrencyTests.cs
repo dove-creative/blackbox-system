@@ -366,7 +366,7 @@ namespace BlackThunder.BlackboxSystem.Tests
             var state = BlackboxSession.CurrentState;
             var owner = new object();
             var box = state.Subjects.GetOrAdd(owner);
-            var tracker = new HandleTracker<ScopeHandle>(state);
+            var tracker = state.GetScopeTracker(ThreadToken.Current);
             for (int i = 0; i < 10000; i++) { state.Subjects.GetOrAdd(owner); tracker.Register(state).Release(); }
             long before = GC.GetAllocatedBytesForCurrentThread();
             for (int i = 0; i < 1000; i++) { state.Subjects.GetOrAdd(owner); tracker.Register(state).Release(); }

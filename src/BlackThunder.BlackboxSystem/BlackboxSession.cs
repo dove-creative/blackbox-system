@@ -1,4 +1,5 @@
 using System;
+using System.Runtime.CompilerServices;
 using System.Threading;
 
 namespace BlackThunder.BlackboxSystem
@@ -86,14 +87,11 @@ namespace BlackThunder.BlackboxSystem
     }
     internal sealed class SessionState
     {
-        private sealed class TrackerNode
-        {
-            internal readonly IHandleTracker Tracker;
-            internal readonly TrackerNode Next;
-            internal TrackerNode(IHandleTracker tracker, TrackerNode next) { Tracker = tracker; Next = next; }
-        }
-        private static readonly TrackerNode Closed = new(null, null);
-        private TrackerNode _trackers;
+        // Session-owned stripes bound tracking overhead independently of context churn.
+        // Segments are reused and grow only when outstanding handles need more cells.
+        private const int TrackerStripeCount = 16;
+        private readonly HandleTracker<ScopeHandle>[] _scopeTrackers = CreateTrackers<ScopeHandle>();
+        private readonly HandleTracker<ExertHandle>[] _exertTrackers = CreateTrackers<ExertHandle>();
         private SessionSettings _settings;
         private CrashInfo _crash;
         private int _warnings;
@@ -148,23 +146,20 @@ namespace BlackThunder.BlackboxSystem
             }
             Settings.WarningLogger?.Invoke(message);
         }
-        internal void RegisterTracker(IHandleTracker tracker)
+        private static HandleTracker<T>[] CreateTrackers<T>()
         {
-            while (true)
-            {
-                var head = Volatile.Read(ref _trackers);
-                if (ReferenceEquals(head, Closed)) { tracker.Close(); return; }
-                if (ReferenceEquals(Interlocked.CompareExchange(ref _trackers, new TrackerNode(tracker, head), head), head)) return;
-            }
+            var trackers = new HandleTracker<T>[TrackerStripeCount];
+            for (int i = 0; i < trackers.Length; i++) trackers[i] = new HandleTracker<T>();
+            return trackers;
         }
+        internal HandleTracker<ScopeHandle> GetScopeTracker(ThreadToken token) =>
+            _scopeTrackers[RuntimeHelpers.GetHashCode(token) & (TrackerStripeCount - 1)];
+        internal HandleTracker<ExertHandle> GetExertTracker(ThreadToken token) =>
+            _exertTrackers[RuntimeHelpers.GetHashCode(token) & (TrackerStripeCount - 1)];
         internal void Retire()
         {
-            var node = Interlocked.Exchange(ref _trackers, Closed);
-            while (node != null && !ReferenceEquals(node, Closed))
-            {
-                node.Tracker.Close();
-                node = node.Next;
-            }
+            foreach (var tracker in _scopeTrackers) tracker.Close();
+            foreach (var tracker in _exertTrackers) tracker.Close();
         }
 #if BLACKBOX_TESTS
         internal Action BeforeHandleRegistration;
