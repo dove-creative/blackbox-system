@@ -9,7 +9,9 @@ if (args.Length != 0)
     {
         case "--scopes": ScalabilityBenchmarks.RunScopes(); break;
         case "--retention": ScalabilityBenchmarks.RunRetention(); break;
-        default: throw new ArgumentException("Expected --scopes or --retention, or no argument for the original benchmark.");
+        case "--retention-unmaintained": ScalabilityBenchmarks.RunRetention(cleanupEachBatch: false); break;
+        case "--lookup": LookupBenchmark.Run(); break;
+        default: throw new ArgumentException("Expected --scopes, --retention, --retention-unmaintained or --lookup, or no argument for the original benchmark.");
     }
     return;
 }

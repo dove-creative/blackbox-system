@@ -14,7 +14,7 @@ namespace BlackThunder.BlackboxSystem
             internal Binding(BlackboxSession session, SessionState state) { Session = session; State = state; }
         }
         private static readonly AsyncLocal<Binding> Ambient = new();
-        private static readonly BlackboxSession Default = new(new SessionSettings(), null, 4096);
+        private static readonly BlackboxSession Default = new(new SessionSettings(), null, 65536);
         private readonly Binding _previous;
         private readonly int _bucketCount;
         private SessionState _current;

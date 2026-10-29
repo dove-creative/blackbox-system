@@ -9,6 +9,7 @@ The format follows Keep a Changelog, and version numbers follow Semantic Version
 ### Fixed
 
 - Bounded handle tracker ownership to 16 shared stripes per handle type in each session generation, preventing write-only object churn from retaining a tracker pair per collected context. Registration/retirement still uses full IDs and lock-free CAS.
+- Expanded the default session's subject table to 65,536 buckets (explicit sessions remain at 256). Registered lookups check hashes before dereferencing owners; dead-entry inspection and cleanup occur only after a lookup miss or during explicit maintenance.
 
 ## [0.2.0] - 2026-10-29
 

@@ -41,17 +41,15 @@ namespace BlackThunder.BlackboxSystem
                 while (true)
                 {
                     var head = Volatile.Read(ref slot);
-                    bool dead = false;
                     for (var n = head; n != null; n = n.Next)
-                    {
-                        var owner = n.Box.Owner;
-                        if (n.Hash == hash && ReferenceEquals(owner, subject)) return n.Box;
-                        dead |= owner == null;
-                    }
+                        if (n.Hash == hash && ReferenceEquals(n.Box.Owner, subject)) return n.Box;
                     if (!_state.CheckWrite()) return null;
-                    if (dead)
+
+                    // Successful lookups never inspect unrelated weak owners or perform cleanup.
+                    // On a miss, remove dead entries before publishing a new canonical box.
+                    var cleaned = RemoveDead(head);
+                    if (!ReferenceEquals(cleaned, head))
                     {
-                        var cleaned = RemoveDead(head);
                         if (!ReferenceEquals(Interlocked.CompareExchange(ref slot, cleaned, head), head)) continue;
                         head = cleaned;
                     }

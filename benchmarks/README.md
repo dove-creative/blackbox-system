@@ -27,7 +27,7 @@ $env:DOTNET_TieredCompilation = '0'
 dotnet run --project benchmarks/Blackbox.Benchmarks -c Release
 ```
 
-Build before timing, then repeat with `--no-build`. The harness prints CSV containing elapsed time, aggregate cost and process allocation deltas. It compiles the runtime sources directly to include the registry lookup case. The registration case uses the default session's 4,096 buckets; explicit sessions use 256. The harness does not measure export I/O, label updates, cold type initialization, unusually large subject sets or cross-session application workloads.
+Build before timing, then repeat with `--no-build`. The harness prints CSV containing elapsed time, aggregate cost and process allocation deltas. It compiles the runtime sources directly to include the registry lookup case. At the time of the October 29 measurements, the registration case used the default session's 4,096 buckets; explicit sessions used 256. The original harness does not measure export I/O, label updates, cold type initialization, unusually large subject sets or cross-session application workloads. The October 30 additions below cover large subject sets separately.
 
 Raw CSV from this local run is in ignored `artifacts/benchmark-{before,after}-{1,2,3}.csv`. The comparison source copy under `artifacts/benchmark-baseline` was reconstructed from the baseline commit and is not shipped.
 
@@ -60,3 +60,44 @@ dotnet run --project benchmarks/Blackbox.Benchmarks -c Release -- --retention
 ```
 
 Use `--no-build` after building to repeat measurements. Raw data is in ignored `artifacts/scalability-scopes-{before,after}-{1,2,3}.csv` and `artifacts/scalability-retention-{before,after}.csv`. The baseline source copy is `artifacts/scalability-baseline`.
+
+## 2026-10-30: subject lookup at larger live populations
+
+The default table now has 65,536 buckets; explicit sessions keep 256. A hit follows immutable nodes and dereferences an owner only after its identity hash matches. Dead-owner scanning and cleanup move to the insertion/miss path. The baseline remains `1d18d06`, with 4,096 default buckets and an owner read for every node inspected.
+
+`--lookup` retains **all** subjects in an array through `GC.KeepAlive`. For each population, it prepares 4,096 indices using `Random(1)`, warms 100,000 lookups, then repeats those indices for 2,000,000 registry hits. Setup, insertion and index generation are outside timing. This measures a repeated hot subset of the live population; it is not a uniformly fresh random lookup on every operation. It calls the internal registry used by Of/interaction/tag lookup, so public API overhead is excluded.
+
+The same Windows/.NET/Release/TieredCompilation settings apply. Before/after processes alternate for three rounds, without concurrent test runs. Medians:
+
+| Live subjects | Before, ns/lookup | After, ns/lookup |
+|---|---:|---:|
+| 1,000 | 12.43 | 11.21 |
+| 10,000 | 36.14 | 15.54 |
+| 100,000 | 771.64 | 51.42 |
+| 400,000 | 6378.17 | 111.18 |
+
+All measured lookup loops allocated zero bytes. The 400,000-subject case is about 57 times faster in this workload. This remains a fixed-size table; still larger live populations will increase chain lengths.
+
+The bucket array itself uses approximately 512 KiB of references per default generation on x64 (plus its array header). There is a separate retention cost: with the batch cleanup protocol above and 65,536 buckets, GC-only heap deltas were 71,808,872 / 71,382,488 / 71,635,208 bytes after 100k/200k/300k objects. Subject cleanup reduced each to 1,400 bytes, with 32 trackers throughout. More buckets can retain more dead entries pending cleanup; the 512 KiB array is not the entire memory tradeoff.
+
+```powershell
+$env:DOTNET_TieredCompilation = '0'
+dotnet run --project benchmarks/Blackbox.Benchmarks -c Release -- --lookup
+dotnet run --project benchmarks/Blackbox.Benchmarks -c Release -- --retention-unmaintained
+```
+
+The latter mode creates six batches of 100,000 objects, runs GC after each batch and **does not clean the subject store or reset between batches**. It performs one subject cleanup at the end, then resets. This distinguishes long-running default-session retention from the earlier per-batch cleanup experiment.
+
+| Objects created without intermediate cleanup | Before: GC-only retained MiB | After: GC-only retained MiB | After: trackers |
+|---|---:|---:|---:|
+| 100,000 | 79.00 | 68.49 | 32 |
+| 200,000 | 149.16 | 82.87 | 32 |
+| 300,000 | 219.37 | 86.10 | 32 |
+| 400,000 | 289.44 | 86.77 | 32 |
+| 500,000 | 359.77 | 86.88 | 32 |
+| 600,000 | 429.91 | 86.89 | 32 |
+
+The original tracker count grew from 200,000 to 1,200,000. After the single final subject cleanup, retained growth was 441,604,472 bytes before and 1,400 bytes after. The remaining pre-cleanup memory in the new version approaches **87 MiB in this workload**, not 68 MiB as in the experiment that cleaned after every batch. This is retained dead registry data, not ongoing tracker accumulation. These results describe this workload and buffer size, not a universal heap limit.
+
+Raw lookup data: ignored `artifacts/scalability-lookup-{before,after}-{1,2,3}.csv`. Final per-batch cleanup data: `artifacts/scalability-retention-final.csv`.
+Data without intermediate cleanup: `artifacts/scalability-retention-unmaintained-{before,after}.csv`.

@@ -42,7 +42,7 @@ internal static class ScalabilityBenchmarks
         }
     }
 
-    internal static void RunRetention()
+    internal static void RunRetention(bool cleanupEachBatch = true)
     {
         Configure();
         // Warm runtime metadata and reflection separately from the retained-heap baseline.
@@ -52,18 +52,29 @@ internal static class ScalabilityBenchmarks
         var baseline = HeapAfterCollection();
         Console.WriteLine("phase,objects_created,trackers,live_subjects,heap_delta_bytes");
         PrintRetention("baseline", 0, baseline, baseline);
-        for (int batch = 1; batch <= 3; batch++)
+        var batches = cleanupEachBatch ? 3 : 6;
+        for (int batch = 1; batch <= batches; batch++)
         {
             Churn(100_000);
             var rawHeap = HeapAfterCollection();
             PrintRetention("after_gc", batch * 100_000, rawHeap, baseline);
-            // Registry dead-node cleanup is distinct from tracker retirement: no ForceReset here.
+            if (cleanupEachBatch)
+            {
+                // Registry dead-node cleanup is distinct from tracker retirement: no ForceReset here.
+                BlackboxSession.CurrentState.Subjects.Cleanup();
+                var cleanedHeap = HeapAfterCollection();
+                PrintRetention("after_subject_cleanup", batch * 100_000, cleanedHeap, baseline);
+            }
+        }
+        if (!cleanupEachBatch)
+        {
+            // Model a long-lived default session with neither exports nor explicit maintenance.
+            // Observe all six batches first; only then separate registry retention from tracker retention.
             BlackboxSession.CurrentState.Subjects.Cleanup();
-            var cleanedHeap = HeapAfterCollection();
-            PrintRetention("after_subject_cleanup", batch * 100_000, cleanedHeap, baseline);
+            PrintRetention("after_subject_cleanup", batches * 100_000, HeapAfterCollection(), baseline);
         }
         BlackboxHandle.ForceReset();
-        PrintRetention("after_reset", 300_000, HeapAfterCollection(), baseline);
+        PrintRetention("after_reset", batches * 100_000, HeapAfterCollection(), baseline);
     }
 
     private static void Configure()

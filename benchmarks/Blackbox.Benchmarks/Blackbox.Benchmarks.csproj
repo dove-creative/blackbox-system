@@ -9,5 +9,6 @@
     <Compile Include="../../src/BlackThunder.BlackboxSystem/**/*.cs" Exclude="../../src/BlackThunder.BlackboxSystem/**/obj/**;../../src/BlackThunder.BlackboxSystem/**/bin/**" />
     <Compile Include="Program.cs" />
     <Compile Include="ScalabilityBenchmarks.cs" />
+    <Compile Include="LookupBenchmark.cs" />
   </ItemGroup>
 </Project>
