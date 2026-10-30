@@ -143,9 +143,7 @@ namespace BlackThunder.BlackboxSystem.Tests
             Assert.That(Tools.TrimSmart(longName), Is.EqualTo("abcdefghijklmno...56789"));
         }
 
-        private static LogData Log(Blackbox owner, string message, long sequence, ScopeType scopeType, long scopeId)
-        {
-            return new LogData(owner, message, DateTime.UtcNow, sequence, "Run", scopeType, scopeId, 1, "thread", -1, null, null, null, null);
-        }
+        private static LogData Log(Blackbox owner, string message, long sequence, ScopeType scopeType, long scopeId) =>
+            new LogData(owner, message, DateTime.UtcNow, sequence, "Run", scopeType, scopeId, 1, "thread", -1, null, null, null, null);
     }
 }

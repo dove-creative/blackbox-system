@@ -237,12 +237,12 @@ namespace BlackThunder.BlackboxSystem.Tests
         [Test]
         public void RestartIsOnlyExposedOnBlackboxHandle()
         {
-            const BindingFlags flags = BindingFlags.Public | BindingFlags.Static;
-            var method = typeof(BlackboxHandle).GetMethod(nameof(BlackboxHandle.RestartDefaultSession), flags);
+            const BindingFlags Flags = BindingFlags.Public | BindingFlags.Static;
+            var method = typeof(BlackboxHandle).GetMethod(nameof(BlackboxHandle.RestartDefaultSession), Flags);
             Assert.That(method.ReturnType, Is.EqualTo(typeof(void)));
             Assert.That(method.GetParameters(), Is.Empty);
-            Assert.That(typeof(BlackboxSession).GetMethod(method.Name, flags), Is.Null);
-            Assert.That(typeof(BlackboxHandle).GetMethod("ForceReset", flags), Is.Null);
+            Assert.That(typeof(BlackboxSession).GetMethod(method.Name, Flags), Is.Null);
+            Assert.That(typeof(BlackboxHandle).GetMethod("ForceReset", Flags), Is.Null);
         }
     }
 }

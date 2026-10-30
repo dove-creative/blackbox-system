@@ -1,4 +1,6 @@
-# 목차
+# Blackbox 구현
+
+## 목차
 
 1. Blackbox 구조
 2. 상세 구현 문서
@@ -32,9 +34,9 @@ Blackbox는 한 객체의 실행 맥락을 기록하는 내부 엔진을 중심�
 
 이 문서는 Blackbox의 전체 구조와 대표 흐름을 설명한다. 여러 객체를 함께 읽어야 하는 세부 구현은 아래 문서에서 따로 다룬다.
 
-- `02.1-Tag-Flow.md`: `.With(...)`로 연결되는 원본 로그, 대상 로그, 표시 정책, 치환 자리 처리 흐름
-- `02.2-Export-Pipeline.md`: 출력 그래프 수집, 스코프 표시 변환, 텍스트/HTML 출력 흐름
-- `02.3-Handle-Lifecycle.md`: `ScopeHandle`, `ExertHandle`, `HandleManager<T>`의 생명주기와 중복 `Dispose()` 방지
+- [태그 흐름](02.1-Tag-Flow.md): `.With(...)`로 연결되는 원본 로그, 대상 로그, 표시 정책, 치환 자리 처리 흐름
+- [출력 파이프라인](02.2-Export-Pipeline.md): 출력 그래프 수집, 스코프 표시 변환, 텍스트/HTML 출력 흐름
+- [핸들 생명주기](02.3-Handle-Lifecycle.md): `ScopeHandle`, `ExertHandle`, `HandleManager<T>`의 생명주기와 중복 `Dispose()` 방지
 
 ## 3. 핵심 구성 요소
 
@@ -54,17 +56,17 @@ Blackbox는 한 객체의 실행 맥락을 기록하는 내부 엔진을 중심�
 보유 정보:
 
 - `Owner` / `OwnerString` / `Id`: 기록 대상 객체, 출력용 이름, Blackbox 내부 식별자
-- `_strongOwner` / `_weakOwner` / `_ownerDescription`: owner 보관 방식과 참조 손실 시 사용할 설명 문자열
-- `_logContext`: 현재 스레드에 대응되는 `LogContext`
+- `_strongOwner` / `_weakOwner` / `TypeName` / `_label`: owner 보관 방식과 타입명·표시 이름
+- `_contexts`: 스레드 토큰과 `LogContext`를 연결하는 불변 문맥 목록
 - `_scopeId`: 이 owner 안에서 스코프 open/close 쌍을 연결하기 위한 번호
 
 제공 서비스와 이유:
 
 - `Write(...)`: 한 객체 내부의 진행 상황 기록 후, 필요한 경우 태그 대상을 붙일 수 있는 값 반환
-- `Scope(...)`: 스코프 id를 발급하고 open 로그를 남긴 뒤 `ScopeHandle` 반환
+- `WriteScope(...)`: 스코프 id와 open 로그를 만들고, 세션이 핸들을 등록할 문맥과 기록 위치 제공
 - `Tag(...)`: 원본 로그가 `.With(...)`로 연결한 대상 쪽에 태그 로그 저장
 - `ExertMessage(...)`: 객체 간 상호작용을 양쪽에 한 줄 기록으로 저장
-- `Exert(...)`: 객체 간 상호작용을 기록하고, `Dispose()` 시 병합을 시도할 `ExertHandle` 반환
+- `Exert(...)`: 객체 간 상호작용을 기록하고, 세션이 `ExertHandle`을 등록할 대상 문맥과 상호작용 id 제공
 - `GetLogsByContext(...)` / `GetLogs(...)`: 여러 스레드 context 로그를 모으고 전역 sequence 기준으로 정렬
 
 즉, `Blackbox`는 기록 저장소 자체라기보다 객체별 기록 규칙과 전체 출력 순서를 조율하는 중심 엔진이다.
@@ -99,7 +101,7 @@ Blackbox는 한 객체의 실행 맥락을 기록하는 내부 엔진을 중심�
 
 `LogContext`는 한 `Blackbox` 안에서 스레드별 로그 버퍼와 스코프 상태를 나누어 보관하는 내부 구조이다.
 
-각 `LogContext`는 ring buffer 형태의 로그 버퍼, 스레드 metadata, 현재 열린 스코프 목록을 가진다. `Blackbox`는 `ThreadLocal<LogContext>`를 통해 현재 스레드에 대응되는 문맥을 얻고, `LogData` 생성과 저장은 그 문맥 안에서 수행한다.
+각 `LogContext`는 ring buffer 형태의 로그 버퍼, 스레드 metadata, 현재 열린 스코프 목록을 가진다. `Blackbox`는 현재 스레드의 토큰으로 불변 문맥 목록을 조회하고, 해당하는 문맥이 없으면 새 문맥을 게시한다. `LogData` 생성과 저장은 그 문맥 안에서 수행한다.
 
 현재 구현에서 스코프는 두 층으로 처리된다. 기록 시점에는 `LogContext`가 `_openScopes` 목록을 사용해 열린 스코프의 생명주기를 관리하고, close 순서가 어긋났을 때 같은 스레드의 더 나중 스코프를 자동으로 닫는다. 출력 시점에는 `ResolveScopeDepths`가 open/close 로그를 다시 읽어 표시 깊이를 계산한다. 따라서 실행 중 스코프 상태와 출력 표시 깊이는 서로 다른 책임이다.
 
@@ -188,11 +190,11 @@ Blackbox는 한 객체의 실행 맥락을 기록하는 내부 엔진을 중심�
 
 ### 3-7. BlackboxHandle
 
-`BlackboxHandle`은 외부 코드가 실제로 마주하는 진입점이다. 그러나 구현자 관점에서는 새로운 기록 구조라기보다, 앞선 내부 구조를 감싸는 얇은 forwarding 계층으로 이해하는 편이 적절하다.
+`BlackboxHandle`은 외부 코드가 실제로 마주하는 진입점이며, 획득한 `Blackbox`와 소속 세션을 고정하여 보관하는 readonly 구조체이다. 핸들 값 자체는 바뀌지 않으며, 기록·설정·종료는 참조하는 객체와 세션을 통해 처리한다.
 
 이 타입의 역할은 다음과 같다.
 
-- 대상 객체에 대응되는 `Blackbox`를 필요 시 조회한다.
+- `Of(subject)`에서 얻은 `Blackbox`와 소속 세션을 이후 호출에서도 사용한다.
 - 일반 기록, 스코프 기록, exert 기록 호출을 내부 `Blackbox`로 전달한다.
 - 일반 기록과 스코프 open 로그에 관련 대상을 나중에 붙일 수 있는 연결점을 제공한다.
 - 조건부 기록, 생성 기록, 오류 기록, 출력 같은 외부 사용 편의 기능을 제공한다.
@@ -200,8 +202,8 @@ Blackbox는 한 객체의 실행 맥락을 기록하는 내부 엔진을 중심�
 
 보유 정보:
 
-- `_subject`: 아직 `Blackbox`를 직접 잡지 않은 핸들이 registry에서 대상 `Blackbox`를 찾기 위한 원본 객체
-- `_blackbox`: `Construct(..., out handle)` 이후처럼 이미 확인된 `Blackbox`를 반복 조회 없이 사용하기 위한 캐시
+- `_blackbox`: 획득 당시의 객체별 기록 엔진
+- `_session`: 대상 조회, 핸들 등록과 출력을 수행하는 소속 세션
 - `Owner` / `OwnerString` / `Id` / `IsValid`: 내부 `Blackbox` 상태를 외부 사용자가 확인할 수 있도록 제공하는 forwarding 속성
 - `LogDirectory` / logger / 출력 option / `MaxLogCount` / `StrongReference` / `TagTargetTypes`: `Infrastructure` 설정을 외부 API에서 조정하기 위한 정적 속성
 
@@ -281,7 +283,7 @@ Blackbox는 한 객체의 실행 맥락을 기록하는 내부 엔진을 중심�
 가장 기본적인 흐름은 한 객체가 자기 자신의 상태나 진행 상황을 남기는 경우이다.
 
 1. 외부 코드는 `BlackboxHandle.Of(subject)`로 기록 진입점을 얻는다.
-2. `Write` 계열 호출이 들어오면, 핸들은 대상 객체에 대응되는 `Blackbox`를 조회한다.
+2. `Write` 계열 호출이 들어오면, 핸들은 획득할 때 고정한 `Blackbox`의 기록 가능 여부를 확인한다.
 3. `Blackbox`는 현재 스레드의 `LogContext`를 얻는다.
 4. `Blackbox`는 메시지, 메서드 이름, sequence 같은 기록 재료를 현재 문맥에 전달한다.
 5. `LogContext`는 전달받은 기록 값을 `LogData`로 만들고, 자신의 ring buffer에 저장한다.
@@ -296,7 +298,7 @@ Blackbox는 한 객체의 실행 맥락을 기록하는 내부 엔진을 중심�
 
 1. `Scope`, `Construct`처럼 스코프를 여는 API가 호출되면 `Blackbox`는 현재 스레드의 `LogContext`를 얻는다.
 2. `Blackbox`는 새 스코프 id를 발급하고, `LogContext.OpenScope(...)`로 open 로그를 저장한다.
-3. `Blackbox`는 해당 문맥과 스코프 id를 담은 `ScopeHandle`을 반환한다.
+3. `BlackboxSession`은 해당 문맥과 스코프 id를 세션 트래커에 등록하고 `ScopeHandle`을 반환한다.
 4. 이후 `using` 블록이 끝나면 `ScopeHandle.Dispose()`가 호출된다.
 5. `ScopeHandle`은 `LogContext.CloseScope(...)`로 닫기 요청을 전달한다.
 6. `LogContext`는 같은 문맥에 동일한 스코프 id를 담은 close 로그를 저장한다.
@@ -315,7 +317,7 @@ exert 기록은 한 객체가 다른 객체와 상호작용하는 흐름을 양�
 2. `Blackbox`는 같은 `InteractionId`를 공유하는 로그를 양쪽에 기록한다.
 3. 보내는 쪽 로그에는 `ExertingTo`가, 받는 쪽 로그에는 `ExertedBy`가 저장된다.
 4. `ExertMessage(...)`는 여기서 끝나며, 두 로그는 한 줄 상호작용 기록으로 남는다.
-5. `Exert(...)`는 같은 기록을 남긴 뒤 `ExertHandle`을 반환한다.
+5. `Exert(...)`는 같은 기록을 남긴 뒤 소속 `BlackboxSession`을 통해 대상 문맥을 트래커에 등록하고 `ExertHandle`을 반환한다.
 6. 반환된 `ExertHandle`을 닫으면, 생성 시점에 고정한 대상 문맥에서 같은 `InteractionId`의 상호작용 로그 바로 다음에 열린 스코프가 있는지 찾는다.
 7. 조건이 맞으면 상호작용 로그를 invalid로 표시하고, 이어지는 open 스코프에 상호작용 정보를 병합한다.
 
@@ -341,13 +343,13 @@ Blackbox는 하나의 owner 객체가 여러 스레드에서 기록될 수 있�
 
 현재 구현은 다음 방식으로 스레드별 안전성을 챙긴다.
 
-- `Blackbox`는 `ThreadLocal<LogContext>`를 보유한다.
+- `Blackbox`는 스레드 토큰별 `LogContext`를 불변 문맥 목록으로 보유한다.
 - 각 스레드는 자기 `LogContext` 안에 별도 ring buffer, 열린 스코프 목록, 스레드 metadata를 가진다.
 - 스코프 open/close 로그는 핸들이 가진 문맥에 저장된다.
 - `ScopeHandle`과 `ExertHandle`은 생성 스레드와 dispose 스레드가 다르면 warning을 남긴다.
 - `Exert(...)` 병합은 받는 쪽 상호작용 로그가 저장된 대상 문맥 안에서만 시도하며, 상호작용과 받는 쪽 스코프가 서로 다른 스레드 문맥에 기록되면 두 로그를 병합하지 않는다.
 - `.With(...)` 태그 해석은 원본 로그가 저장된 문맥에서 시작되고, 대상 로그는 대상 `Blackbox`의 현재 문맥에 저장된다.
-- 스코프 id, interaction id, sequence는 `Blackbox`와 그 `Blackbox`가 속한 `BlackboxSession`이 원자적으로 발급한다.
+- 스코프 id는 `Blackbox`가, interaction id와 sequence는 소속 `SessionState`가 원자적으로 발급한다.
 - `LogData`에는 `ThreadId`와 `ThreadName`이 저장되어 출력 결과에서 어느 스레드의 기록인지 확인할 수 있다.
 - 모든 로그에는 전역 `Sequence`가 부여되어, 여러 문맥에서 모은 로그를 출력할 때 전체 발생 순서를 다시 맞출 수 있다.
 
@@ -371,7 +373,7 @@ Blackbox의 구현은 크게 여섯 가지 의도를 가진다.
 
 외부에서는 `BlackboxHandle.Of(this).Write(...)` 같은 형태로 기록을 사용한다. 내부 구조를 직접 노출하지 않으므로, 호출자는 '어디에 어떻게 저장되는가'보다 '어떤 맥락을 남길 것인가'에 집중할 수 있다.
 
-### 6-4. `Dispose()` 후처리를 목적별 핸들로 나눈다
+### 6-4. Dispose() 후처리를 목적별 핸들로 나눈다
 
 스코프 close와 exert merge는 둘 다 `using` / `Dispose()` 시점에 일어나지만, 의미가 다르다. 현재 구현은 이 둘을 하나의 action 핸들로 합치지 않고 `ScopeHandle`과 `ExertHandle`로 분리한다. 이 덕분에 각 핸들이 보관해야 할 정보와 dispose 정책이 명확해지고, `HandleManager`를 통해 struct 복사에 의한 중복 dispose도 막을 수 있다.
 

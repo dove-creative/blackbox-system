@@ -37,7 +37,6 @@ namespace BlackThunder.BlackboxSystem.Exporters
 
             return result;
 
-
             bool TryFindEmptyScopeCloseIndex(IReadOnlyList<LogData> contextLogs, int openIndex, out LogData close)
             {
                 close = default;

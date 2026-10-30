@@ -8,12 +8,15 @@ namespace BlackThunder.BlackboxSystem
     {
         internal static string Format(Type type)
         {
-            if (type.IsArray) return Format(type.GetElementType()) + "[" + new string(',', type.GetArrayRank() - 1) + "]";
+            if (type.IsArray)
+                return Format(type.GetElementType()) + "[" + new string(',', type.GetArrayRank() - 1) + "]";
             if (type.IsByRef) return Format(type.GetElementType()) + "&";
             if (type.IsPointer) return Format(type.GetElementType()) + "*";
             if (type.IsGenericParameter) return type.Name;
+
             var chain = new Stack<Type>();
-            for (var current = type; current != null; current = current.DeclaringType) chain.Push(current);
+            for (var current = type; current != null; current = current.DeclaringType)
+                chain.Push(current);
             var arguments = type.IsGenericType ? type.GetGenericArguments() : Type.EmptyTypes;
             var result = new StringBuilder();
             int argument = 0;
@@ -24,7 +27,8 @@ namespace BlackThunder.BlackboxSystem
                 var name = part.Name;
                 int tick = name.LastIndexOf('`');
                 int count = 0;
-                if (tick >= 0 && int.TryParse(name.Substring(tick + 1), out count)) name = name.Substring(0, tick);
+                if (tick >= 0 && int.TryParse(name.Substring(tick + 1), out count))
+                    name = name.Substring(0, tick);
                 result.Append(name);
                 if (count == 0) continue;
                 result.Append('<');

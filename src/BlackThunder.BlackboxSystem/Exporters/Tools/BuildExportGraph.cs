@@ -12,7 +12,9 @@ namespace BlackThunder.BlackboxSystem.Exporters
         public IReadOnlyList<LogData> Logs { get; }
         internal IReadOnlyDictionary<Blackbox, string> Names { get; set; }
 
-        public ExportNode(Blackbox current, int depth, IReadOnlyList<LogData> logs) : this(current, null, depth, logs) { }
+
+        public ExportNode(Blackbox current, int depth, IReadOnlyList<LogData> logs)
+            : this(current, null, depth, logs) { }
         public ExportNode(Blackbox current, Blackbox parent, int depth, IReadOnlyList<LogData> logs)
         {
             Blackbox = current;
@@ -49,8 +51,7 @@ namespace BlackThunder.BlackboxSystem.Exporters
                     current
                         .GetLogsByContext(maxSequence)
                         .Select(FlattenSteps)
-                        .Select(ResolveScopeDepths)
-                    );
+                        .Select(ResolveScopeDepths));
 
                 for (int i = 0; i < logs.Count; i++)
                 {
@@ -59,7 +60,9 @@ namespace BlackThunder.BlackboxSystem.Exporters
                     CaptureName(log.ExertedBy);
                     CaptureName(log.ExertingTo);
                     CaptureName(log.TaggedBy);
-                    if (log.Tags != null) foreach (var tag in log.Tags) CaptureName(tag.Target);
+                    if (log.Tags != null)
+                        foreach (var tag in log.Tags)
+                            CaptureName(tag.Target);
                     log.DisplayNames = names;
                     logs[i] = log;
                 }

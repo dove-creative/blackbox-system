@@ -10,7 +10,7 @@ namespace BlackThunder.BlackboxSystem.Tests
 {
     internal static class BlackboxTableScenarioFactory
     {
-        private static readonly string[] ProjectNames =
+        private static readonly string[] _projectNames =
         {
             "LogData",
             "LogFormatter",
@@ -29,7 +29,7 @@ namespace BlackThunder.BlackboxSystem.Tests
             "Integration"
         };
 
-        private static readonly int[] ContinuousSeeds =
+        private static readonly int[] _continuousSeeds =
         {
             0,
             1,
@@ -38,23 +38,21 @@ namespace BlackThunder.BlackboxSystem.Tests
 
         public static IEnumerable<TestCaseData> TableProjectCases()
         {
-            return ProjectNames
+            return _projectNames
                 .Select(name => new TestCaseData(name).SetName("BlackboxTable_" + name))
                 .ToArray();
         }
 
         public static IEnumerable<TestCaseData> ContinuousTableProjectCases()
         {
-            return ProjectNames
-                .SelectMany(name => ContinuousSeeds.Select(seed =>
+            return _projectNames
+                .SelectMany(name => _continuousSeeds.Select(seed =>
                     new TestCaseData(name, seed).SetName("BlackboxTable_" + name + "_Seed" + seed)))
                 .ToArray();
         }
 
-        public static BlackboxTableProject CreateProject(string name, bool continuous, int continuousSeed = 0)
-        {
-            return new BlackboxTableProject(name, continuous, continuousSeed, CreateScenarios(name));
-        }
+        public static BlackboxTableProject CreateProject(string name, bool continuous, int continuousSeed = 0) =>
+            new BlackboxTableProject(name, continuous, continuousSeed, CreateScenarios(name));
 
         private static IReadOnlyList<TableScenario> CreateScenarios(string name)
         {
@@ -1198,60 +1196,29 @@ namespace BlackThunder.BlackboxSystem.Tests
             };
         }
 
-        private static LogData NewFormatterLog(Blackbox owner, ScopeType scopeType)
-        {
-            return new LogData(owner, "message", DateTime.UtcNow, 1, "Run", scopeType, 1, 1, "main", -1, null, null, null, null);
-        }
+        private static LogData NewFormatterLog(Blackbox owner, ScopeType scopeType) =>
+            new LogData(owner, "message", DateTime.UtcNow, 1, "Run", scopeType, 1, 1, "main", -1, null, null, null, null);
 
-        private static TableScenario Scenario(string id, Action<BlackboxTableModel> execute)
-        {
-            return new TableScenario(id, execute, _ => true);
-        }
+        private static TableScenario Scenario(string id, Action<BlackboxTableModel> execute) => new TableScenario(id, execute, _ => true);
 
-        private static TableScenario Scenario(string id, Action<BlackboxTableModel> execute, Func<BlackboxTableModel, bool> canRun)
-        {
-            return new TableScenario(id, execute, canRun);
-        }
+        private static TableScenario Scenario(string id, Action<BlackboxTableModel> execute, Func<BlackboxTableModel, bool> canRun) =>
+            new TableScenario(id, execute, canRun);
 
-        private static bool NotPrinted(BlackboxTableModel model)
-        {
-            return !model.Printed;
-        }
+        private static bool NotPrinted(BlackboxTableModel model) => !model.Printed;
 
-        private static IEnumerable<string> NewWarnings(BlackboxTableModel model, int warningCount)
-        {
-            return model.WarningLogs.Skip(warningCount);
-        }
+        private static IEnumerable<string> NewWarnings(BlackboxTableModel model, int warningCount) => model.WarningLogs.Skip(warningCount);
 
-        private static Blackbox Box(object owner)
-        {
-            return BlackboxTestDoubles.BlackboxFor(owner);
-        }
+        private static Blackbox Box(object owner) => BlackboxTestDoubles.BlackboxFor(owner);
 
-        private static Blackbox Box(Blackbox box)
-        {
-            return box;
-        }
+        private static Blackbox Box(Blackbox box) => box;
 
-        private static IReadOnlyList<LogData> Logs(object owner)
-        {
-            return Box(owner).GetLogs();
-        }
+        private static IReadOnlyList<LogData> Logs(object owner) => Box(owner).GetLogs();
 
-        private static IReadOnlyList<LogData> Logs(Blackbox box)
-        {
-            return box.GetLogs();
-        }
+        private static IReadOnlyList<LogData> Logs(Blackbox box) => box.GetLogs();
 
-        private static LogData LastLog(object owner)
-        {
-            return Logs(owner).Last();
-        }
+        private static LogData LastLog(object owner) => Logs(owner).Last();
 
-        private static LogData LastLog(Blackbox box)
-        {
-            return Logs(box).Last();
-        }
+        private static LogData LastLog(Blackbox box) => Logs(box).Last();
 
         private static string[] GetFiles(string directory, string pattern)
         {

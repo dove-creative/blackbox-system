@@ -3,13 +3,14 @@ using System.Text;
 
 namespace BlackThunder.BlackboxSystem
 {
-    public partial struct BlackboxHandle
+    public readonly partial struct BlackboxHandle
     {
         [InterpolatedStringHandler]
         public ref struct WriteHandler
         {
             private StringBuilder _builder;
             public bool ShouldLog { get; }
+
 
             public WriteHandler(int literalLength, int formattedCount, BlackboxHandle handle, out bool shouldLog)
             {

@@ -11,6 +11,7 @@ namespace BlackThunder.BlackboxSystem
     /// <remarks>Explicit sessions are strongly retained until disposed, even if callers drop all references.</remarks>
     public sealed class BlackboxSession : IDisposable
     {
+        // Session ownership
         private readonly BlackboxSession _previous;
         // Session-owned stripes bound tracking overhead independently of context churn.
         // Segments are reused and grow only when outstanding handles need more cells.
@@ -24,13 +25,48 @@ namespace BlackThunder.BlackboxSystem
 
         public Guid SessionKey { get; } = Guid.NewGuid();
         internal bool IsDisposed => !State.IsActive;
-        internal long NextExportOrdinal() => Interlocked.Increment(ref _exportOrdinal);
+
+
+        // Construction
         internal BlackboxSession(SessionSettings settings, BlackboxSession previous, int buckets)
         {
             _previous = previous;
             State = new SessionState(settings);
             Subjects = new SubjectStore(State, buckets);
         }
+        private static HandleTracker<T>[] CreateTrackers<T>()
+        {
+            var trackers = new HandleTracker<T>[TrackerStripeCount];
+            for (int i = 0; i < trackers.Length; i++)
+                trackers[i] = new HandleTracker<T>();
+            return trackers;
+        }
+
+        // Front-side handle creation: the Blackbox records, this session registers the handle in its trackers.
+        internal ScopeHandle OpenScope(Blackbox box, string message, string methodName)
+        {
+            if (!box.WriteScope(message, methodName, out var context, out var scopeId, out var tag)) return default;
+            var lease = GetScopeTracker(ThreadToken.Current).Register(State);
+            return new ScopeHandle(context, scopeId, tag.Bind(this), lease);
+        }
+
+        internal ExertHandle Exert(Blackbox source, Blackbox target, string message, string methodName)
+        {
+            var interactionId = source.Exert(target, message, methodName, out var targetContext);
+            if (targetContext == null) return default;
+            var lease = GetExertTracker(ThreadToken.Current).Register(State);
+            return new ExertHandle(targetContext, interactionId, lease);
+        }
+
+        internal HandleTracker<ScopeHandle> GetScopeTracker(ThreadToken token) =>
+            _scopeTrackers[RuntimeHelpers.GetHashCode(token) & (TrackerStripeCount - 1)];
+        internal HandleTracker<ExertHandle> GetExertTracker(ThreadToken token) =>
+            _exertTrackers[RuntimeHelpers.GetHashCode(token) & (TrackerStripeCount - 1)];
+
+        // Export identity
+        internal long NextExportOrdinal() => Interlocked.Increment(ref _exportOrdinal);
+
+        // Retirement
         /// <summary>Ends this recording lifetime, reclaims outstanding handle IDs and removes the active session.</summary>
         /// <remarks>
         /// Only the first call ends the session and removes it from the active list.
@@ -48,31 +84,6 @@ namespace BlackThunder.BlackboxSystem
             BlackboxSessionRegistry.Restore(this, _previous);
         }
 
-        // Front-side handle creation: the Blackbox records, this session registers the handle in its trackers.
-        internal ScopeHandle OpenScope(Blackbox box, string message, string methodName)
-        {
-            if (!box.WriteScope(message, methodName, out var context, out var scopeId, out var tag)) return default;
-            var lease = GetScopeTracker(ThreadToken.Current).Register(State);
-            return new ScopeHandle(context, scopeId, tag.Bind(this), lease);
-        }
-        internal ExertHandle Exert(Blackbox source, Blackbox target, string message, string methodName)
-        {
-            var interactionId = source.Exert(target, message, methodName, out var targetContext);
-            if (targetContext == null) return default;
-            var lease = GetExertTracker(ThreadToken.Current).Register(State);
-            return new ExertHandle(targetContext, interactionId, lease);
-        }
-
-        private static HandleTracker<T>[] CreateTrackers<T>()
-        {
-            var trackers = new HandleTracker<T>[TrackerStripeCount];
-            for (int i = 0; i < trackers.Length; i++) trackers[i] = new HandleTracker<T>();
-            return trackers;
-        }
-        internal HandleTracker<ScopeHandle> GetScopeTracker(ThreadToken token) =>
-            _scopeTrackers[RuntimeHelpers.GetHashCode(token) & (TrackerStripeCount - 1)];
-        internal HandleTracker<ExertHandle> GetExertTracker(ThreadToken token) =>
-            _exertTrackers[RuntimeHelpers.GetHashCode(token) & (TrackerStripeCount - 1)];
         private void Retire()
         {
             foreach (var tracker in _scopeTrackers) tracker.Close();

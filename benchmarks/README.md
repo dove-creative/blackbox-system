@@ -2,6 +2,20 @@
 
 The console harness measures the same public write/scope/exert calls and internal registry lookup on one shared default session. Each worker warms up 500 operations before the measurement. Registration measures 2,000 operations per worker; the other cases measure 20,000. There are 1 and 24 workers on this machine. Threads share an owner and interaction target, and each thread receives its own log context.
 
+## Current execution
+
+The current project is `benchmarks/BlackThunder.BlackboxSystem.Benchmarks/BlackThunder.BlackboxSystem.Benchmarks.csproj` and requires a .NET 10 SDK. Build before measuring, then run the selected mode without rebuilding:
+
+```powershell
+dotnet build benchmarks/BlackThunder.BlackboxSystem.Benchmarks/BlackThunder.BlackboxSystem.Benchmarks.csproj -c Release
+$env:DOTNET_TieredCompilation = '0'
+dotnet run --project benchmarks/BlackThunder.BlackboxSystem.Benchmarks/BlackThunder.BlackboxSystem.Benchmarks.csproj -c Release --no-build -- --lookup
+```
+
+Other modes include the default recording comparison, `--scopes`, `--retention`, `--retention-unmaintained [maxLogCount]`, and `--registration`. Run measurements without concurrent tests or builds.
+
+The dated sections below preserve their original commands, project paths, SDK versions, commits, and measurements. Paths containing `Blackbox.Benchmarks` refer to the project name at that time. Use the current path above for a new run, and report the new environment separately; the recorded measurements are not results from the renamed .NET 10 project.
+
 ## 2026-10-29 comparison
 
 Windows x64, .NET SDK 9.0.320, Release, `DOTNET_TieredCompilation=0`. The baseline is commit `9f20c862171e5de6ab4c663c62f8a00070e9ca35` (0.1.2); the after column is the 0.2.0 session implementation. Both versions use the same harness. Before/after processes were alternated for three rounds with no tests running concurrently. Values below are the median of the three rounds.
@@ -20,7 +34,7 @@ The immutable publication design costs approximately **152 bytes per write**, co
 
 Writes took about 80% longer with one worker and 54% longer in the 24-worker aggregate measurement. This is the tradeoff for safely copying and replacing complete records during concurrent export, reset and disposal. Removing locks does not imply faster execution or no garbage collection. Single-worker scope/exert improvements should not be generalized to every workload; the multi-worker exert case became slower.
 
-## Reproduce
+## Historical reproduction commands for 2026-10-29
 
 ```powershell
 $env:DOTNET_TieredCompilation = '0'

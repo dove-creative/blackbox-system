@@ -173,8 +173,18 @@ namespace BlackThunder.BlackboxSystem.Tests
             recordingSession.State.BeforeHandleRegistration = () => { ready.Set(); Assert.That(go.Wait(10000), Is.True); };
             var task = Task.Run(() =>
             {
-                if (exert) { var h = handle.Exert(owner, "call"); Assert.That(h.IsAlive, Is.False); h.Dispose(); }
-                else { var h = handle.Scope("scope"); Assert.That(h.IsAlive, Is.False); h.Dispose(); }
+                if (exert)
+                {
+                    var h = handle.Exert(owner, "call");
+                    Assert.That(h.IsAlive, Is.False);
+                    h.Dispose();
+                }
+                else
+                {
+                    var h = handle.Scope("scope");
+                    Assert.That(h.IsAlive, Is.False);
+                    h.Dispose();
+                }
             });
             try
             {

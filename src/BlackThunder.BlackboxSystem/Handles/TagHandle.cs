@@ -54,6 +54,7 @@ namespace BlackThunder.BlackboxSystem
         // the front-side caller binds the session that owns the written Blackbox.
         private readonly BlackboxSession _session;
 
+
         internal TagHandle(LogContext context, long logIndex, string fallbackMessage, BlackboxSession session = null)
         {
             _context = context;

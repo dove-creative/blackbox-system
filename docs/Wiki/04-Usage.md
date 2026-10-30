@@ -1,4 +1,6 @@
-# 목차
+# Blackbox 사용법
+
+## 목차
 
 0. Blackbox 호출 줄바꿈 기준
 1. 시작 전에 확인할 것
@@ -18,7 +20,7 @@ Blackbox 호출은 도메인 로직 자체라기보다, 이미 존재하는 도�
 
 다른 객체와 연결되는 순간만 남기고 싶을 때는 `ExertMessage(...)`를 사용한다. 반대로 호출 구간을 이어 읽고 싶을 때는 `Exert(...)`가 반환하는 `ExertHandle`을 `using`과 함께 닫아, 받는 쪽의 이어지는 스코프와 병합을 시도한다.
 
-### 0-1. `Exert(...)`는 using 표식처럼 붙일 수 있다
+### 0-1. Exert(...)는 using 표식처럼 붙일 수 있다
 
 `Exert(...)`는 상대 객체와의 호출 구간을 열고 `ExertHandle`을 반환한다. 이 구간이 한 문장뿐이라면, `using`을 Blackbox 전용 표식처럼 바로 다음 문장에 붙여 쓸 수 있다.
 
@@ -55,7 +57,7 @@ public void Attack(Monster monster)
 }
 ```
 
-### 0-3. `WriteError(...)`는 오류 메시지에 붙는 표식처럼 쓴다
+### 0-3. WriteError(...)는 오류 메시지에 붙는 표식처럼 쓴다
 
 예외를 던지는 코드에서 `WriteError(...)`는 오류 메시지를 만드는 도메인 문장을 대체하는 것이 아니라, 그 메시지를 Blackbox에 함께 기록하는 래퍼이다.
 
@@ -164,7 +166,7 @@ var bb = BlackboxHandle.Of(this, label: Name);
 bb.Write("상태 갱신");
 ```
 
-같은 세션에서 최초로 지정한 공백 아닌 이름을 유지한다. 이후 `Of(this)`처럼 이름을 생략해도 기존 이름이 유지되며, 다른 이름을 전달하면 기존 값을 유지하고 경고한다. 자세한 규칙은 [객체 이름과 수명](05-Sessions.md#객체-이름과-수명)을 참고한다.
+같은 세션에서 최초로 지정한 공백 아닌 이름을 유지한다. 이후 `Of(this)`처럼 이름을 생략해도 기존 이름이 유지되며, 다른 이름을 전달하면 기존 값을 유지하고 경고한다. 자세한 규칙은 [세션과 기록 계약](05-Sessions.md)의 객체 이름과 수명 절을 참고한다.
 
 이 진입점 하나만 기억해도 대부분의 사용 흐름을 따라갈 수 있다.
 
@@ -283,7 +285,7 @@ public void DrinkPotion(Potion potion)
 
 이 형태가 가장 기본적인 기록 방식이다. 기존 상태 변경 코드 앞에 기록 한 줄을 추가하므로, 원래 코드의 흐름을 크게 바꾸지 않는다.
 
-### 4-2-1. 한 줄 기록에 관련 대상 붙이기
+#### 4-2-1. 한 줄 기록에 관련 대상 붙이기
 
 상태 변화 자체는 내 객체의 기록이지만, 그 변화의 원인이 된 객체를 함께 남기고 싶을 때가 있다. 이때는 `Write(...)` 뒤에 `.With(...)`를 바로 붙인다.
 
@@ -420,8 +422,8 @@ public void Attack(Monster monster)
 var outer = BlackboxHandle.Of(this).Scope("Outer");
 var inner = BlackboxHandle.Of(this).Scope("Inner");
 
-outer.Dispose(); // Inner가 먼저 자동으로 닫히고, 그 다음 Outer가 닫힌다. 경고도 남는다.
-inner.Dispose(); // 이미 자동으로 닫혔으므로 중복 닫기 로그는 남지 않는다.
+outer.Dispose(); // Inner closes automatically before Outer, and a warning is recorded.
+inner.Dispose(); // The scope is already closed, so no duplicate close log is recorded.
 ```
 
 이 동작은 로그 파일을 깨끗하게 유지하기 위한 보정이다. 의도적으로 이 흐름에 의존하기보다, 직접 `Dispose()`를 호출해야 하는 경우에는 가능하면 자식 스코프부터 닫는 편이 좋다.

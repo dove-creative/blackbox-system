@@ -44,10 +44,7 @@ namespace BlackThunder.BlackboxSystem.Tests
                 _name = name;
             }
 
-            public override string ToString()
-            {
-                return _name;
-            }
+            public override string ToString() => _name;
         }
 
         private static readonly List<string> _normalLogs = new List<string>();
@@ -86,15 +83,9 @@ namespace BlackThunder.BlackboxSystem.Tests
             BlackboxHandle.DefaultRecursionDepth = 10;
         }
 
-        public static NamedOwner Owner(string name)
-        {
-            return new NamedOwner(name);
-        }
+        public static NamedOwner Owner(string name) => new NamedOwner(name);
 
-        public static Blackbox Blackbox(string ownerName)
-        {
-            return BlackboxFor(Owner(ownerName));
-        }
+        public static Blackbox Blackbox(string ownerName) => BlackboxFor(Owner(ownerName));
 
         public static Blackbox BlackboxFor(object owner)
         {
@@ -113,15 +104,9 @@ namespace BlackThunder.BlackboxSystem.Tests
         private static string NameOf(object owner) => owner is NamedOwner named ? named.Name :
             owner is global::BlackThunder.BlackboxSystem.Tests.NamedOwner table ? table.Name : null;
 
-        public static List<LogData> Logs(Blackbox blackbox)
-        {
-            return blackbox.GetLogs().ToList();
-        }
+        public static List<LogData> Logs(Blackbox blackbox) => blackbox.GetLogs().ToList();
 
-        public static List<string> Lines(Blackbox blackbox)
-        {
-            return blackbox.GetLogs().Select(log => log.ToString()).ToList();
-        }
+        public static List<string> Lines(Blackbox blackbox) => blackbox.GetLogs().Select(log => log.ToString()).ToList();
 
         public static string CreateTempDirectory()
         {

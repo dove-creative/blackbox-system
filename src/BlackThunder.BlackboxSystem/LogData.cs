@@ -12,8 +12,7 @@ namespace BlackThunder.BlackboxSystem
 
     internal struct LogData
     {
-        // Front ----------
-        // Property
+        // Ownership
         public Blackbox Owner { get; }
         public bool IsValid { get; internal set; }
 
@@ -57,7 +56,8 @@ namespace BlackThunder.BlackboxSystem
         public Tag[] Tags { get; internal set; }
         internal System.Collections.Generic.IReadOnlyDictionary<Blackbox, string> DisplayNames { get; set; }
 
-        // Content ----------
+
+        // Construction and rendering
         internal LogData(
             Blackbox owner,
             string message,

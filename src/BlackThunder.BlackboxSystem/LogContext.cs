@@ -1,6 +1,6 @@
 using System;
-using System.Linq;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 
 namespace BlackThunder.BlackboxSystem
@@ -12,16 +12,30 @@ namespace BlackThunder.BlackboxSystem
         {
             internal readonly long Index;
             internal readonly LogData Value;
-            internal PublishedLog(long index, LogData value) { Index = index; Value = value; }
+
+            internal PublishedLog(long index, LogData value)
+            {
+                Index = index;
+                Value = value;
+            }
         }
+
         private sealed class ScopeInfo
         {
             internal readonly long Id;
             internal readonly string Method;
             internal readonly ScopeInfo Next;
             internal int Closed;
-            internal ScopeInfo(long id, string method, ScopeInfo next) { Id = id; Method = method; Next = next; }
+
+            internal ScopeInfo(long id, string method, ScopeInfo next)
+            {
+                Id = id;
+                Method = method;
+                Next = next;
+            }
         }
+
+        // Buffer and thread ownership
         private readonly Blackbox _blackbox;
         private readonly PublishedLog[] _logBuffer;
         private long _currentLogIndex = -1;
@@ -29,8 +43,10 @@ namespace BlackThunder.BlackboxSystem
         private readonly string _threadName;
         private readonly ThreadToken _token;
         private ScopeInfo _openScopes;
+
         internal SessionState State => _blackbox.State;
         internal bool IsCurrentThread => ReferenceEquals(_token, ThreadToken.Current);
+
 
         public LogContext(Blackbox blackbox, int bufferSize)
         {
@@ -42,16 +58,26 @@ namespace BlackThunder.BlackboxSystem
             _token = ThreadToken.Current;
         }
 
-        public TagHandle EnqueueLog(string message, long sequence, string methodName, long scopeId = -1, long interactionId = -1, Blackbox exertingTo = null, Blackbox exertedBy = null)
+        // Recording
+        public TagHandle EnqueueLog(
+            string message, long sequence, string methodName,
+            long scopeId = -1, long interactionId = -1,
+            Blackbox exertingTo = null, Blackbox exertedBy = null)
         {
             var index = Enqueue(message, sequence, methodName, ScopeType.None, scopeId, interactionId, exertingTo, exertedBy);
             return index < 0 ? TagHandle.FromMessage(message) : new TagHandle(this, index, message);
         }
-        public void EnqueueTagLog(string message, long sequence, string methodName, long interactionId, Blackbox taggedBy = null) =>
-            EnqueueTagLog(message, sequence, methodName, interactionId, taggedBy, new[] { new LogData.Tag(interactionId, taggedBy) }, TargetTypes.BasedOnSettings);
-        public void EnqueueTagLog(string message, long sequence, string methodName, long interactionId, Blackbox taggedBy, LogData.Tag[] tags, TargetTypes targetTypes) =>
-            Enqueue(message, sequence, methodName, ScopeType.None, -1, interactionId, null, null, tags, taggedBy, State.Settings.Resolve(targetTypes));
 
+        public void EnqueueTagLog(string message, long sequence, string methodName, long interactionId, Blackbox taggedBy = null) =>
+            EnqueueTagLog(message, sequence, methodName, interactionId, taggedBy,
+                new[] { new LogData.Tag(interactionId, taggedBy) }, TargetTypes.BasedOnSettings);
+        public void EnqueueTagLog(
+            string message, long sequence, string methodName,
+            long interactionId, Blackbox taggedBy, LogData.Tag[] tags, TargetTypes targetTypes) =>
+            Enqueue(message, sequence, methodName, ScopeType.None, -1, interactionId,
+                null, null, tags, taggedBy, State.Settings.Resolve(targetTypes));
+
+        // Scope lifetime
         public TagHandle OpenScope(string message, long sequence, string methodName, long scopeId)
         {
             if (!State.CheckWrite()) return TagHandle.FromMessage(message);
@@ -81,7 +107,11 @@ namespace BlackThunder.BlackboxSystem
                 State.WarnOnce(SessionWarning.MissingScope, $"[LogContext] Scope '{scopeId}' cannot be closed because it is not open.");
                 return;
             }
-            if (Volatile.Read(ref found.Closed) != 0) { PruneScopes(); return; }
+            if (Volatile.Read(ref found.Closed) != 0)
+            {
+                PruneScopes();
+                return;
+            }
             if (!IsCurrentThread) WarnThreadMismatch();
             else if (!ReferenceEquals(head, found))
             {
@@ -93,12 +123,15 @@ namespace BlackThunder.BlackboxSystem
                         Enqueue("Closed automatically because an outer scope closed first.", sequence, n.Method, ScopeType.Close, n.Id);
                         sequence = -1;
                     }
-                if (autoClosed) State.WarnOnce(SessionWarning.OuterScopeClose, "[LogContext] Newer scopes found. They will be closed automatically.");
+                if (autoClosed)
+                    State.WarnOnce(SessionWarning.OuterScopeClose,
+                        "[LogContext] Newer scopes found. They will be closed automatically.");
             }
             if (Interlocked.Exchange(ref found.Closed, 1) == 0)
                 Enqueue(string.Empty, sequence, found.Method, ScopeType.Close, found.Id);
             PruneScopes();
         }
+
         private void PruneScopes()
         {
             while (true)
@@ -108,12 +141,15 @@ namespace BlackThunder.BlackboxSystem
                 Interlocked.CompareExchange(ref _openScopes, head.Next, head);
             }
         }
+
         internal void WarnThreadMismatch()
         {
-            if (!IsCurrentThread) State.WarnOnce(SessionWarning.CrossThreadClose,
-                "[Blackbox] Handle disposed on a different thread; newer scopes remain open.");
+            if (!IsCurrentThread)
+                State.WarnOnce(SessionWarning.CrossThreadClose,
+                    "[Blackbox] Handle disposed on a different thread; newer scopes remain open.");
         }
 
+        // Immutable publication
         private long Enqueue(string message, long sequence, string methodName, ScopeType scopeType, long scopeId,
             long interactionId = -1, Blackbox exertingTo = null, Blackbox exertedBy = null,
             LogData.Tag[] tags = null, Blackbox taggedBy = null, TargetTypes targetTypes = TargetTypes.Full)
@@ -137,6 +173,7 @@ namespace BlackThunder.BlackboxSystem
             }
         }
 
+        // Snapshot retrieval and updates
         public IEnumerable<LogData> GetLogs(long maxSequence = -1)
         {
             GetRange(out var first, out var last);
@@ -150,11 +187,13 @@ namespace BlackThunder.BlackboxSystem
                 yield return log;
             }
         }
+
         public string RenderMessage(long index, string fallback)
         {
             var entry = Read(index);
             return entry != null && entry.Value.IsValid ? LogFormatter.RenderMessage(entry.Value) : fallback ?? string.Empty;
         }
+
         public void ResolveWith(long index, IEnumerable<Blackbox> targets, TargetTypes targetTypes)
         {
             if (!State.CheckWrite() || Read(index) == null) return;
@@ -195,11 +234,11 @@ namespace BlackThunder.BlackboxSystem
                     if (interaction == null || scope == null) break;
                     var from = interaction.Value;
                     var into = scope.Value;
-                    if (!from.IsValid || !into.IsValid || from.ScopeType != ScopeType.None ||
-                        into.ScopeType != ScopeType.Open || from.InteractionId != interactionId || into.ScopeId < 0) break;
+                    if (!from.IsValid || !into.IsValid || from.ScopeType != ScopeType.None
+                        || into.ScopeType != ScopeType.Open || from.InteractionId != interactionId || into.ScopeId < 0) break;
                     if (!string.IsNullOrEmpty(from.Message))
-                        into.Message = string.IsNullOrEmpty(into.Message) ? from.Message :
-                            into.Message == from.Message ? into.Message : $"{into.Message} (from: {from.Message})";
+                        into.Message = string.IsNullOrEmpty(into.Message) ? from.Message
+                            : into.Message == from.Message ? into.Message : $"{into.Message} (from: {from.Message})";
                     into.InteractionId = from.InteractionId;
                     into.ExertedBy = from.ExertedBy ?? into.ExertedBy;
                     into.ExertingTo = from.ExertingTo ?? into.ExertingTo;
@@ -219,11 +258,14 @@ namespace BlackThunder.BlackboxSystem
             }
             return false;
         }
+
+        // Ring-buffer access
         private void GetRange(out long first, out long last)
         {
             last = Volatile.Read(ref _currentLogIndex);
             first = Math.Max(0, last - _logBuffer.Length + 1);
         }
+
         private PublishedLog Read(long index)
         {
             if (index < 0) return null;
@@ -233,6 +275,7 @@ namespace BlackThunder.BlackboxSystem
             // A reservation may still contain the preceding lap's entry.
             return entry != null && entry.Index == index ? entry : null;
         }
+
         private bool Replace(PublishedLog old, LogData value) =>
             ReferenceEquals(Interlocked.CompareExchange(ref _logBuffer[ToBufferIndex(old.Index)], new PublishedLog(old.Index, value), old), old);
         private int ToBufferIndex(long index) => (int)(index % _logBuffer.Length);

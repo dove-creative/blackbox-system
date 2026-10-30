@@ -1,27 +1,19 @@
 using System;
-using System.IO;
 
-namespace BlackThunder.BlackboxSystem.Samples.NativeCSharp
+namespace BlackThunder.BlackboxSystem.Samples.Scenarios
 {
-    // This sample reuses the potion flow as a failure case. The player receives a
-    // null potion, records the problem with WriteError, and then throws so the
-    // crash export shows the collected history up to the failed drink.
-    internal static class Sample_4_Exception
+    // This sample shows an interaction between two objects. The player records the
+    // drink flow on itself, Exert connects that flow to the potion, and the potion
+    // records its own scope so the exported log can read both sides together.
+    internal static class ExertSample
     {
-        public static void Run()
+        public static void Run(bool openLog)
         {
             using var session = BlackboxHandle.BeginSession();
-            SampleEnvironment.Configure("4-Exception");
-            BlackboxHandle.Configure(
-                logDirectory: Path.Combine(SampleEnvironment.BaseLogDirectory, "4-Exception"),
-                normalLogger: Console.WriteLine,
-                warningLogger: Console.WriteLine,
-                exportFormat: ExportFormat.Html,
-                openLogOption: OpenLogOption.Never,
-                exceptionHandlingOption: ExceptionHandlingOption.CrashExport);
+            SampleEnvironment.Configure("Exert", openLog);
 
-            Player player = new Player("Rin", 100);
-            Potion potion = null;
+            var player = new Player("Rin", 100);
+            var potion = new Potion("Sunshine Potion", 15);
 
             player.TakeDamage(10);
             player.TakeDamage(20);
@@ -57,22 +49,15 @@ namespace BlackThunder.BlackboxSystem.Samples.NativeCSharp
 
             public void Drink(Potion potion)
             {
-                // Scope records the drink attempt, even when it fails.
+                // Scope records the player's full drink flow.
                 using var _ = BlackboxHandle.Of(this).Scope($"Drink (HP={HP}, Potion={potion?.Name})");
-
-                if (potion == null)
-                {
-                    // WriteError records the failure before the exception is thrown.
-                    var message = BlackboxHandle.Of(this).WriteError("Potion cannot be null.");
-                    throw new NullReferenceException(message);
-                }
-
                 int heal;
+
                 // Exert links this call range to the potion's own behavior.
                 using (BlackboxHandle.Of(this).Exert(potion, "Drink Potion"))
                 heal = potion.Drink();
 
-                // Write records the successful drink result.
+                // Write records the result returned from the exerted object.
                 BlackboxHandle.Of(this).Write($"Drink Potion: Got {heal}");
                 BlackboxHandle.Of(this).Write($"HP Change: {HP} -> {HP + heal}");
                 HP += heal;

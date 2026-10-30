@@ -1,16 +1,16 @@
 using System;
 
-namespace BlackThunder.BlackboxSystem.Samples.NativeCSharp
+namespace BlackThunder.BlackboxSystem.Samples.Scenarios
 {
     // This sample shows the smallest Blackbox flow: configure logging, create one
     // player, record its construction, and use scopes plus writes to explain how
     // HP changes over time before exporting the player's history.
-    internal static class Sample_1_Write
+    internal static class WriteSample
     {
-        public static void Run()
+        public static void Run(bool openLog)
         {
             using var session = BlackboxHandle.BeginSession();
-            SampleEnvironment.Configure("1-Write");
+            SampleEnvironment.Configure("Write", openLog);
 
             var player = new Player("Rin", 100);
 
@@ -61,7 +61,6 @@ namespace BlackThunder.BlackboxSystem.Samples.NativeCSharp
             {
                 // Nested scopes show smaller work inside the parent flow.
                 using var _ = BlackboxHandle.Of(this).Scope("Shine");
-                Console.WriteLine("Shine!");
             }
         }
     }

@@ -46,8 +46,11 @@ namespace BlackThunder.BlackboxSystem
         // Stack of reusable slots. This is preallocated to avoid per-operation GC.
         private static readonly int[] _freeSlots = new int[MaxSlots];
 
-        // Number of slots that have ever been created since last Reset().
+        // Number of slots created by this closed generic manager.
         private static int _slotCount;
+
+        // Number of entries currently stored in _freeSlots.
+        private static int _freeCount;
 
 #if BLACKBOX_TESTS
         internal static int LiveCountForTests
@@ -62,9 +65,7 @@ namespace BlackThunder.BlackboxSystem
         }
 #endif
 
-        // Number of entries currently stored in _freeSlots.
-        private static int _freeCount;
-
+        // Allocation, disposal and lookup
         public static long GetHandleId()
         {
             lock (_gate)
@@ -162,6 +163,7 @@ namespace BlackThunder.BlackboxSystem
             return Volatile.Read(ref _slotStates[slot]) == generation;
         }
 
+        // Packed identifier conversion
         private static long Pack(int slot, long generation)
         {
             // Use a 1-based public id so 0 remains an invalid/null handle.

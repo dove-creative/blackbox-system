@@ -40,7 +40,7 @@ namespace BlackThunder.BlackboxSystem
         BasedOnSettings,
     }
 
-    public partial struct BlackboxHandle
+    public readonly partial struct BlackboxHandle
     {
         // Forwarders
         public readonly object Owner => _blackbox?.Owner;
@@ -116,7 +116,13 @@ namespace BlackThunder.BlackboxSystem
         // The session that owns _blackbox: target lookup, handle registration and export go through it.
         private readonly BlackboxSession _session;
         private readonly Blackbox Blackbox => _blackbox != null && _blackbox.State.CheckWrite() ? _blackbox : null;
-        internal BlackboxHandle(Blackbox blackbox, BlackboxSession session) { _blackbox = blackbox; _session = session; }
+
+
+        internal BlackboxHandle(Blackbox blackbox, BlackboxSession session)
+        {
+            _blackbox = blackbox;
+            _session = session;
+        }
 
         #region Configuration
         public static void Configure(
@@ -130,7 +136,8 @@ namespace BlackThunder.BlackboxSystem
             TargetTypes tagTargetTypes = TargetTypes.BasedOnSettings,
             UseBlackboxOption useBlackbox = UseBlackboxOption.BasedOnSettings)
         {
-            Configure(logDirectory, logger, logger, strongReference, exportFormat, fullExportOption, openLogOption, exceptionHandlingOption, tagTargetTypes, useBlackbox);
+            Configure(logDirectory, logger, logger, strongReference, exportFormat, fullExportOption,
+                openLogOption, exceptionHandlingOption, tagTargetTypes, useBlackbox);
         }
 
         public static void Configure(
@@ -220,12 +227,16 @@ namespace BlackThunder.BlackboxSystem
         }
 
         public ScopeHandle Construct([CallerMemberName] string methodName = "") => Construct(out _, methodName);
-        public ScopeHandle Construct(out BlackboxHandle blackboxHandle, [CallerMemberName] string methodName = "")
-        {
-            return Construct(string.Empty, out blackboxHandle, methodName);
-        }
-        public ScopeHandle Construct([InterpolatedStringHandlerArgument("")] ref WriteHandler handler, [CallerMemberName] string methodName = "") => Construct(ref handler, out _, methodName);
-        public ScopeHandle Construct([InterpolatedStringHandlerArgument("")] ref WriteHandler handler, out BlackboxHandle blackboxHandle, [CallerMemberName] string methodName = "")
+        public ScopeHandle Construct(out BlackboxHandle blackboxHandle, [CallerMemberName] string methodName = "") =>
+            Construct(string.Empty, out blackboxHandle, methodName);
+        public ScopeHandle Construct(
+            [InterpolatedStringHandlerArgument("")] ref WriteHandler handler,
+            [CallerMemberName] string methodName = "") =>
+            Construct(ref handler, out _, methodName);
+        public ScopeHandle Construct(
+            [InterpolatedStringHandlerArgument("")] ref WriteHandler handler,
+            out BlackboxHandle blackboxHandle,
+            [CallerMemberName] string methodName = "")
         {
             if (!handler.ShouldLog)
             {
@@ -253,10 +264,7 @@ namespace BlackThunder.BlackboxSystem
             return _session.OpenScope(blackbox, constructMessage, methodName);
         }
 
-        public readonly BlackboxHandle When(bool condition)
-        {
-            return condition ? this : default;
-        }
+        public readonly BlackboxHandle When(bool condition) => condition ? this : default;
         public BlackboxHandle When(Func<bool> predicate)
         {
             if (predicate == null)
@@ -267,11 +275,10 @@ namespace BlackThunder.BlackboxSystem
             return predicate() ? this : default;
         }
 
-        public BlackboxHandle Dispose()
-        {
-            return Dispose(string.Empty, nameof(Dispose));
-        }
-        public BlackboxHandle Dispose([InterpolatedStringHandlerArgument("")] ref WriteHandler handler, [CallerMemberName] string methodName = "")
+        public BlackboxHandle Dispose() => Dispose(string.Empty, nameof(Dispose));
+        public BlackboxHandle Dispose(
+            [InterpolatedStringHandlerArgument("")] ref WriteHandler handler,
+            [CallerMemberName] string methodName = "")
         {
             if (!handler.ShouldLog) return default;
             return Dispose(handler.GetTextAndClear(), methodName);
@@ -290,7 +297,9 @@ namespace BlackThunder.BlackboxSystem
         }
         #endregion
 
-        public readonly TagHandle Write([InterpolatedStringHandlerArgument("")] ref WriteHandler handler, [CallerMemberName] string methodName = "")
+        public readonly TagHandle Write(
+            [InterpolatedStringHandlerArgument("")] ref WriteHandler handler,
+            [CallerMemberName] string methodName = "")
         {
             if (!handler.ShouldLog) return default;
             return Write(handler.GetTextAndClear(), methodName);
@@ -301,7 +310,9 @@ namespace BlackThunder.BlackboxSystem
             return blackbox == null ? TagHandle.FromMessage(message) : blackbox.Write(message, methodName).Bind(_session);
         }
 
-        public readonly ScopeHandle Scope([InterpolatedStringHandlerArgument("")] ref WriteHandler handler, [CallerMemberName] string methodName = "")
+        public readonly ScopeHandle Scope(
+            [InterpolatedStringHandlerArgument("")] ref WriteHandler handler,
+            [CallerMemberName] string methodName = "")
         {
             if (!handler.ShouldLog) return default;
             return Scope(handler.GetTextAndClear(), methodName);
@@ -312,17 +323,21 @@ namespace BlackThunder.BlackboxSystem
             return blackbox == null ? default : _session.OpenScope(blackbox, message, methodName);
         }
 
-        public readonly string ExertMessage<T>(T other, [InterpolatedStringHandlerArgument("")] ref WriteHandler handler, [CallerMemberName] string methodName = "") where T : class
+        public readonly string ExertMessage<T>(
+            T other,
+            [InterpolatedStringHandlerArgument("")] ref WriteHandler handler,
+            [CallerMemberName] string methodName = "") where T : class
         {
             if (!handler.ShouldLog) return handler.GetTextAndClear();
             return ExertMessage(other, handler.GetTextAndClear(), methodName);
         }
-        public readonly string ExertMessage<T>(T other, string message, [CallerMemberName] string methodName = "") where T : class
-        {
-            return Blackbox?.ExertMessage(_session.Subjects.GetOrAdd(other), message, methodName) ?? message;
-        }
+        public readonly string ExertMessage<T>(T other, string message, [CallerMemberName] string methodName = "") where T : class =>
+            Blackbox?.ExertMessage(_session.Subjects.GetOrAdd(other), message, methodName) ?? message;
 
-        public readonly ExertHandle Exert<T>(T other, [InterpolatedStringHandlerArgument("")] ref WriteHandler handler, [CallerMemberName] string methodName = "") where T : class
+        public readonly ExertHandle Exert<T>(
+            T other,
+            [InterpolatedStringHandlerArgument("")] ref WriteHandler handler,
+            [CallerMemberName] string methodName = "") where T : class
         {
             if (!handler.ShouldLog) return default;
             return Exert(other, handler.GetTextAndClear(), methodName);
@@ -341,12 +356,18 @@ namespace BlackThunder.BlackboxSystem
             public ErrorContainer(params (string context, object target)[] targets) => Targets = targets;
             public static implicit operator ErrorContainer((string context, object target) target) => new ErrorContainer(target);
         }
-        public readonly string WriteError(object message, ErrorContainer? others = null, ExceptionHandlingOption exceptionHandlingOption = ExceptionHandlingOption.BasedOnSettings, [CallerMemberName] string methodName = "")
+        public readonly string WriteError(
+            object message,
+            ErrorContainer? others = null,
+            ExceptionHandlingOption exceptionHandlingOption = ExceptionHandlingOption.BasedOnSettings,
+            [CallerMemberName] string methodName = "")
         {
             var messageStr = ToMessageString(message);
-            
+
             var settings = _blackbox?.State.Settings ?? BlackboxSessionRegistry.Current.State.Settings;
-            if ((exceptionHandlingOption == ExceptionHandlingOption.BasedOnSettings ? settings.ExceptionHandlingOption : exceptionHandlingOption) == ExceptionHandlingOption.CrashExport)
+            if ((exceptionHandlingOption == ExceptionHandlingOption.BasedOnSettings
+                ? settings.ExceptionHandlingOption
+                : exceptionHandlingOption) == ExceptionHandlingOption.CrashExport)
             {
                 CrashExport(messageStr, others, methodName: methodName);
                 return messageStr;
@@ -355,7 +376,14 @@ namespace BlackThunder.BlackboxSystem
             WriteErrorToBlackbox(messageStr, others, methodName);
             return messageStr;
         }
-        public readonly string CrashExport(object message, ErrorContainer? others = null, int? recursionDepth = null, ExportFormat format = ExportFormat.Html, FullExportOption fullExport = FullExportOption.BasedOnSettings, OpenLogOption openLog = OpenLogOption.BasedOnSettings, [CallerMemberName] string methodName = "")
+        public readonly string CrashExport(
+            object message,
+            ErrorContainer? others = null,
+            int? recursionDepth = null,
+            ExportFormat format = ExportFormat.Html,
+            FullExportOption fullExport = FullExportOption.BasedOnSettings,
+            OpenLogOption openLog = OpenLogOption.BasedOnSettings,
+            [CallerMemberName] string methodName = "")
         {
             var messageStr = ToMessageString(message);
 
@@ -409,10 +437,20 @@ namespace BlackThunder.BlackboxSystem
             Write(errorMessage, methodName).With(tags);
         }
 
-        public readonly void Export(int? recursionDepth = null, ExportFormat format = ExportFormat.BasedOnSettings, FullExportOption fullExportOption = FullExportOption.BasedOnSettings, OpenLogOption openLogOption = OpenLogOption.BasedOnSettings) =>
-            ExportInternal(recursionDepth ?? (_blackbox?.State.Settings.DefaultRecursionDepth ?? DefaultRecursionDepth), false, format, fullExportOption, openLogOption);
+        public readonly void Export(
+            int? recursionDepth = null,
+            ExportFormat format = ExportFormat.BasedOnSettings,
+            FullExportOption fullExportOption = FullExportOption.BasedOnSettings,
+            OpenLogOption openLogOption = OpenLogOption.BasedOnSettings) =>
+            ExportInternal(recursionDepth ?? (_blackbox?.State.Settings.DefaultRecursionDepth ?? DefaultRecursionDepth),
+                false, format, fullExportOption, openLogOption);
 
-        private readonly void ExportInternal(int recursionDepth, bool isCrash, ExportFormat format, FullExportOption fullExportOption, OpenLogOption openLogOption)
+        private readonly void ExportInternal(
+            int recursionDepth,
+            bool isCrash,
+            ExportFormat format,
+            FullExportOption fullExportOption,
+            OpenLogOption openLogOption)
         {
             var blackbox = _blackbox;
             if (blackbox == null)

@@ -25,71 +25,7 @@ Thank you for using Blackbox.
 - Export: writes recorded logs to text or HTML files.
 - Runtime switch: set `BlackboxHandle.UseBlackbox` to control whether recording handles are created and logs are written.
 
-## Test sessions
-
-```csharp
-using var session = BlackboxHandle.BeginSession();
-BlackboxHandle.Configure(logDirectory, Console.WriteLine,
-    openLogOption: OpenLogOption.Never);
-var system = new SystemUnderTest();
-await system.RunAsync();
-```
-
-Create the objects inside their test session and await/join all child work before disposing it. `BeginSession()` is synchronous; ordinary Task/Thread execution-context flow inherits the session. Open sessions in test bodies rather than relying on NUnit SetUp to propagate AsyncLocal values. A session copies its parent's settings and isolates its storage and crash state. Each session has one recording lifetime; dispose it and call BeginSession() again to start another explicit session.
-
-Handles remain bound to the session in which they were acquired, including handles cached by constructors. Using such an object in another session does not move its handle. Without `BeginSession()`, callers use the shared default session; tests that restart or configure that default must run serially.
-
-**Undisposed explicit sessions are not released.** A process-wide list holds strong references until `Dispose()` or `BlackboxHandle.DisposeActiveSessions()` is called. Dropping references and running GC does not release a session or its outstanding Scope/Exert handle IDs; without cleanup they remain until process exit. `ActiveSessionCount` counts these sessions, and `GetActiveSessionKeys()` returns an independent `Guid[]` snapshot in start order. The default session and restart candidates are excluded.
-
-Check for missed disposal before cleanup in NUnit TearDown:
-
-```csharp
-[NonParallelizable]
-public abstract class BlackboxTestBase
-{
-    [TearDown]
-    public void CheckSessions()
-    {
-        try
-        {
-            Assert.That(BlackboxHandle.ActiveSessionCount, Is.Zero,
-                "Undisposed Blackbox sessions: " +
-                string.Join(", ", BlackboxHandle.GetActiveSessionKeys()));
-        }
-        finally
-        {
-            BlackboxHandle.DisposeActiveSessions();
-        }
-    }
-}
-```
-
-The list is global: parallel tests see each other's sessions, and bulk cleanup can dispose another test's sessions. Use this check with serial tests after all child work finishes. Bulk cleanup snapshots under a lock and disposes outside it in reverse start order, restoring nested bindings in the calling flow. Other flows keep their disposed bindings and reject recording until they call `Dispose()` themselves. Sessions started after the snapshot are not included. Only the first `Dispose()` ends a session and removes it from the list; every call restores the previous binding in the calling flow when that flow is still bound to the session.
-
-Use `BlackboxHandle.CurrentSessionKey` and `BlackboxHandle.DefaultSessionKey` to inspect the current/default session identity. If an object's constructor cached `_bb` before `BeginSession()`, its valid handle still reports the default key inside the new session. Diagnose that situation with:
-
-```csharp
-if (_bb.SessionKey != BlackboxHandle.CurrentSessionKey)
-{
-    // This object was created in another session.
-}
-```
-
-These read-only `Guid` properties expose no session object and perform no locking or allocation. An invalid handle (`IsValid == false`) returns `Guid.Empty`; check validity before interpreting a mismatch. Keys identify session lifetimes; restarting the default session changes DefaultSessionKey.
-
-`Export()` can be repeated while recording continues. `CrashExport()` freezes only its own session and exports once; a failed crash export can be retried with ordinary `Export()`. Live exports are approximate snapshots. After all work has completed, exports contain the stable records still retained by the ring buffers. Files have a short session key and export ordinal and never overwrite an earlier export; retention is the caller's responsibility.
-
-`BlackboxHandle.RestartDefaultSession()` replaces only the shared default session, inherits its settings and disposes it. The replacement gets a new key, storage, counters, export ordinal and crash/warning state. Explicit sessions and their child execution contexts are unchanged, even when called inside one. Unbound callers subsequently use the new default; old handles stay with the disposed session and stop recording. A write racing disposal may finish in the old session, whose buffers are never reused. Retained handles can still export old data. A child bound to a disposed explicit session remains there and cannot silently record into the default session.
-
-Subject `ToString()` is never called automatically. Assign an optional name once:
-
-```csharp
-using var scope = BlackboxHandle.Of(this, label: Name).Construct(out _bb);
-```
-
-The display is `Forest (MonsterHome #2)`, or `MonsterHome #2` without a label. The first nonblank label wins. Record changing domain state explicitly in messages. Subjects are weakly held by default; `StrongReference` keeps them alive while their Blackbox remains reachable, including through retained handles after Dispose. Internal recording and registration use no locks, but immutable log publication allocates; runtime, GC, I/O and caller-provided formatting/loggers are outside that guarantee.
-
-## Installation
+## Requirements and Installation
 
 Consumers reference a pinned stable release of `BlackThunder.BlackboxSystem`. Register the directory containing the released `.nupkg` as a NuGet feed before restoring it.
 
@@ -101,15 +37,19 @@ Consumers reference a pinned stable release of `BlackThunder.BlackboxSystem`. Re
 
 Samples in the Blackbox development repository use a `ProjectReference` to the current library project. The runtime library has no dependency on UniTest.
 
+Building this repository and running its tests, samples, or benchmarks requires a .NET 10 SDK. The library targets `netstandard2.1`, executable projects target `net10.0`, and the language version is C# 9. See the [contribution guide](CONTRIBUTING.md) for shared-guideline submodule initialization and development rules.
+
 Configure the log output location and logger early in execution.
 
 ```csharp
 BlackboxHandle.Configure(
-	logDirectory: Path.Combine(AppContext.BaseDirectory, "BlackboxLogs"),
-	logger: Console.WriteLine);
+    logDirectory: Path.Combine(AppContext.BaseDirectory, "BlackboxLogs"),
+    logger: Console.WriteLine);
 ```
 
 Recording starts enabled by default. To temporarily stop recording, set `BlackboxHandle.UseBlackbox = false` or pass `useBlackbox: UseBlackboxOption.DoNotUse` to `Configure(...)`. When this switch is off, `BlackboxHandle.Of(subject)` returns an invalid handle and recording calls fall back to no-op/default behavior.
+
+C# 9 callers use string overloads for interpolated messages, so expressions inside the string are evaluated first even when recording is disabled. Automatic short-circuiting through `WriteHandler` is supported for callers compiled with C# 10 or later.
 
 ## Quick Start
 
@@ -132,13 +72,10 @@ public class Loader
         BlackboxHandle.Of(this).Write("Prepare %0").With(worker);
 
         using (BlackboxHandle.Of(this).Exert(worker, "Worker.Load"))
-		worker.Load();
+        worker.Load();
     }
 
-    public void ExportLogs()
-    {
-        BlackboxHandle.Of(this).Export();
-    }
+    public void ExportLogs() => BlackboxHandle.Of(this).Export();
 }
 ```
 
@@ -149,17 +86,30 @@ This example records the following information.
 - Bidirectional interaction records for the `worker.Load()` call
 - Connected log output centered on `Loader` when `ExportLogs()` is called
 
-### C# Sample
+### Test Sessions
 
-Run the console sample under `samples/Blackbox.NativeCSharp.Samples` to exercise the recording flows.
-
-```powershell
-dotnet run --project samples/Blackbox.NativeCSharp.Samples/Blackbox.NativeCSharp.Samples.csproj
+```csharp
+using var session = BlackboxHandle.BeginSession();
+BlackboxHandle.Configure(logDirectory, Console.WriteLine,
+    openLogOption: OpenLogOption.Never);
+var system = new SystemUnderTest();
+await system.RunAsync();
 ```
 
-At the `sample>` prompt, enter `write`, `exert`, `tag`, or `exception`. Empty input waits for another command, and `exit` closes the sample.
+Create objects inside their session and await/join all child work before disposal. Handles stay bound to the session in which they were acquired, and the global active list retains undisposed explicit sessions. See the [session and recording contract](docs/Wiki/05-Sessions.md) for isolation, leak diagnostics, default-session restart, and export behavior (Korean).
 
-The sample runs with the default `UseBlackbox = true` setting. Logs are written under `BlackboxSystem/Samples/NativeCSharp` in the sample output directory.
+### C# Sample
+
+Use the [console sample in samples](samples/README.md) to exercise the recording flows.
+
+```powershell
+dotnet run --project samples/BlackThunder.BlackboxSystem.Samples.csproj
+dotnet run --project samples/BlackThunder.BlackboxSystem.Samples.csproj -- write
+```
+
+The first command opens the `sample>` prompt. Run `write`, `exert`, `tag`, or `exception` repeatedly; empty input is ignored, `help` shows usage, and `exit` closes the sample. The second command runs one scenario and exits without opening a browser. One-shot exit codes are 0 for success, 1 for execution failure, and 2 for an invalid command or arguments.
+
+Recording uses the default `UseBlackbox = true` setting. Logs are written under `SampleOutput/Write`, `SampleOutput/Exert`, `SampleOutput/Tag`, or `SampleOutput/Exception` in the executable output directory. See the sample README for each command's purpose and interactive export-opening behavior.
 
 ## Main APIs
 
@@ -180,7 +130,10 @@ The sample runs with the default `UseBlackbox = true` setting. Logs are written 
 
 ## Documentation
 
-See the [session and recording contract](docs/Wiki/05-Sessions.md) for lifecycle, default-session, lock-free recording and export details (Korean).
+- [Overview](docs/Wiki/01-Overview.md): purpose and main recording structures (Korean)
+- [Usage](docs/Wiki/04-Usage.md): configuration and representative workflows (Korean)
+- [Implementation](docs/Wiki/02-Implementations.md): component responsibilities and recording pipelines (Korean)
+- [Session and recording contract](docs/Wiki/05-Sessions.md): lifecycle, default sessions, lock-free recording, and exports (Korean)
 
 ## Tests
 

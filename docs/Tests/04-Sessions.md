@@ -1,6 +1,8 @@
 # 0.2.0 세션 구현 검증
 
-이전 절은 각 구현 단계 당시의 검증 기록이다. 현재 세션 수명 계약과 활성 세션 추적 검증은 마지막의 2026-10-30 절을 참고한다.
+각 절은 해당 구현 단계 당시의 검증 기록이다. 당시 실행한 경로·명령·SDK·결과를 그대로 보관하므로, 아래의 옛 샘플·벤치마크 경로를 현재 명령으로 해석하지 않는다. 현재 세션 수명 계약은 [세션과 기록 계약](../Wiki/05-Sessions.md)을, 최신 플랫폼 검증은 [테스트 결과](03-Results.md)를 참고한다.
+
+현재 샘플 프로젝트는 `samples/BlackThunder.BlackboxSystem.Samples.csproj`, 벤치마크 프로젝트는 `benchmarks/BlackThunder.BlackboxSystem.Benchmarks/BlackThunder.BlackboxSystem.Benchmarks.csproj`이다.
 
 검증 환경: Windows x64, .NET SDK 9.0.320, net9.0 NUnit 테스트, netstandard2.1 라이브러리. 기존 테스트 159개를 세션별 동결·반복 출력·명시적 Label 계약에 맞게 이관하고 동시성/수명 테스트 35개를 추가했다.
 

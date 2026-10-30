@@ -1,6 +1,6 @@
 using System;
-using System.Text;
 using System.Collections.Generic;
+using System.Text;
 
 namespace BlackThunder.BlackboxSystem
 {
@@ -8,11 +8,8 @@ namespace BlackThunder.BlackboxSystem
     {
         private const int IndentCount = 4;
 
-        public static string RenderMessage(LogData log)
-        {
-            return RenderMessage(log, true);
-        }
-
+        // Message and line rendering
+        public static string RenderMessage(LogData log) => RenderMessage(log, true);
         internal static string RenderMessage(LogData log, bool includeTagInteractionIds)
         {
             var message = ResolveTagMessage(log.Message, log.Tags, includeTagInteractionIds, log.DisplayNames);
@@ -65,6 +62,7 @@ namespace BlackThunder.BlackboxSystem
             };
         }
 
+        // Object and interaction references
         public static string ObjectRef(Blackbox blackbox, IReadOnlyDictionary<Blackbox, string> names = null)
         {
             if (blackbox == null)
@@ -92,6 +90,7 @@ namespace BlackThunder.BlackboxSystem
             return right ? "->" : "<-";
         }
 
+        // Tag rendering
         private static string RenderTaggedMessage(LogData log, string message, bool includeTagInteractionIds)
         {
             var targetTypes = log.TagTargetTypes;
@@ -118,7 +117,9 @@ namespace BlackThunder.BlackboxSystem
             return builder.ToString();
         }
 
-        private static string ResolveTagMessage(string message, LogData.Tag[] tags, bool includeTagInteractionIds, IReadOnlyDictionary<Blackbox, string> names)
+        private static string ResolveTagMessage(
+            string message, LogData.Tag[] tags, bool includeTagInteractionIds,
+            IReadOnlyDictionary<Blackbox, string> names)
         {
             if (tags == null || tags.Length == 0)
                 return message ?? string.Empty;
@@ -140,7 +141,8 @@ namespace BlackThunder.BlackboxSystem
                     usedTags[tagIndex] = true;
                     builder.Append(FormatTag(tags[tagIndex], includeTagInteractionIds, names));
                 }
-                else builder.Append(text, position, end - position);
+                else
+                    builder.Append(text, position, end - position);
                 position = end;
             }
 

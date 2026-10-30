@@ -54,7 +54,7 @@ namespace BlackThunder.BlackboxSystem
         // Packed lock-free stack head for _freeNext.
         private static long _freeHead;
 
-        // Number of slots that have ever been reserved since last Reset().
+        // Number of slots reserved by this closed generic manager.
         private static int _slotCount;
 
 #if BLACKBOX_TESTS
@@ -70,6 +70,7 @@ namespace BlackThunder.BlackboxSystem
         }
 #endif
 
+        // Allocation, disposal and lookup
         public static long GetHandleId()
         {
             while (true)
@@ -154,6 +155,7 @@ namespace BlackThunder.BlackboxSystem
             return AtomicRead(ref _slotStates[slot]) == generation;
         }
 
+        // Free-list maintenance
         private static bool TryReserveFreshSlot(out int slot)
         {
             while (true)
@@ -222,6 +224,7 @@ namespace BlackThunder.BlackboxSystem
             }
         }
 
+        // Packed identifier conversion
         private static long Pack(int slot, long generation)
         {
             // Use a 1-based public id so 0 remains an invalid/null handle.
@@ -253,25 +256,16 @@ namespace BlackThunder.BlackboxSystem
             return Interlocked.CompareExchange(ref value, 0L, 0L);
         }
 
-        private static int GetFreeHeadIndexPlusOne(long head)
-        {
-            return (int)(unchecked((ulong)head) & FreeHeadIndexMask);
-        }
+        private static int GetFreeHeadIndexPlusOne(long head) => (int)(unchecked((ulong)head) & FreeHeadIndexMask);
 
-        private static ulong GetFreeHeadVersion(long head)
-        {
-            return unchecked((ulong)head) >> FreeHeadIndexBits;
-        }
+        private static ulong GetFreeHeadVersion(long head) => unchecked((ulong)head) >> FreeHeadIndexBits;
 
-        private static ulong NextFreeHeadVersion(ulong version)
-        {
-            return (version + 1UL) & FreeHeadVersionMask;
-        }
+        private static ulong NextFreeHeadVersion(ulong version) => (version + 1UL) & FreeHeadVersionMask;
 
         private static long PackFreeHead(ulong version, int indexPlusOne)
         {
-            ulong packed = ((version & FreeHeadVersionMask) << FreeHeadIndexBits) |
-                           ((ulong)indexPlusOne & FreeHeadIndexMask);
+            ulong packed = ((version & FreeHeadVersionMask) << FreeHeadIndexBits)
+                | ((ulong)indexPlusOne & FreeHeadIndexMask);
             return unchecked((long)packed);
         }
     }

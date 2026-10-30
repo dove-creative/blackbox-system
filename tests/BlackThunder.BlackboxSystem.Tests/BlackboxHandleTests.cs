@@ -312,7 +312,6 @@ namespace BlackThunder.BlackboxSystem.Tests
         public void WriteHandlerSkipsFormattingForInvalidHandle()
         {
             var invalid = default(BlackboxHandle);
-            var formatCalls = 0;
 
             // Table 1-3 / Skipped x Construct.InvalidHandle
             var handler = new BlackboxHandle.WriteHandler(8, 1, invalid, out var shouldLog);
@@ -329,10 +328,20 @@ namespace BlackThunder.BlackboxSystem.Tests
             // Table 1-3 / Skipped x GetTextAndClear
             Assert.That(handler.GetTextAndClear(), Is.EqualTo(string.Empty));
             Assert.That(invalid.Write(ref handler, "Run").With(), Is.EqualTo(string.Empty));
+            Assert.That(BlackboxSessionRegistry.Count(), Is.EqualTo(0));
+        }
 
-            // Table 1-3 / Skipped x AppendFormatted.Value
-            Assert.That(invalid.Write($"value {FormatValue()}", "Run").With(), Is.EqualTo(string.Empty));
-            Assert.That(formatCalls, Is.EqualTo(0));
+        [Test]
+        public void CSharp9InterpolationUsesStringFallbackWhenRecordingIsDisabled()
+        {
+            var owner = BlackboxTestDoubles.Owner("owner");
+            BlackboxHandle.UseBlackbox = false;
+            var handle = BlackboxTestDoubles.HandleFor(owner);
+            var formatCalls = 0;
+
+            // Table 5-1 / UseBlackboxOff x Write: C# 9 evaluates string arguments before the call.
+            Assert.That(handle.Write($"value {FormatValue()}", "Run").With(), Is.EqualTo("value formatted"));
+            Assert.That(formatCalls, Is.EqualTo(1));
             Assert.That(BlackboxSessionRegistry.Count(), Is.EqualTo(0));
 
             string FormatValue()

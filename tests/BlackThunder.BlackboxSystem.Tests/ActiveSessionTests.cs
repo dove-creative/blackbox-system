@@ -279,17 +279,17 @@ namespace BlackThunder.BlackboxSystem.Tests
         [Test]
         public void DiagnosticsAreOnlyExposedOnBlackboxHandle()
         {
-            const BindingFlags flags = BindingFlags.Public | BindingFlags.Static;
-            var count = typeof(BlackboxHandle).GetProperty(nameof(BlackboxHandle.ActiveSessionCount), flags);
+            const BindingFlags Flags = BindingFlags.Public | BindingFlags.Static;
+            var count = typeof(BlackboxHandle).GetProperty(nameof(BlackboxHandle.ActiveSessionCount), Flags);
             Assert.That(count.PropertyType, Is.EqualTo(typeof(int)));
             Assert.That(count.CanWrite, Is.False);
-            var keys = typeof(BlackboxHandle).GetMethod(nameof(BlackboxHandle.GetActiveSessionKeys), flags);
+            var keys = typeof(BlackboxHandle).GetMethod(nameof(BlackboxHandle.GetActiveSessionKeys), Flags);
             Assert.That(keys.ReturnType, Is.EqualTo(typeof(Guid[])));
             Assert.That(keys.GetParameters(), Is.Empty);
-            var dispose = typeof(BlackboxHandle).GetMethod(nameof(BlackboxHandle.DisposeActiveSessions), flags);
+            var dispose = typeof(BlackboxHandle).GetMethod(nameof(BlackboxHandle.DisposeActiveSessions), Flags);
             Assert.That(dispose.ReturnType, Is.EqualTo(typeof(void)));
             Assert.That(dispose.GetParameters(), Is.Empty);
-            Assert.That(typeof(BlackboxSession).GetMembers(flags), Is.Empty);
+            Assert.That(typeof(BlackboxSession).GetMembers(Flags), Is.Empty);
         }
     }
 }

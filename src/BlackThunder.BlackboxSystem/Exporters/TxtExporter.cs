@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.IO;
 using System.Text;
 
 namespace BlackThunder.BlackboxSystem.Exporters
@@ -12,7 +11,11 @@ namespace BlackThunder.BlackboxSystem.Exporters
         internal static Action<ProcessStartInfo> OpenLogProcess = startInfo => Process.Start(startInfo);
 #endif
 
-        public static void Export(BlackboxSession session, Blackbox blackbox, int recursionDepth, bool isCrash, bool fullExport, bool openLog, long maxSequence = -1, SessionSettings settings = null)
+        // Export pipeline
+        public static void Export(
+            BlackboxSession session, Blackbox blackbox, int recursionDepth,
+            bool isCrash, bool fullExport, bool openLog,
+            long maxSequence = -1, SessionSettings settings = null)
         {
             settings ??= blackbox.State.Settings;
             var sb = new StringBuilder();
@@ -48,6 +51,7 @@ namespace BlackThunder.BlackboxSystem.Exporters
             }
         }
 
+        // Object and log rendering
         private static void BuildText(IReadOnlyList<ExportNode> nodes, StringBuilder sb)
         {
             var includedBlackboxes = new HashSet<Blackbox>();

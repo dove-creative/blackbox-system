@@ -22,6 +22,15 @@ BlackboxSession은 SessionState, SubjectStore, 핸들 트래커와 세션 수명
 
 진단용 `BlackboxHandle.CurrentSessionKey`는 실행 문맥에 바인딩된 세션의 키이며, 바인딩이 없으면 `DefaultSessionKey`다. `BlackboxHandle.SessionKey`는 유효한 핸들이 고정된 세션 키이고 `IsValid == false`이면 `Guid.Empty`다. 세 속성은 읽기 전용 값만 반환하며 잠금·할당·경고 출력 없이 읽는다. 세션 객체를 반환하는 공개 Current API는 없다. 키는 세션의 기록 수명을 식별한다. 기본 세션을 재시작하면 DefaultSessionKey가 바뀐다. 종료된 명시적 세션의 문맥에서는 원래 키가 유지되지만 기록은 거부된다.
 
+객체 생성자가 세션 밖에서 `_bb`를 보관했다면 새 세션 안에서 사용해도 그 핸들은 이전 세션을 가리킨다. 유효한 핸들의 키를 비교하여 이 상황을 확인할 수 있다.
+
+```csharp
+if (_bb.IsValid && _bb.SessionKey != BlackboxHandle.CurrentSessionKey)
+{
+    // This object was created in another session.
+}
+```
+
 ## 활성 세션 진단과 정리
 
 `BlackboxSessionRegistry`는 잠금으로 보호하는 `List<BlackboxSession>` 하나에 활성 명시적 세션을 강하게 보관한다. Begin은 새 세션을 목록에 추가한 뒤 현재 흐름에 바인딩한다. 최초 Dispose가 핸들 ID를 회수하고 목록에서 제거한다. 기본 세션, 재시작으로 만든 새 기본 세션, 교체 경쟁에서 진 후보는 이 목록에 들어가지 않는다.
@@ -32,7 +41,30 @@ BlackboxSession은 SessionState, SubjectStore, 핸들 트래커와 세션 수명
 
 Dispose를 잊은 세션은 참조를 버리고 GC를 실행해도 목록에 남으므로 누락을 진단할 수 있다. 정리하지 않으면 세션의 기록 상태와 미종료 Scope/Exert 핸들 ID를 프로세스 종료까지 유지한다. 세션은 테스트·디버그용이며 이 수명 비용을 의도적으로 받아들인다. 종료한 세션은 목록이 더 이상 보관하지 않지만 다른 핸들이나 실행 문맥이 참조하면 여전히 살아 있을 수 있다.
 
-테스트 TearDown은 `ActiveSessionCount == 0`을 검사하고 실패 메시지에 남은 키를 넣은 뒤, `finally`에서 `DisposeActiveSessions()`로 정리한다. [README의 예시](../../README.ko.md#테스트-세션)를 참고한다. 전역 목록이므로 병렬 테스트에서는 다른 테스트의 세션도 보이고 일괄 정리가 그 세션을 종료할 수 있다. 전체 0 검사와 정리는 모든 작업을 await/join한 직렬 테스트 경계에서 사용한다. 개수와 키 조회는 각각의 스냅샷이므로 동시 시작·종료 중 두 호출의 결과가 같은 순간을 나타내지는 않는다.
+테스트 TearDown은 `ActiveSessionCount == 0`을 검사하고 실패 메시지에 남은 키를 넣은 뒤, `finally`에서 `DisposeActiveSessions()`로 정리한다.
+
+```csharp
+[NonParallelizable]
+public abstract class BlackboxTestBase
+{
+    [TearDown]
+    public void CheckSessions()
+    {
+        try
+        {
+            Assert.That(BlackboxHandle.ActiveSessionCount, Is.Zero,
+                "Undisposed Blackbox sessions: "
+                + string.Join(", ", BlackboxHandle.GetActiveSessionKeys()));
+        }
+        finally
+        {
+            BlackboxHandle.DisposeActiveSessions();
+        }
+    }
+}
+```
+
+전역 목록이므로 병렬 테스트에서는 다른 테스트의 세션도 보이고 일괄 정리가 그 세션을 종료할 수 있다. 전체 0 검사와 정리는 모든 작업을 await/join한 직렬 테스트 경계에서 사용한다. 개수와 키 조회는 각각의 스냅샷이므로 동시 시작·종료 중 두 호출의 결과가 같은 순간을 나타내지는 않는다.
 
 ## 기본 세션 재시작과 명시적 세션 종료
 

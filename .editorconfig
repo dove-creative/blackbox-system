@@ -7,3 +7,37 @@ insert_final_newline = true
 
 [*.{cs,vb}]
 dotnet_diagnostic.IDE0130.severity = none
+
+[*.cs]
+indent_style = space
+indent_size = 4
+csharp_new_line_before_open_brace = all
+csharp_new_line_before_else = true
+csharp_new_line_before_catch = true
+csharp_new_line_before_finally = true
+csharp_preserve_single_line_blocks = true
+csharp_preserve_single_line_statements = true
+csharp_space_after_comma = true
+csharp_space_before_comma = false
+csharp_space_after_colon_in_inheritance_clause = true
+csharp_space_before_colon_in_inheritance_clause = true
+csharp_style_expression_bodied_methods = when_on_single_line:suggestion
+csharp_style_expression_bodied_constructors = when_on_single_line:suggestion
+dotnet_style_require_accessibility_modifiers = for_non_interface_members:suggestion
+
+# Constants use PascalCase; this more specific rule takes precedence over private fields.
+dotnet_naming_rule.constants_use_pascal_case.symbols = constants
+dotnet_naming_rule.constants_use_pascal_case.style = pascal_case
+dotnet_naming_rule.constants_use_pascal_case.severity = warning
+dotnet_naming_symbols.constants.applicable_kinds = field, local
+dotnet_naming_symbols.constants.applicable_accessibilities = *
+dotnet_naming_symbols.constants.required_modifiers = const
+dotnet_naming_style.pascal_case.capitalization = pascal_case
+
+dotnet_naming_rule.private_fields_use_underscore.symbols = private_fields
+dotnet_naming_rule.private_fields_use_underscore.style = underscore_camel_case
+dotnet_naming_rule.private_fields_use_underscore.severity = warning
+dotnet_naming_symbols.private_fields.applicable_kinds = field
+dotnet_naming_symbols.private_fields.applicable_accessibilities = private
+dotnet_naming_style.underscore_camel_case.required_prefix = _
+dotnet_naming_style.underscore_camel_case.capitalization = camel_case

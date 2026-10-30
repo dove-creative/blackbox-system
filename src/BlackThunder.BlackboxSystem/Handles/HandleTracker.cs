@@ -9,10 +9,15 @@ namespace BlackThunder.BlackboxSystem
         {
             internal readonly long[] Ids = new long[32];
             internal readonly Segment Next;
-            internal Segment(Segment next) { Next = next; }
+
+            internal Segment(Segment next) => Next = next;
         }
-        private static readonly Segment Closed = new(null);
+
+        private static readonly Segment _closed = new(null);
         private Segment _head = new(null);
+
+
+        // Registration and retirement
         internal HandleLease<T> Register(SessionState state)
         {
             if (!state.CheckWrite()) return default;
@@ -25,23 +30,23 @@ namespace BlackThunder.BlackboxSystem
                 while (true)
                 {
                     var head = Volatile.Read(ref _head);
-                    if (ReferenceEquals(head, Closed) || !state.CanWrite)
+                    if (ReferenceEquals(head, _closed) || !state.CanWrite)
                     {
                         HandleManager<T>.TryDisposeHandleId(id);
                         return default;
                     }
                     for (var segment = head; segment != null; segment = segment.Next)
-                    for (int i = 0; i < segment.Ids.Length; i++)
-                    {
-                        if (Interlocked.CompareExchange(ref segment.Ids[i], id, 0) != 0) continue;
-                        var lease = new HandleLease<T>(segment, i, id);
-                        if (!state.CanWrite || ReferenceEquals(Volatile.Read(ref _head), Closed))
+                        for (int i = 0; i < segment.Ids.Length; i++)
                         {
-                            lease.Release();
-                            return default;
+                            if (Interlocked.CompareExchange(ref segment.Ids[i], id, 0) != 0) continue;
+                            var lease = new HandleLease<T>(segment, i, id);
+                            if (!state.CanWrite || ReferenceEquals(Volatile.Read(ref _head), _closed))
+                            {
+                                lease.Release();
+                                return default;
+                            }
+                            return lease;
                         }
-                        return lease;
-                    }
                     Interlocked.CompareExchange(ref _head, new Segment(head), head);
                 }
             }
@@ -51,25 +56,34 @@ namespace BlackThunder.BlackboxSystem
                 throw;
             }
         }
+
         public void Close()
         {
-            var head = Interlocked.Exchange(ref _head, Closed);
-            for (var segment = head; segment != null && !ReferenceEquals(segment, Closed); segment = segment.Next)
-            for (int i = 0; i < segment.Ids.Length; i++)
-            {
-                // Closed cells cannot be reused by a registrar which captured an older head.
-                var id = Interlocked.Exchange(ref segment.Ids[i], -1);
-                if (id > 0) HandleManager<T>.TryDisposeHandleId(id);
-            }
+            var head = Interlocked.Exchange(ref _head, _closed);
+            for (var segment = head; segment != null && !ReferenceEquals(segment, _closed); segment = segment.Next)
+                for (int i = 0; i < segment.Ids.Length; i++)
+                {
+                    // Closed cells cannot be reused by a registrar which captured an older head.
+                    var id = Interlocked.Exchange(ref segment.Ids[i], -1);
+                    if (id > 0) HandleManager<T>.TryDisposeHandleId(id);
+                }
         }
     }
+
     internal readonly struct HandleLease<T>
     {
         private readonly HandleTracker<T>.Segment _segment;
         private readonly int _index;
         internal readonly long Id;
+
+
         internal HandleLease(HandleTracker<T>.Segment segment, int index, long id)
-        { _segment = segment; _index = index; Id = id; }
+        {
+            _segment = segment;
+            _index = index;
+            Id = id;
+        }
+
         internal bool Release()
         {
             if (Id <= 0) return false;

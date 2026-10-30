@@ -1,17 +1,17 @@
 using System;
 using System.Collections.Generic;
 
-namespace BlackThunder.BlackboxSystem.Samples.NativeCSharp
+namespace BlackThunder.BlackboxSystem.Samples.Scenarios
 {
     // This sample shows how tags add related references to logs without making
     // them the main interaction path. Homes register monsters, attacks are exerted
     // to monsters, and each damaged monster tags its own home for context.
-    internal static class Sample_3_Tag
+    internal static class TagSample
     {
-        public static void Run()
+        public static void Run(bool openLog)
         {
             using var session = BlackboxHandle.BeginSession();
-            SampleEnvironment.Configure("3-Tag");
+            SampleEnvironment.Configure("Tag", openLog);
 
             var player = new Player("Rin", 100);
             var sandHouse = new MonsterHome("Sand House");
@@ -62,7 +62,7 @@ namespace BlackThunder.BlackboxSystem.Samples.NativeCSharp
             public int HP { get; private set; }
             public MonsterHome Home { get; private set; }
 
-            private BlackboxHandle _bb;
+            private readonly BlackboxHandle _blackbox;
 
             public Monster(string name, int hp)
             {
@@ -70,25 +70,25 @@ namespace BlackThunder.BlackboxSystem.Samples.NativeCSharp
                 HP = hp;
 
                 // Construct stores a reusable handle for this monster's logs.
-                using var _ = BlackboxHandle.Of(this, label: Name).Construct(out _bb);
+                using var _ = BlackboxHandle.Of(this, label: Name).Construct(out _blackbox);
             }
 
             public void TakeDamage(int damage)
             {
                 // With attaches the monster's home to this damage scope.
-                using var _ = _bb
+                using var _ = _blackbox
                     .Scope($"Damaged (HP={HP}, damage={damage}, home=%0)")
                     .With(Home);
 
                 // Write records the HP change inside the tagged scope.
-                _bb.Write($"HP Change: {HP} -> {Math.Max(0, HP - damage)}");
+                _blackbox.Write($"HP Change: {HP} -> {Math.Max(0, HP - damage)}");
                 HP = Math.Max(0, HP - damage);
             }
 
             public void SetHome(MonsterHome home)
             {
                 // With attaches the assigned home to this log entry.
-                using var _ = _bb.Scope("Set Home (home=%0)").With(home);
+                using var _ = _blackbox.Scope("Set Home (home=%0)").With(home);
                 Home = home;
             }
         }
@@ -98,24 +98,24 @@ namespace BlackThunder.BlackboxSystem.Samples.NativeCSharp
             public string Name { get; }
             public List<Monster> Monsters { get; } = new List<Monster>();
 
-            private BlackboxHandle _bb;
+            private readonly BlackboxHandle _blackbox;
 
             public MonsterHome(string name)
             {
                 Name = name;
 
                 // Construct stores a reusable handle for this home's logs.
-                using var _ = BlackboxHandle.Of(this, label: Name).Construct(out _bb);
+                using var _ = BlackboxHandle.Of(this, label: Name).Construct(out _blackbox);
             }
 
             public void Register(Monster monster)
             {
                 // Scope records which monster is added to this home.
-                using var _ = _bb.Scope($"Register (monster={monster.Name})");
+                using var _ = _blackbox.Scope($"Register (monster={monster.Name})");
                 Monsters.Add(monster);
 
                 // Exert links the home-side register flow to the monster update.
-                using (_bb.Exert(monster, "Register"))
+                using (_blackbox.Exert(monster, "Register"))
                 monster.SetHome(this);
             }
         }

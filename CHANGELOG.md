@@ -8,6 +8,12 @@ The format follows Keep a Changelog, and version numbers follow Semantic Version
 
 ### Changed
 
+- Adopted the pinned BlackThunder Conventions submodule and its C# platform guidelines: repository-wide C# 9, `netstandard2.1` for the library, and `net10.0` for tests, samples, and benchmarks. C# 9 callers use string-overload interpolation; automatic `WriteHandler` short-circuiting remains available to C# 10 or later callers.
+- Applied the shared C# and documentation conventions across runtime, tests, samples, and benchmarks, including private-field names, member grouping, formatting, document titles, and relative links.
+- Declared `BlackboxHandle` as a `readonly` struct. Its references to the recording object and session remain fixed; the nested `WriteHandler` remains a mutable `ref struct` for message construction.
+- Moved the single sample project to `samples/BlackThunder.BlackboxSystem.Samples.csproj`, grouped named scenarios under `samples/Scenarios`, and placed exports under the executable's `SampleOutput` directory. Command-line scenarios now run once without opening a browser and return exit code 0 on success, 1 on execution failure, or 2 for invalid commands or arguments. Interactive execution retains the prompt and each scenario's export-opening behavior.
+- Renamed the benchmark project to `BlackThunder.BlackboxSystem.Benchmarks` and separated current run instructions from dated measurement records.
+- Shortened the English and Korean README entry points and consolidated detailed session diagnostics in the session documentation while preserving historical test and benchmark results.
 - Replaced `BlackboxHandle.Of(subject).Label(name)` with `BlackboxHandle.Of(subject, label: name)` and removed the public `Label` method. The optional label keeps the first-nonblank-name policy within each session; omitted or blank labels preserve the existing name, and conflicting names keep the first value and warn. Existing source calls to `Of(subject)` remain valid; consumers must rebuild against the updated signature.
 
 ## [0.2.0] - 2026-10-29

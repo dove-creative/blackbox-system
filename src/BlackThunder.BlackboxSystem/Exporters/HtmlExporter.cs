@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.IO;
 using System.Text;
 
 namespace BlackThunder.BlackboxSystem.Exporters
@@ -12,7 +11,11 @@ namespace BlackThunder.BlackboxSystem.Exporters
         internal static Action<ProcessStartInfo> OpenLogProcess = startInfo => Process.Start(startInfo);
 #endif
 
-        public static void Export(BlackboxSession session, Blackbox blackbox, int recursionDepth, bool isCrash, bool fullExport, bool openLog, long maxSequence = -1, SessionSettings settings = null)
+        // Export pipeline
+        public static void Export(
+            BlackboxSession session, Blackbox blackbox, int recursionDepth,
+            bool isCrash, bool fullExport, bool openLog,
+            long maxSequence = -1, SessionSettings settings = null)
         {
             settings ??= blackbox.State.Settings;
             var sb = new StringBuilder();
@@ -20,7 +23,8 @@ namespace BlackThunder.BlackboxSystem.Exporters
 
             AppendDocumentStart(sb);
             var crash = blackbox.State.Crash;
-            if (crash != null) sb.Append("<pre>" + HtmlEncode($"[Error] {crash.Message}\n[STACK TRACE]\n{crash.Stack}") + "</pre>");
+            if (crash != null)
+                sb.Append("<pre>" + HtmlEncode($"[Error] {crash.Message}\n[STACK TRACE]\n{crash.Stack}") + "</pre>");
             BuildHtml(nodes, sb);
             AppendDocumentEnd(sb);
 
@@ -48,6 +52,7 @@ namespace BlackThunder.BlackboxSystem.Exporters
             }
         }
 
+        // Object and log rendering
         private static void BuildHtml(IReadOnlyList<ExportNode> nodes, StringBuilder sb)
         {
             var includedBlackboxes = new HashSet<Blackbox>();
@@ -87,10 +92,9 @@ namespace BlackThunder.BlackboxSystem.Exporters
                         sb.Append($"<span{classAttr} style='color:{methodColor}'>{HtmlEncode(methodLabel)}</span> ");
                     }
 
-                    // Message FIRST
+                    // Render the message before its interaction links.
                     sb.Append($"{HtmlEncode(LogFormatter.RenderMessage(log, false))}");
 
-                    // Interaction Links LATER
                     if (log.ExertedBy != null)
                         AppendInteraction(sb, log.ExertedBy, false, log.InteractionId, includedBlackboxes, node.Names);
 
@@ -106,6 +110,7 @@ namespace BlackThunder.BlackboxSystem.Exporters
             }
         }
 
+        // Interaction links
         private static void AppendInteraction(
             StringBuilder sb,
             Blackbox peer,

@@ -6,7 +6,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BlackThunder.BlackboxSystem
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BlackThunder.BlackboxSystem.Tests", "tests\BlackThunder.BlackboxSystem.Tests\BlackThunder.BlackboxSystem.Tests.csproj", "{34A521CA-5A95-40F8-A603-51FD96C0E3FB}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Blackbox.NativeCSharp.Samples", "samples\Blackbox.NativeCSharp.Samples\Blackbox.NativeCSharp.Samples.csproj", "{BD0BA0E2-9C9A-4CE3-BD64-8175EDBB4A26}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BlackThunder.BlackboxSystem.Samples", "samples\BlackThunder.BlackboxSystem.Samples.csproj", "{BD0BA0E2-9C9A-4CE3-BD64-8175EDBB4A26}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

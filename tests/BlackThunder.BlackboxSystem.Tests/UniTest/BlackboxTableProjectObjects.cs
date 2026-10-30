@@ -104,10 +104,7 @@ namespace BlackThunder.BlackboxSystem.Tests
             return new NamedOwner(ProjectName + "_" + role + "_" + _ownerIndex);
         }
 
-        public Blackbox NewBlackbox(string role)
-        {
-            return BlackboxTestDoubles.BlackboxFor(NewOwner(role));
-        }
+        public Blackbox NewBlackbox(string role) => BlackboxTestDoubles.BlackboxFor(NewOwner(role));
 
         public string CreateTempDirectory()
         {
@@ -142,9 +139,6 @@ namespace BlackThunder.BlackboxSystem.Tests
             _name = name;
         }
 
-        public override string ToString()
-        {
-            return _name;
-        }
+        public override string ToString() => _name;
     }
 }

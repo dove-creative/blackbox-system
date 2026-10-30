@@ -9,6 +9,7 @@ Blackbox는 POCO 중심의 기록 프레임워크이므로, 테스트는 .NET에
 ### 1-1. 실행 방식
 
 - 테스트 코드는 `tests/BlackThunder.BlackboxSystem.Tests`에 작성한다.
+- .NET 10 SDK와 저장소 공통 C# 9 설정을 사용한다. 기본 핸들 구성과 `-p:BlackboxLockHandles=true` 구성을 검증한다.
 - 저장소 루트에서 `dotnet test tests/BlackThunder.BlackboxSystem.Tests/BlackThunder.BlackboxSystem.Tests.csproj`를 실행한다.
 - 테스트 프로젝트는 exporter hook을 위해 Blackbox 런타임 소스를 링크하고 `BLACKBOX_TESTS`로 컴파일하여 internal 타입도 검증한다.
 - UniTest는 `BlackThunder.UniTest` 안정 버전 `0.2.0` 패키지를 정확히 고정하여 참조한다. `BlackboxTableProject`는 `ExecutionMode.Inline`을 선택하여 전역 Blackbox 상태를 사용하는 기존 실행 방식을 유지한다.
@@ -23,12 +24,12 @@ Blackbox는 POCO 중심의 기록 프레임워크이므로, 테스트는 .NET에
 - `01-Tables.md`의 `X` 칸은 논리적으로 존재할 수 없는 조합이므로 테스트 대상에서 제외한다.
 - `X`를 제외한 모든 결과 칸은 테스트에 포함한다. `-`, `^`, 예외, 상태 변화, 고유 동작, 내부 동작 칸은 모두 테스트 함수 또는 한 테스트 안의 독립 assert 구간으로 대응시킨다.
 - public API 테스트는 `BlackboxHandle` 기준으로 작성하고, internal 구조 검증이 필요한 경우에만 `Blackbox`, `LogContext`, `LogData`, export tools를 직접 호출한다.
-- interpolated string handler 경로는 public API 호출로 우선 검증하고, handler 자체의 short-circuit 상태처럼 public 호출만으로 관찰하기 어려운 부분은 `BlackboxHandle.WriteHandler`를 직접 구성해 검증한다.
+- C# 9 테스트에서는 `BlackboxHandle.WriteHandler`를 직접 구성해 handler 상태와 ref 오버로드를 검증한다. 일반 interpolated string 호출은 식을 먼저 평가하고 string 오버로드로 전달하는 fallback 경로로 검증한다. 자동 handler 변환과 식 평가 생략은 C# 10 이상 호출자에서 별도로 확인한다.
 - 파일 출력 테스트는 임시 폴더를 사용한다. 일반 export 테스트에서는 자동 open을 `OpenLogOption.Never`로 끄고, `OpenLog` 전용 칸은 테스트 빌드 hook으로 외부 프로세스 실행 없이 실패 warning 경로를 검증한다.
 
-### 1-3. 예상 규모
+### 1-3. 초기 예상 규모와 현재 검증
 
-`01-Tables.md` 기준 `X`를 제외한 모든 결과 칸을 풀어도 약 95-115개 테스트 함수, 120-170개 assert 구간으로 예상된다. 200개 이하이므로 전체 표를 기준으로 테스트를 작성한다.
+초기 계획에서는 `01-Tables.md`의 `X`를 제외한 모든 결과 칸을 약 95-115개 테스트 함수, 120-170개 assert 구간으로 검증할 것으로 예상했다. 이 수치는 세션·동시성·수명 검증을 확장하기 전의 계획이며 현재 테스트 수의 상한이 아니다. 전체 표의 상태·동작 커버리지를 유지하면서 필요한 회귀 검증을 추가하고, 실제 실행 결과는 [테스트 결과](03-Results.md)와 [세션 구현 검증](04-Sessions.md)에 기록한다.
 
 ### 1-4. 칸 커버리지 기준
 
@@ -48,7 +49,7 @@ Blackbox는 POCO 중심의 기록 프레임워크이므로, 테스트는 .NET에
 
 ## 2. 공통 테스트 도구
 
-### 2-1. `BlackboxTestDoubles.cs`
+### 2-1. BlackboxTestDoubles.cs
 
 공통 테스트 fixture와 helper를 둔다.
 
@@ -71,7 +72,7 @@ Blackbox는 POCO 중심의 기록 프레임워크이므로, 테스트는 .NET에
 
 ## 3. 단위 테스트 계획
 
-### 3-1. `LogDataTests.cs`
+### 3-1. LogDataTests.cs
 
 대응 표: `1-1. LogData`
 
@@ -83,7 +84,7 @@ Blackbox는 POCO 중심의 기록 프레임워크이므로, 테스트는 .NET에
 | `MutableExportFieldsCanBeUpdated` | export/merge 단계에서 `ScopeDepth`, `IsValid`, `Message`, interaction 정보가 갱신된다. |
 | `ToStringUsesFormatter` | `ToString()`이 `LogFormatter.RenderTextLine(...)` 경로의 결과를 낸다. |
 
-### 3-2. `LogFormatterTests.cs`
+### 3-2. LogFormatterTests.cs
 
 대응 표: `1-2. LogFormatter`
 
@@ -96,7 +97,7 @@ Blackbox는 POCO 중심의 기록 프레임워크이므로, 테스트는 .NET에
 | `RenderMethodLabelDependsOnScopeType` | open/close/step/normal label이 scope type에 맞게 렌더링된다. |
 | `ArrowAndTagRefHandleInteractionIds` | interaction id 유무에 따라 arrow와 tag ref 표현이 달라진다. |
 
-### 3-3. `TagHandleTests.cs`
+### 3-3. TagHandleTests.cs
 
 대응 표: `2-1. TagHandle`
 
@@ -109,7 +110,7 @@ Blackbox는 POCO 중심의 기록 프레임워크이므로, 테스트는 .NET에
 | `WithNullArrayTagsNull` | `With((object[])null)`도 null target으로 정규화된다. |
 | `WithTargetTypesLastOverridesTargetLogPolicy` | 마지막 `TargetTypes` 인자가 target 로그 표시 정책으로 사용된다. |
 
-### 3-4. `ScopeHandleTests.cs`
+### 3-4. ScopeHandleTests.cs
 
 대응 표: `2-2. ScopeHandle`
 
@@ -122,7 +123,7 @@ Blackbox는 POCO 중심의 기록 프레임워크이므로, 테스트는 .NET에
 | `DifferentThreadDisposeWarns` | 생성 thread와 다른 thread에서 dispose하면 warning을 남긴다. |
 | `PrintedDisposeDoesNotCloseScope` | export 이후 dispose는 close log를 추가하지 않는다. |
 
-### 3-5. `ExertHandleTests.cs`
+### 3-5. ExertHandleTests.cs
 
 대응 표: `2-3. ExertHandle`
 
@@ -135,7 +136,7 @@ Blackbox는 POCO 중심의 기록 프레임워크이므로, 테스트는 .NET에
 | `DifferentThreadDisposeWarns` | 다른 thread dispose는 warning을 남긴다. |
 | `PrintedDisposeDoesNotMerge` | export 이후 dispose는 병합하지 않는다. |
 
-### 3-6. `SessionCounterTests.cs`
+### 3-6. SessionCounterTests.cs
 
 대응 표: `3-1. 세션 카운터 (BlackboxSession)`
 
@@ -144,7 +145,7 @@ Blackbox는 POCO 중심의 기록 프레임워크이므로, 테스트는 .NET에
 | `IdsIncreaseIndependently` | blackbox id, interaction id, sequence가 독립적으로 증가한다. |
 | `ResetRestartsCounters` | 기본 세션 재시작 후 각 counter가 초기값부터 다시 시작한다. |
 
-### 3-7. `BlackboxSessionRegistryTests.cs`
+### 3-7. BlackboxSessionRegistryTests.cs
 
 대응 표: `3-2. BlackboxSessionRegistry`
 
@@ -157,7 +158,7 @@ Blackbox는 POCO 중심의 기록 프레임워크이므로, 테스트는 .NET에
 | `StrongReferencePolicyKeepsOwnerReference` | strong reference 설정이 owner를 강하게 보관한다. |
 | `WeakReferencePolicyStoresWeakOwnerReference` | weak reference 설정에서는 owner가 사라질 수 있고 fallback owner string을 유지한다. |
 
-### 3-8. `InfrastructureTests.cs`
+### 3-8. InfrastructureTests.cs
 
 대응 표: `3-3. Infrastructure`
 
@@ -168,7 +169,7 @@ Blackbox는 POCO 중심의 기록 프레임워크이므로, 테스트는 .NET에
 | `LogDispatchesToMatchingLogger` | normal/warning logger가 분리 호출된다. |
 | `TryMarkPrintedSucceedsOnceAndResetAllowsPrintingAgain` | 크래시 동결은 세션당 한 번만 성공하고 기본 세션 재시작 후 새 세션에서 다시 동결할 수 있다. |
 
-### 3-9. `LogContextTests.cs`
+### 3-9. LogContextTests.cs
 
 대응 표: `4-1. LogContext`
 
@@ -185,7 +186,7 @@ Blackbox는 POCO 중심의 기록 프레임워크이므로, 테스트는 .NET에
 | `TryMergeScopeRejectsNonAdjacentOrMissingTarget` | 병합 대상이 없으면 기존 로그를 유지한다. |
 | `GetLogsStopsAtMaxSequence` | `maxSequence` 이후 로그를 반환하지 않는다. |
 
-### 3-10. `BlackboxTests.cs`
+### 3-10. BlackboxTests.cs
 
 대응 표: `4-2. Blackbox`
 
@@ -202,7 +203,7 @@ Blackbox는 POCO 중심의 기록 프레임워크이므로, 테스트는 .NET에
 | `GetLogsByContextReturnsSeparateThreadBuckets` | thread별 context 로그 묶음을 분리해서 반환한다. |
 | `OwnerStringFallsBackWhenOwnerReferenceIsLost` | weak owner가 사라진 경우 fallback owner string을 사용한다. |
 
-### 3-11. `BlackboxHandleTests.cs`
+### 3-11. BlackboxHandleTests.cs
 
 대응 표: `5-1. BlackboxHandle`, `1-3. BlackboxHandle.WriteHandler`
 
@@ -224,9 +225,10 @@ Blackbox는 POCO 중심의 기록 프레임워크이므로, 테스트는 .NET에
 | `RestartDefaultSessionRestoresDefaultRuntimeState` | 기본 세션 재시작 후 새 기록 수명을 시작할 수 있다. |
 | `WriteHandlerFormatsInterpolatedValuesForValidHandle` | 유효 handle에서 interpolated string literal, formatted value, null value가 message로 조립된다. |
 | `WriteHandlerSkipsFormattingForInvalidHandle` | invalid handle에서 handler가 skipped 상태가 되어 문자열 조립과 로그 저장을 생략한다. |
+| `CSharp9InterpolationUsesStringFallbackWhenRecordingIsDisabled` | C# 9 호출자는 기록이 꺼져 있어도 보간 식을 먼저 평가하고 원래 message를 반환하며 로그를 저장하지 않는다. |
 | `UseBlackboxFalseDisablesNewAndExistingHandles` | `UseBlackbox=false` 상태에서 public API가 invalid/default handle과 원래 message를 반환하고 실제 기록을 만들지 않는다. |
 
-### 3-12. `ExportToolsTests.cs`
+### 3-12. ExportToolsTests.cs
 
 대응 표: `6-1. export tools`
 
@@ -241,7 +243,7 @@ Blackbox는 POCO 중심의 기록 프레임워크이므로, 테스트는 .NET에
 | `ResolveScopeDepthsAssignsNestedDepths` | 중첩 scope depth를 계산한다. |
 | `TrimSmartSanitizesFileNameParts` | 비어 있거나 파일 이름에 부적합한 입력은 `null`로 정규화하고 긴 입력은 앞/뒤를 보존해 줄인다. |
 
-### 3-13. `ExporterTests.cs`
+### 3-13. ExporterTests.cs
 
 대응 표: `6-2. exporters`
 
@@ -256,7 +258,7 @@ Blackbox는 POCO 중심의 기록 프레임워크이므로, 테스트는 .NET에
 
 ## 4. 통합 테스트 계획
 
-### 4-1. `IntegrationTests.cs`
+### 4-1. IntegrationTests.cs
 
 대응 표: `7. 통합 흐름`
 
@@ -268,3 +270,20 @@ Blackbox는 POCO 중심의 기록 프레임워크이므로, 테스트는 .NET에
 | `ErrorFlowExportsErrorAndCrashContext` | error/crash 흐름이 오류 로그와 파일 출력으로 이어진다. |
 | `RestartDefaultAndRerunStartsClean` | export 후 reset하고 새 실행을 독립적으로 기록한다. |
 | `RingBufferLimitKeepsRecentLogsInPublicFlow` | public API 경로에서 buffer 제한이 최근 로그 유지로 나타난다. |
+
+### 4-2. SampleCliTests.cs
+
+대응 표: `8. Sample CLI`
+
+테스트 프로젝트가 준비한 SampleApp 배포 파일을 테스트마다 독립된 임시 디렉터리로 복사하고, 실제 샘플 DLL을 .NET 호스트의 자식 프로세스로 실행한다. 표준 입력을 닫지 않은 상태에서 종료를 기다려 일회 실행이 EOF나 대화형 프롬프트에 의존하지 않는지 확인한다. 대화형 검증에서는 입력 줄을 전달한 뒤에도 같은 조건을 유지한다. 종료 코드, stdout, stderr와 임시 디렉터리의 파일을 관찰하며 테스트 종료 후 해당 디렉터리를 정리한다.
+
+아래 여섯 테스트 메서드는 매개변수 조합을 포함하여 17개 사례를 구성한다.
+
+| 테스트 | 사례 수 | 대응 축과 검증 내용 |
+| --- | --- | --- |
+| `InformationCommandsExitWithoutReadingInputOrCreatingOutput` | 2 | `One-shot x Help/Exit`: help와 exit가 입력을 기다리지 않고 성공 종료하며 출력 디렉터리를 생성하지 않는다. |
+| `ScenariosAndNumericAliasesExportAndExitWithInputStillOpen` | 8 | `One-shot x Scenario`: 네 시나리오와 숫자 별칭이 한 번 실행되고, 완료 메시지·시나리오별 HTML 파일·의도된 예외 결과를 남긴다. |
+| `InvalidCommandsReturnUsageErrorWithoutRunningAScenario` | 4 | `One-shot x InvalidInput`: unknown 명령과 write/help/exit의 추가 인자를 종료 코드 2로 거부하고 stderr에 사용법을 출력한다. |
+| `InteractiveModeContinuesAfterEmptyInputAndInvalidCommands` | 1 | `Interactive x Empty/Invalid/Help/Exit`: 빈 입력과 잘못된 명령 뒤에도 help·exit와 프롬프트 반복이 유지된다. |
+| `UnexpectedOutputFailureReturnsFailureAndDoesNotReportSuccess` | 1 | `One-shot x OutputFailure`: SampleOutput 위치를 파일로 막으면 종료 코드 1과 실패 메시지를 반환하고 성공을 보고하지 않는다. |
+| `InteractiveModeContinuesAfterUnexpectedOutputFailure` | 1 | `Interactive x OutputFailure`: 같은 출력 오류 뒤에도 help와 exit를 처리하며 실패한 실행을 완료로 표시하지 않는다. |

@@ -134,10 +134,10 @@ namespace BlackThunder.BlackboxSystem.Tests
         private static void ExerciseRetirement<T>(HandleTracker<T> tracker, BlackboxSession recordingSession,
             Action retire, Func<BlackboxSession, HandleTracker<T>> selectTracker)
         {
-            const int workers = 8;
+            const int Workers = 8;
             int before = HandleManager<T>.LiveCountForTests;
             var published = Enumerable.Range(0, 80).Select(_ => tracker.Register(recordingSession.State)).ToArray();
-            using var ready = new CountdownEvent(workers);
+            using var ready = new CountdownEvent(Workers);
             using var release = new ManualResetEventSlim();
             var errors = new ConcurrentQueue<Exception>();
             recordingSession.State.BeforeHandleRegistration = () =>
@@ -145,7 +145,7 @@ namespace BlackThunder.BlackboxSystem.Tests
                 ready.Signal();
                 if (!release.Wait(10000)) throw new TimeoutException("Retirement registration gate timed out.");
             };
-            var threads = Enumerable.Range(0, workers).Select(_ => new Thread(() =>
+            var threads = Enumerable.Range(0, Workers).Select(_ => new Thread(() =>
             {
                 try
                 {

@@ -10,7 +10,7 @@ namespace BlackThunder.BlackboxSystem.Tests
 {
     internal sealed class SubjectCleanupTests : BlackboxTestBase
     {
-        private static readonly FieldInfo Cursor = typeof(SubjectStore)
+        private static readonly FieldInfo _cursor = typeof(SubjectStore)
             .GetField("_cleanupCursor", BindingFlags.Instance | BindingFlags.NonPublic);
 
         [TestCase(1, 0)]
@@ -29,9 +29,9 @@ namespace BlackThunder.BlackboxSystem.Tests
             BlackboxTestDoubles.ForceFullCollection();
             Assert.That(Alive(discarded), Is.EqualTo(discarded.Length));
 
-            Cursor.SetValue(store, start);
+            _cursor.SetValue(store, start);
             for (int i = 0; i < 100; i++) Assert.That(store.GetOrAdd(living), Is.SameAs(canonical));
-            Assert.That(Cursor.GetValue(store), Is.EqualTo(start), "Hits must not advance maintenance.");
+            Assert.That(_cursor.GetValue(store), Is.EqualTo(start), "Hits must not advance maintenance.");
             BlackboxTestDoubles.ForceFullCollection();
             Assert.That(Alive(discarded), Is.EqualTo(discarded.Length));
 
@@ -64,7 +64,7 @@ namespace BlackThunder.BlackboxSystem.Tests
             foreach (var result in results)
                 for (int i = 0; i < owners.Length; i++) Assert.That(result[i], Is.SameAs(results[0][i]));
             Assert.That(store.Count(), Is.EqualTo(owners.Length));
-            Assert.That(Cursor.GetValue(store), Is.EqualTo(owners.Length * 16));
+            Assert.That(_cursor.GetValue(store), Is.EqualTo(owners.Length * 16));
             GC.KeepAlive(owners);
         }
 
@@ -82,7 +82,7 @@ namespace BlackThunder.BlackboxSystem.Tests
             using var ready = new ManualResetEventSlim();
             using var proceed = new ManualResetEventSlim();
             int attempts = 0;
-            Cursor.SetValue(store, 0);
+            _cursor.SetValue(store, 0);
             store.BeforeCleanupPublish = bucket =>
             {
                 if (bucket != 0) return;
@@ -121,7 +121,7 @@ namespace BlackThunder.BlackboxSystem.Tests
             var owner = OwnerInBucket(capacity - 1, capacity);
             using var ready = new ManualResetEventSlim();
             using var proceed = new ManualResetEventSlim();
-            Cursor.SetValue(store, 0);
+            _cursor.SetValue(store, 0);
             store.BeforeCleanupPublish = _ =>
             {
                 ready.Set();
