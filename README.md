@@ -1,6 +1,6 @@
 # Blackbox System
 
-[Korean README](README.ko.md)
+[한국어](README.ko.md)
 
 Blackbox is a .NET tracing framework for recording object activity, execution scopes, and object-to-object interactions, then reading them later as connected logs.
 
@@ -12,9 +12,7 @@ Where a normal log focuses on a message at one moment, Blackbox records both 'wh
 
 Blackbox is a foundational tracing framework in the BlackThunder project family.
 
-This repository is an early open-source project by dove-creative. If you find rough edges or areas to improve, please open a Discussion or contact vkdl4062@gmail.com.
-
-Thank you for using Blackbox.
+If you find a problem or have a suggestion, please open a [Discussion](https://github.com/dove-creative/blackbox-system/discussions) or contact vkdl4062@gmail.com. Thank you for using Blackbox.
 
 ## Features
 
@@ -28,6 +26,12 @@ Thank you for using Blackbox.
 ## Requirements and Installation
 
 Consumers reference a pinned stable release of `BlackThunder.BlackboxSystem`. Register the directory containing the released `.nupkg` as a NuGet feed before restoring it.
+
+```powershell
+dotnet add package BlackThunder.BlackboxSystem --version "[0.2.0]"
+```
+
+You can also add the reference directly to the project file.
 
 ```xml
 <ItemGroup>
@@ -86,18 +90,6 @@ This example records the following information.
 - Bidirectional interaction records for the `worker.Load()` call
 - Connected log output centered on `Loader` when `ExportLogs()` is called
 
-### Test Sessions
-
-```csharp
-using var session = BlackboxHandle.BeginSession();
-BlackboxHandle.Configure(logDirectory, Console.WriteLine,
-    openLogOption: OpenLogOption.Never);
-var system = new SystemUnderTest();
-await system.RunAsync();
-```
-
-Create objects inside their session and await/join all child work before disposal. Handles stay bound to the session in which they were acquired, and the global active list retains undisposed explicit sessions. See the [session and recording contract](docs/Wiki/05-Sessions.md) for isolation, leak diagnostics, default-session restart, and export behavior (Korean).
-
 ### C# Sample
 
 Use the [console sample in samples](samples/README.md) to exercise the recording flows.
@@ -107,26 +99,22 @@ dotnet run --project samples/BlackThunder.BlackboxSystem.Samples.csproj
 dotnet run --project samples/BlackThunder.BlackboxSystem.Samples.csproj -- write
 ```
 
-The first command opens the `sample>` prompt. Run `write`, `exert`, `tag`, or `exception` repeatedly; empty input is ignored, `help` shows usage, and `exit` closes the sample. The second command runs one scenario and exits without opening a browser. One-shot exit codes are 0 for success, 1 for execution failure, and 2 for an invalid command or arguments.
+The first command opens the `sample>` prompt for repeated runs of `write`, `exert`, `tag`, or `exception`. The second command runs the `write` scenario once and exits without opening a browser.
 
-Recording uses the default `UseBlackbox = true` setting. Logs are written under `SampleOutput/Write`, `SampleOutput/Exert`, `SampleOutput/Tag`, or `SampleOutput/Exception` in the executable output directory. See the sample README for each command's purpose and interactive export-opening behavior.
+Logs are written to scenario-specific folders under the executable output directory. The `write` scenario uses `SampleOutput/Write`. See the [sample documentation](samples/README.md) for command usage, exit codes, and export-opening behavior (Korean).
 
 ## Main APIs
 
-- `BlackboxHandle.Of(subject, label: name)`: gets the recording entry point for the target object in the current session. The label is optional; the first nonblank name wins, and omitting it preserves the existing name.
-- `BlackboxHandle.BeginSession()`: begins an isolated test/debug session.
-- `BlackboxHandle.ActiveSessionCount` / `GetActiveSessionKeys()`: observes undisposed explicit sessions across the process.
-- `BlackboxHandle.DisposeActiveSessions()`: disposes a snapshot of those sessions for cleanup.
-- `Write(message)`: records a one-line activity log.
-- `Write(message).With(targets)`: attaches related targets to an activity log.
-- `Scope(message)`: records a scope-start log and returns a `ScopeHandle`.
-- `Scope(message).With(targets)`: attaches related targets to a scope-start log.
-- `Exert(other, message)`: records an interaction with another object and returns an `ExertHandle` that can try to merge with the receiving-side scope.
-- `ExertMessage(other, message)`: records a one-line interaction without merge behavior.
-- `WriteError(message)`: records an error message and returns the same string.
-- `Export(...)`: writes log files centered on the current object.
-- `CrashExport(...)`: records an error and creates export output in one call.
-- `RestartDefaultSession()`: ends and replaces the shared default session while preserving its settings; explicit sessions are unaffected.
+- `BlackboxHandle.Of(subject, label: name)`: gets the recording entry point for the target object in the current session, with an optional label.
+- `Write(message)` / `WriteError(message)`: records activity or errors.
+- `Scope(message)`: records the execution scope of a `using` block.
+- `Exert(other, message)` / `ExertMessage(other, message)`: records object-to-object interactions in both objects' logs.
+- `With(targets)`: attaches related targets to an activity log or scope-start log.
+- `Export(...)` / `CrashExport(...)`: exports connected logs, optionally recording an error as part of the export.
+- `BlackboxHandle.BeginSession()`: begins a test/debug session with its own lifetime.
+- `BlackboxHandle.RestartDefaultSession()`: ends and replaces the shared default session while preserving its settings.
+
+See [Usage](docs/Wiki/04-Usage.md) for calling guidelines and the [session and recording contract](docs/Wiki/05-Sessions.md) for disposal and leak diagnostics (Korean).
 
 ## Documentation
 
@@ -137,20 +125,16 @@ Recording uses the default `UseBlackbox = true` setting. Logs are written under 
 
 ## Tests
 
-Test code is in `tests/BlackThunder.BlackboxSystem.Tests` and `tests/BlackThunder.BlackboxSystem.Tests.CSharp10`, and both projects use NUnit.
+Run both NUnit test projects with a .NET 10 SDK. The main project covers recording, handles, exports, and samples. The C# 10 project checks that interpolated messages bind to `WriteHandler` and skip formatted expressions when recording is disabled.
 
-The main test project compiles Blackbox runtime sources with `BLACKBOX_TESTS` for exporter hooks and references the stable `BlackThunder.UniTest` package at version `0.4.0`. `BlackboxTableProject` selects `ExecutionMode.Inline` to preserve the existing execution behavior around global Blackbox state.
-
-`BlackThunder.BlackboxSystem.Tests.CSharp10` references the library project and compiles with C# 10, the only exception to the repository-wide C# 9 setting. It verifies that callers compiled with C# 10 or later bind interpolated messages to `WriteHandler` and skip formatted expressions while recording is disabled.
-
-The root `NuGet.config` uses the `packages/` local feed and nuget.org. `packages/` contains the pinned UniTest release package and its provenance record, and the framework package IDs map exclusively to the local feed. General restore caches and `bin/obj` remain outside version control.
+The root `NuGet.config` restores `BlackThunder.UniTest` `0.4.0` from the checked-in `packages/` local feed and third-party dependencies from nuget.org.
 
 ```powershell
 dotnet test tests/BlackThunder.BlackboxSystem.Tests/BlackThunder.BlackboxSystem.Tests.csproj
 dotnet test tests/BlackThunder.BlackboxSystem.Tests.CSharp10/BlackThunder.BlackboxSystem.Tests.CSharp10.csproj
 ```
 
-See the [session validation report](docs/Tests/04-Sessions.md) and [recording benchmark](benchmarks/README.md).
+See the [contribution guide](CONTRIBUTING.md) for verification scope and development settings, along with the [session validation report](docs/Tests/04-Sessions.md) and [recording benchmark](benchmarks/README.md).
 
 ## License
 
