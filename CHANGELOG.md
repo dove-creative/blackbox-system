@@ -14,6 +14,7 @@ The format follows Keep a Changelog, and version numbers follow Semantic Version
 - Moved the single sample project to `samples/BlackThunder.BlackboxSystem.Samples.csproj`, grouped named scenarios under `samples/Scenarios`, and placed exports under the executable's `SampleOutput` directory. Command-line scenarios now run once without opening a browser and return exit code 0 on success, 1 on execution failure, or 2 for invalid commands or arguments. Interactive execution retains the prompt and each scenario's export-opening behavior.
 - Renamed the benchmark project to `BlackThunder.BlackboxSystem.Benchmarks` and separated current run instructions from dated measurement records.
 - Shortened the English and Korean README entry points and consolidated detailed session diagnostics in the session documentation while preserving historical test and benchmark results.
+- Updated Blackbox tests to the pinned `BlackThunder.UniTest` `0.4.0` package. Table tests import the `BlackThunder.UniTest` namespace and print failures as JSON reports.
 - Moved the shared `Nullable` and `ImplicitUsings` settings into `Directory.Build.props`.
 - The benchmark project now references the library project instead of compiling runtime sources, so measurements use the `netstandard2.1` build. It is included in the solution, and `InternalsVisibleTo` now names only the benchmark assembly.
 - Grouped runtime members under the shared `Front`, `Internal`, and `Content` regions, with named subgroups where a region has several.

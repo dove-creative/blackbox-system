@@ -2,7 +2,7 @@ using System;
 using System.IO;
 using System.Threading.Tasks;
 using NUnit.Framework;
-using UniTest;
+using BlackThunder.UniTest;
 
 namespace BlackThunder.BlackboxSystem.Tests
 {
@@ -12,7 +12,7 @@ namespace BlackThunder.BlackboxSystem.Tests
         private const int ScenarioDepth = 10;
         private const int ContinuousScenarioDepth = 30;
         // Toggle this off when the full UniTest node XML makes the test output too noisy.
-        private const bool PrintResultXml = false;
+        private const bool PrintResultJson = false;
 
         [TestCaseSource(typeof(BlackboxTableScenarioFactory), nameof(BlackboxTableScenarioFactory.TableProjectCases))]
         public async Task TableProjectsExecute(string projectName)
@@ -24,7 +24,7 @@ namespace BlackThunder.BlackboxSystem.Tests
                 var project = BlackboxTableScenarioFactory.CreateProject(projectName, false);
                 result = await project.Execute(ScenarioDepth + 1);
 
-                PrintResultXmlIfEnabled(project.Name, result);
+                PrintResultJsonIfEnabled(project.Name, result);
                 AssertProjectSucceeded(project, result);
                 Assert.That(GetMaxExecutionCount(result), Is.InRange(1, ScenarioDepth + 1), project.Name);
             }
@@ -46,7 +46,7 @@ namespace BlackThunder.BlackboxSystem.Tests
                 var project = BlackboxTableScenarioFactory.CreateProject(projectName, true, seed);
                 result = await project.ExecuteContinuously(ContinuousScenarioDepth + 1, seed);
 
-                PrintResultXmlIfEnabled(project.Name + " Seed " + seed, result);
+                PrintResultJsonIfEnabled(project.Name + " Seed " + seed, result);
                 AssertProjectSucceeded(project, result);
                 Assert.That(GetMaxExecutionCount(result), Is.InRange(1, ContinuousScenarioDepth + 1), project.Name);
             }
@@ -59,7 +59,7 @@ namespace BlackThunder.BlackboxSystem.Tests
         private static void AssertProjectSucceeded(BlackboxTableProject project, Node<BlackboxTableModel> result)
         {
             bool cancelled;
-            Assert.That(result.AllSucceed(out cancelled), Is.True, project.Name + Environment.NewLine + result.GetFailedReports().OuterXml);
+            Assert.That(result.AllSucceed(out cancelled), Is.True, project.Name + Environment.NewLine + result.GetFailedReports().ToJson());
             Assert.That(cancelled, Is.False, project.Name);
         }
 
@@ -99,13 +99,13 @@ namespace BlackThunder.BlackboxSystem.Tests
                 CleanupNode(after);
         }
 
-        private static void PrintResultXmlIfEnabled(string name, Node<BlackboxTableModel> result)
+        private static void PrintResultJsonIfEnabled(string name, Node<BlackboxTableModel> result)
         {
-            if (!PrintResultXml || result == null)
+            if (!PrintResultJson || result == null)
                 return;
 
             TestContext.Out.WriteLine(name);
-            TestContext.Out.WriteLine(result.Report.OuterXml);
+            TestContext.Out.WriteLine(result.GetReport().ToJson());
         }
 
     }

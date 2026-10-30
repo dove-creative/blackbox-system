@@ -139,7 +139,7 @@ dotnet run --project samples/BlackThunder.BlackboxSystem.Samples.csproj -- write
 
 테스트 코드는 `tests/BlackThunder.BlackboxSystem.Tests`와 `tests/BlackThunder.BlackboxSystem.Tests.CSharp10`에 있으며, 두 프로젝트 모두 NUnit을 사용한다.
 
-기본 테스트 프로젝트는 exporter hook을 위해 Blackbox 런타임 소스를 `BLACKBOX_TESTS`로 컴파일하고, UniTest는 `BlackThunder.UniTest` 안정 버전 `0.2.0` 패키지를 참조한다. `BlackboxTableProject`는 `ExecutionMode.Inline`을 선택하여 전역 Blackbox 상태를 사용하는 기존 실행 방식을 유지한다.
+기본 테스트 프로젝트는 exporter hook을 위해 Blackbox 런타임 소스를 `BLACKBOX_TESTS`로 컴파일하고, UniTest는 `BlackThunder.UniTest` 안정 버전 `0.4.0` 패키지를 참조한다. `BlackboxTableProject`는 `ExecutionMode.Inline`을 선택하여 전역 Blackbox 상태를 사용하는 기존 실행 방식을 유지한다.
 
 `BlackThunder.BlackboxSystem.Tests.CSharp10`은 라이브러리 프로젝트를 참조하고, 저장소 공통 C# 9 설정의 유일한 예외로 C# 10을 사용한다. C# 10 이상으로 컴파일한 호출자의 보간 문자열이 `WriteHandler`로 연결되고, 기록이 꺼져 있을 때 문자열 안의 식을 평가하지 않는지 확인한다.
 

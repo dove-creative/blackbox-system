@@ -139,7 +139,7 @@ Recording uses the default `UseBlackbox = true` setting. Logs are written under 
 
 Test code is in `tests/BlackThunder.BlackboxSystem.Tests` and `tests/BlackThunder.BlackboxSystem.Tests.CSharp10`, and both projects use NUnit.
 
-The main test project compiles Blackbox runtime sources with `BLACKBOX_TESTS` for exporter hooks and references the stable `BlackThunder.UniTest` package at version `0.2.0`. `BlackboxTableProject` selects `ExecutionMode.Inline` to preserve the existing execution behavior around global Blackbox state.
+The main test project compiles Blackbox runtime sources with `BLACKBOX_TESTS` for exporter hooks and references the stable `BlackThunder.UniTest` package at version `0.4.0`. `BlackboxTableProject` selects `ExecutionMode.Inline` to preserve the existing execution behavior around global Blackbox state.
 
 `BlackThunder.BlackboxSystem.Tests.CSharp10` references the library project and compiles with C# 10, the only exception to the repository-wide C# 9 setting. It verifies that callers compiled with C# 10 or later bind interpolated messages to `WriteHandler` and skip formatted expressions while recording is disabled.
 

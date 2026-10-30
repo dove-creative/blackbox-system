@@ -7,15 +7,17 @@ Blackbox 테스트가 소비하는 검증된 자사 NuGet 배포본을 보관한
 | 항목 | 값 |
 | --- | --- |
 | 패키지 | `BlackThunder.UniTest` |
-| 버전 | `0.2.0` |
-| 파일 | `BlackThunder.UniTest.0.2.0.nupkg` |
+| 버전 | `0.4.0` |
+| 파일 | `BlackThunder.UniTest.0.4.0.nupkg` |
 | 원본 저장소 | [dove-creative/unitest](https://github.com/dove-creative/unitest) |
-| 원본 커밋 | [76ab64a12abe65a1b87e516619ea16616c9e06a1](https://github.com/dove-creative/unitest/commit/76ab64a12abe65a1b87e516619ea16616c9e06a1) |
-| SHA-256 | `CD31ABF08CF3E26A5CB439A5420ACF6726500E1617F0C4EFEEC9EB632F5135A8` |
-| 검증 | Release 솔루션 빌드, 단위 테스트 521개 및 재귀 테스트 8개 통과 |
-| 소비 검증 | Blackbox Release 솔루션 빌드 및 기존 테스트 159개 통과 |
+| 원본 커밋 | [5b5e593f1a1018d0b359e55073426cb83be80590](https://github.com/dove-creative/unitest/commit/5b5e593f1a1018d0b359e55073426cb83be80590) |
+| SHA-256 | `F978A9E221098D9F6FAA25A619FB30D710EEEA5499ED604BAF8891EFD8E79F8E` |
+| 검증 | Release 솔루션 빌드, 단위 테스트 590개 및 재귀 테스트 8개 통과, Windows·Ubuntu CI 통과 |
+| 소비 검증 | 빈 패키지 캐시에서 로컬 피드 복원, Blackbox Release 솔루션 빌드, 기본 테스트 278개 및 C# 10 테스트 2개 통과 |
 
-패키지는 `netstandard2.1`의 `UniTest.dll`을 제공한다. Blackbox 테스트는 `[0.2.0]`으로 버전을 고정하고 `ExecutionMode.Inline`을 명시한다. 일반 생성자의 기본값은 `ThreadPool`이다. `Inline`도 비동기로 실행되며 같은 OS 스레드를 보장하지 않는다.
+패키지는 `netstandard2.1`의 `BlackThunder.UniTest.dll`을 제공하며, 네임스페이스도 `BlackThunder.UniTest`이다. Blackbox 테스트는 `[0.4.0]`으로 버전을 고정하고 `ExecutionMode.Inline`을 명시한다. 일반 생성자의 기본값은 `ThreadPool`이다. `Inline`도 비동기로 실행되며 같은 OS 스레드를 보장하지 않는다.
+
+`0.2.0`에서 올리면서 `0.3.0`의 JSON 보고서 API(`GetReport().ToJson()`, `GetFailedReports().ToJson()`)와 `0.4.0`의 네임스페이스 변경을 테스트에 반영했다. 이전 배포본 `BlackThunder.UniTest.0.2.0.nupkg`(원본 커밋 `76ab64a`, SHA-256 `CD31ABF0…5135A8`)는 덮어쓰지 않고 그대로 보관한다.
 
 ## 갱신 절차
 

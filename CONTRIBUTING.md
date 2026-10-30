@@ -26,7 +26,7 @@ Blackbox uses an SDK-style .NET solution.
 Basic checklist:
 
 - Install a .NET 10 SDK.
-- Restore the pinned `BlackThunder.UniTest` `0.2.0` package from the checked-in `packages/` local feed when building the Blackbox test project.
+- Restore the pinned `BlackThunder.UniTest` `0.4.0` package from the checked-in `packages/` local feed when building the Blackbox test project.
 - Restore and build `BlackThunder.BlackboxSystem.sln` from the repository root.
 - The library remains dependency-free and targets `netstandard2.1`.
 - Tests, samples, and benchmarks target `net10.0`. The repository-wide `Directory.Build.props` selects C# 9 and disables nullable analysis and implicit usings.

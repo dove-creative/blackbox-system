@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using UniTest;
+using BlackThunder.UniTest;
 
 namespace BlackThunder.BlackboxSystem.Tests
 {
@@ -15,7 +15,7 @@ namespace BlackThunder.BlackboxSystem.Tests
         public string Name { get; private set; }
 
         public BlackboxTableProject(string name, bool continuous, int continuousSeed, IReadOnlyList<TableScenario> scenarios)
-            : base(UniTest.ExecutionMode.Inline)
+            : base(ExecutionMode.Inline)
         {
             Name = name;
             _continuous = continuous;
