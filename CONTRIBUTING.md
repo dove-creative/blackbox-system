@@ -29,11 +29,12 @@ Basic checklist:
 - Restore the pinned `BlackThunder.UniTest` `0.2.0` package from the checked-in `packages/` local feed when building the Blackbox test project.
 - Restore and build `BlackThunder.BlackboxSystem.sln` from the repository root.
 - The library remains dependency-free and targets `netstandard2.1`.
-- Tests, samples, and benchmarks target `net10.0`. The repository-wide `Directory.Build.props` selects C# 9.
+- Tests, samples, and benchmarks target `net10.0`. The repository-wide `Directory.Build.props` selects C# 9 and disables nullable analysis and implicit usings.
+- Only `tests/BlackThunder.BlackboxSystem.Tests.CSharp10` overrides the language version, to C# 10, so it can verify the interpolated string handler path that C# 10 or later callers use.
 
 Platform choices follow the shared [C# platform guidelines](guidelines/blackthunder-conventions/instructions/플랫폼%20기준%20-%20CSharp.md), including nullable usage and DLL-based integration with other repositories. Nullable reference types are permitted; the existing projects currently keep nullable analysis disabled.
 
-Consumers pin stable `BlackThunder.BlackboxSystem` packages. Blackbox's own sample keeps its `ProjectReference` so development builds use the current source. The checked-in `packages/` directory is limited to immutable release packages and their provenance records; general NuGet caches and generated build output are not committed. The root `NuGet.config` maps framework package IDs to this local feed and restores third-party dependencies from nuget.org.
+Consumers pin stable `BlackThunder.BlackboxSystem` packages. Blackbox's own sample, benchmark, and C# 10 test projects keep a `ProjectReference` so development builds use the current source. The checked-in `packages/` directory is limited to immutable release packages and their provenance records; general NuGet caches and generated build output are not committed. The root `NuGet.config` maps framework package IDs to this local feed and restores third-party dependencies from nuget.org.
 
 ## Code Style
 
@@ -57,18 +58,19 @@ Run the applicable verification for the changed area.
 - Documentation-only changes: check links, terminology, line endings, and trailing whitespace.
 - Formatting and naming changes that preserve behavior: build the affected projects.
 - Behavior changes: run the affected tests in `tests/BlackThunder.BlackboxSystem.Tests/BlackThunder.BlackboxSystem.Tests.csproj`.
-- Changes across modules, public APIs, build settings, dependencies, or packaging: run the full test project.
+- Changes across modules, public APIs, build settings, dependencies, or packaging: run both test projects.
+- Interpolated message or `WriteHandler` changes: also run `tests/BlackThunder.BlackboxSystem.Tests.CSharp10/BlackThunder.BlackboxSystem.Tests.CSharp10.csproj`.
 - Platform or handle-management changes: also run the full test project with `-p:BlackboxLockHandles=true`.
 - UniTest table-flow changes: run the same test project against the pinned package; `BlackboxTableProject` uses `ExecutionMode.Inline` to preserve its global-state execution contract.
 - Output or file-generation changes: verify both text and HTML output.
 - Changes to recording disable behavior: also verify fallback behavior with `UseBlackbox = false`.
 - Sample changes: verify interactive input and one-shot `help`, all scenarios, invalid commands, and error exit codes. One-shot execution must finish without opening a browser and write files only below the executable's `SampleOutput` directory.
 
-The current benchmark project is `benchmarks/BlackThunder.BlackboxSystem.Benchmarks/BlackThunder.BlackboxSystem.Benchmarks.csproj`. Build it when shared runtime sources or project settings change; run measurements separately when the task calls for performance evidence.
+The current benchmark project is `benchmarks/BlackThunder.BlackboxSystem.Benchmarks/BlackThunder.BlackboxSystem.Benchmarks.csproj`. It references the library project, is part of the solution build, and reaches internal registry types through `InternalsVisibleTo`. Run measurements separately when the task calls for performance evidence.
 
 Briefly include verification results in the pull request.
 
-C# 9 callers use the string overloads for interpolated messages, so formatted expressions are evaluated before the logging call even when recording is disabled. The public `WriteHandler` API remains available; automatic interpolation short-circuiting requires a caller compiled with C# 10 or later. Keep tests for explicit handlers separate from C# 9 string-overload fallback behavior.
+C# 9 callers use the string overloads for interpolated messages, so formatted expressions are evaluated before the logging call even when recording is disabled. The public `WriteHandler` API remains available; automatic interpolation short-circuiting requires a caller compiled with C# 10 or later. Keep tests for explicit handlers separate from C# 9 string-overload fallback behavior; the C# 10 test project covers automatic handler binding.
 
 ## Branch Naming
 

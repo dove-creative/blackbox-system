@@ -8,24 +8,27 @@ namespace BlackThunder.BlackboxSystem
     // It references no session, subject store, handle tracker or registry, and invokes no callbacks.
     internal sealed class SessionState
     {
-        private SessionSettings _settings;
-        private CrashInfo _crash;
-        private int _active = 1, _warnings;
-        private long _boxId = -1, _interactionId = -1, _sequence = -1;
+        // Front
+        internal SessionSettings Settings => Volatile.Read(ref _settings);
+        internal CrashInfo Crash => Volatile.Read(ref _crash);
+        internal bool IsActive => Volatile.Read(ref _active) != 0;
+        internal bool CanWrite => IsActive && Crash == null && Settings.UseBlackbox == UseBlackboxOption.Use;
+        internal long CurrentSequence => Volatile.Read(ref _sequence);
 #if BLACKBOX_TESTS
         internal Action BeforeHandleRegistration;
         internal Action<long> BeforeLogPublication;
         internal Action AfterScopeMerge;
 #endif
 
-        // Published state views
-        internal SessionSettings Settings => Volatile.Read(ref _settings);
-        internal CrashInfo Crash => Volatile.Read(ref _crash);
-        internal bool IsActive => Volatile.Read(ref _active) != 0;
-        internal bool CanWrite => IsActive && Crash == null && Settings.UseBlackbox == UseBlackboxOption.Use;
-        internal long CurrentSequence => Volatile.Read(ref _sequence);
+        // Internal
+        private SessionSettings _settings;
+        private CrashInfo _crash;
+        private int _active = 1, _warnings;
+        private long _boxId = -1, _interactionId = -1, _sequence = -1;
 
 
+        // Content --------------------
+        // Construction
         internal SessionState(SessionSettings settings) => _settings = settings;
 
         // Sequence allocation

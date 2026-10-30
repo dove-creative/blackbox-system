@@ -42,6 +42,7 @@ namespace BlackThunder.BlackboxSystem
 
     public readonly partial struct BlackboxHandle
     {
+        // Front --------------------
         // Forwarders
         public readonly object Owner => _blackbox?.Owner;
         public readonly string OwnerString => _blackbox?.OwnerString ?? InvalidHandleMessage;
@@ -51,8 +52,7 @@ namespace BlackThunder.BlackboxSystem
         public readonly Guid SessionKey => IsValid ? _session.SessionKey : Guid.Empty;
         internal readonly bool CanRecord => Blackbox != null;
 
-        private const string InvalidHandleMessage = "[BlackboxHandle] Invalid Handle";
-
+        // Settings
         public static string LogDirectory
         {
             get => Infrastructure.LogDirectory;
@@ -112,12 +112,16 @@ namespace BlackThunder.BlackboxSystem
             set => Infrastructure.TagTargetTypes = value;
         }
 
+        // Internal
+        private const string InvalidHandleMessage = "[BlackboxHandle] Invalid Handle";
         private readonly Blackbox _blackbox;
         // The session that owns _blackbox: target lookup, handle registration and export go through it.
         private readonly BlackboxSession _session;
         private readonly Blackbox Blackbox => _blackbox != null && _blackbox.State.CheckWrite() ? _blackbox : null;
 
 
+        // Content --------------------
+        // Construction
         internal BlackboxHandle(Blackbox blackbox, BlackboxSession session)
         {
             _blackbox = blackbox;
@@ -297,6 +301,7 @@ namespace BlackThunder.BlackboxSystem
         }
         #endregion
 
+        // Recording
         public readonly TagHandle Write(
             [InterpolatedStringHandlerArgument("")] ref WriteHandler handler,
             [CallerMemberName] string methodName = "")
@@ -348,7 +353,7 @@ namespace BlackThunder.BlackboxSystem
             return blackbox == null ? default : _session.Exert(blackbox, _session.Subjects.GetOrAdd(other), message, methodName);
         }
 
-
+        // Errors
         public readonly struct ErrorContainer
         {
             internal readonly (string context, object target)[] Targets;
@@ -437,6 +442,7 @@ namespace BlackThunder.BlackboxSystem
             Write(errorMessage, methodName).With(tags);
         }
 
+        // Export
         public readonly void Export(
             int? recursionDepth = null,
             ExportFormat format = ExportFormat.BasedOnSettings,

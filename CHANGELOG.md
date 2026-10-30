@@ -14,7 +14,14 @@ The format follows Keep a Changelog, and version numbers follow Semantic Version
 - Moved the single sample project to `samples/BlackThunder.BlackboxSystem.Samples.csproj`, grouped named scenarios under `samples/Scenarios`, and placed exports under the executable's `SampleOutput` directory. Command-line scenarios now run once without opening a browser and return exit code 0 on success, 1 on execution failure, or 2 for invalid commands or arguments. Interactive execution retains the prompt and each scenario's export-opening behavior.
 - Renamed the benchmark project to `BlackThunder.BlackboxSystem.Benchmarks` and separated current run instructions from dated measurement records.
 - Shortened the English and Korean README entry points and consolidated detailed session diagnostics in the session documentation while preserving historical test and benchmark results.
+- Moved the shared `Nullable` and `ImplicitUsings` settings into `Directory.Build.props`.
+- The benchmark project now references the library project instead of compiling runtime sources, so measurements use the `netstandard2.1` build. It is included in the solution, and `InternalsVisibleTo` now names only the benchmark assembly.
+- Grouped runtime members under the shared `Front`, `Internal`, and `Content` regions, with named subgroups where a region has several.
 - Replaced `BlackboxHandle.Of(subject).Label(name)` with `BlackboxHandle.Of(subject, label: name)` and removed the public `Label` method. The optional label keeps the first-nonblank-name policy within each session; omitted or blank labels preserve the existing name, and conflicting names keep the first value and warn. Existing source calls to `Of(subject)` remain valid; consumers must rebuild against the updated signature.
+
+### Added
+
+- Added `tests/BlackThunder.BlackboxSystem.Tests.CSharp10`, which compiles with C# 10 and verifies that callers compiled with C# 10 or later bind interpolated messages to `WriteHandler` and skip formatted expressions while recording is disabled.
 
 ## [0.2.0] - 2026-10-29
 

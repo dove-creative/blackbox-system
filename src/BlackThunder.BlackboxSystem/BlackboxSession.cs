@@ -11,7 +11,15 @@ namespace BlackThunder.BlackboxSystem
     /// <remarks>Explicit sessions are strongly retained until disposed, even if callers drop all references.</remarks>
     public sealed class BlackboxSession : IDisposable
     {
-        // Session ownership
+        // Front
+        public Guid SessionKey { get; } = Guid.NewGuid();
+        internal bool IsDisposed => !State.IsActive;
+
+        // The only session part recording code sees.
+        internal readonly SessionState State;
+        internal readonly SubjectStore Subjects;
+
+        // Internal
         private readonly BlackboxSession _previous;
         // Session-owned stripes bound tracking overhead independently of context churn.
         // Segments are reused and grow only when outstanding handles need more cells.
@@ -19,14 +27,9 @@ namespace BlackThunder.BlackboxSystem
         private readonly HandleTracker<ScopeHandle>[] _scopeTrackers = CreateTrackers<ScopeHandle>();
         private readonly HandleTracker<ExertHandle>[] _exertTrackers = CreateTrackers<ExertHandle>();
         private long _exportOrdinal;
-        // The only session part recording code sees.
-        internal readonly SessionState State;
-        internal readonly SubjectStore Subjects;
-
-        public Guid SessionKey { get; } = Guid.NewGuid();
-        internal bool IsDisposed => !State.IsActive;
 
 
+        // Content --------------------
         // Construction
         internal BlackboxSession(SessionSettings settings, BlackboxSession previous, int buckets)
         {
@@ -42,7 +45,8 @@ namespace BlackThunder.BlackboxSystem
             return trackers;
         }
 
-        // Front-side handle creation: the Blackbox records, this session registers the handle in its trackers.
+        // Handle creation
+        // The Blackbox records, and this session registers the handle in its trackers.
         internal ScopeHandle OpenScope(Blackbox box, string message, string methodName)
         {
             if (!box.WriteScope(message, methodName, out var context, out var scopeId, out var tag)) return default;

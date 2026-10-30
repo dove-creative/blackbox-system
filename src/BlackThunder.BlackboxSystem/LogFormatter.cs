@@ -6,8 +6,11 @@ namespace BlackThunder.BlackboxSystem
 {
     internal static class LogFormatter
     {
+        // Internal
         private const int IndentCount = 4;
 
+
+        // Content --------------------
         // Message and line rendering
         public static string RenderMessage(LogData log) => RenderMessage(log, true);
         internal static string RenderMessage(LogData log, bool includeTagInteractionIds)

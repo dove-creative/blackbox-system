@@ -118,7 +118,7 @@ _bb.WriteError(
 
 ### 1-1. UseBlackbox 설정을 확인한다
 
-`BlackboxHandle`의 주요 기록 메서드는 `UseBlackbox` 설정을 기준으로 실제 기록 여부를 결정한다. 이 값이 꺼져 있으면 `BlackboxHandle.Of(subject)`는 유효한 핸들을 만들지 않고, 기록 호출은 로그를 남기지 않거나 원래 메시지를 그대로 반환한다.
+`BlackboxHandle`의 주요 기록 메서드는 `UseBlackbox` 설정을 기준으로 실제 기록 여부를 결정한다. 이 값이 꺼져 있으면 `BlackboxHandle.Of(subject)`는 유효한 핸들을 만들지 않고, 기록 호출은 로그를 남기지 않거나 원래 메시지를 그대로 반환한다. 단, C# 10 이상으로 컴파일한 호출자가 보간 문자열을 넘기면 `WriteHandler`가 문자열 조립을 생략하므로 `Write(...).With()`와 `ExertMessage(...)`는 빈 문자열을 반환한다. `WriteError(...)`는 C# 버전과 관계없이 오류 메시지를 그대로 반환한다.
 
 즉 '코드는 넣었는데 로그가 안 남는다'면, 먼저 `BlackboxHandle.UseBlackbox`가 꺼져 있지 않은지 확인하는 편이 좋다.
 

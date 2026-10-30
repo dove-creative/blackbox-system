@@ -7,6 +7,11 @@ namespace BlackThunder.BlackboxSystem
 {
     internal class LogContext
     {
+        // Front
+        internal SessionState State => _blackbox.State;
+        internal bool IsCurrentThread => ReferenceEquals(_token, ThreadToken.Current);
+
+        // Internal
         // The value is copied for updates/export; the published wrapper and its tag array never change.
         private sealed class PublishedLog
         {
@@ -35,7 +40,6 @@ namespace BlackThunder.BlackboxSystem
             }
         }
 
-        // Buffer and thread ownership
         private readonly Blackbox _blackbox;
         private readonly PublishedLog[] _logBuffer;
         private long _currentLogIndex = -1;
@@ -44,10 +48,9 @@ namespace BlackThunder.BlackboxSystem
         private readonly ThreadToken _token;
         private ScopeInfo _openScopes;
 
-        internal SessionState State => _blackbox.State;
-        internal bool IsCurrentThread => ReferenceEquals(_token, ThreadToken.Current);
 
-
+        // Content --------------------
+        // Construction
         public LogContext(Blackbox blackbox, int bufferSize)
         {
             if (bufferSize < 1) throw new ArgumentOutOfRangeException(nameof(bufferSize));

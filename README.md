@@ -137,14 +137,17 @@ Recording uses the default `UseBlackbox = true` setting. Logs are written under 
 
 ## Tests
 
-Test code is in `tests/BlackThunder.BlackboxSystem.Tests` and uses NUnit.
+Test code is in `tests/BlackThunder.BlackboxSystem.Tests` and `tests/BlackThunder.BlackboxSystem.Tests.CSharp10`, and both projects use NUnit.
 
-The test project compiles Blackbox runtime sources with `BLACKBOX_TESTS` for exporter hooks and references the stable `BlackThunder.UniTest` package at version `0.2.0`. `BlackboxTableProject` selects `ExecutionMode.Inline` to preserve the existing execution behavior around global Blackbox state.
+The main test project compiles Blackbox runtime sources with `BLACKBOX_TESTS` for exporter hooks and references the stable `BlackThunder.UniTest` package at version `0.2.0`. `BlackboxTableProject` selects `ExecutionMode.Inline` to preserve the existing execution behavior around global Blackbox state.
+
+`BlackThunder.BlackboxSystem.Tests.CSharp10` references the library project and compiles with C# 10, the only exception to the repository-wide C# 9 setting. It verifies that callers compiled with C# 10 or later bind interpolated messages to `WriteHandler` and skip formatted expressions while recording is disabled.
 
 The root `NuGet.config` uses the `packages/` local feed and nuget.org. `packages/` contains the pinned UniTest release package and its provenance record, and the framework package IDs map exclusively to the local feed. General restore caches and `bin/obj` remain outside version control.
 
 ```powershell
 dotnet test tests/BlackThunder.BlackboxSystem.Tests/BlackThunder.BlackboxSystem.Tests.csproj
+dotnet test tests/BlackThunder.BlackboxSystem.Tests.CSharp10/BlackThunder.BlackboxSystem.Tests.CSharp10.csproj
 ```
 
 See the [session validation report](docs/Tests/04-Sessions.md) and [recording benchmark](benchmarks/README.md).

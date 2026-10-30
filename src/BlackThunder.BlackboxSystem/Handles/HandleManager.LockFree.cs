@@ -19,6 +19,21 @@ namespace BlackThunder.BlackboxSystem
     /// </remarks>
     internal static class HandleManager<T>
     {
+        // Front
+#if BLACKBOX_TESTS
+        internal static int LiveCountForTests
+        {
+            get
+            {
+                int count = 0;
+                for (int i = 0; i < Volatile.Read(ref _slotCount); i++)
+                    if (Volatile.Read(ref _slotStates[i]) > 0) count++;
+                return count;
+            }
+        }
+#endif
+
+        // Internal
         // 20 bits = 1,048,576 simultaneously allocated live/reusable slots per T.
         // Adjust this value based on the expected maximum number of concurrent handles.
         // Memory with SlotBits = 20:
@@ -57,19 +72,8 @@ namespace BlackThunder.BlackboxSystem
         // Number of slots reserved by this closed generic manager.
         private static int _slotCount;
 
-#if BLACKBOX_TESTS
-        internal static int LiveCountForTests
-        {
-            get
-            {
-                int count = 0;
-                for (int i = 0; i < Volatile.Read(ref _slotCount); i++)
-                    if (Volatile.Read(ref _slotStates[i]) > 0) count++;
-                return count;
-            }
-        }
-#endif
 
+        // Content --------------------
         // Allocation, disposal and lookup
         public static long GetHandleId()
         {

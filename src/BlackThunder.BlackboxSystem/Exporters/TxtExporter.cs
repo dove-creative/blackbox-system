@@ -7,10 +7,13 @@ namespace BlackThunder.BlackboxSystem.Exporters
 {
     internal static class TxtExporter
     {
+        // Front
 #if BLACKBOX_TESTS
         internal static Action<ProcessStartInfo> OpenLogProcess = startInfo => Process.Start(startInfo);
 #endif
 
+
+        // Content --------------------
         // Export pipeline
         public static void Export(
             BlackboxSession session, Blackbox blackbox, int recursionDepth,

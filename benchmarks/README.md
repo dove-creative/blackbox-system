@@ -4,7 +4,7 @@ The console harness measures the same public write/scope/exert calls and interna
 
 ## Current execution
 
-The current project is `benchmarks/BlackThunder.BlackboxSystem.Benchmarks/BlackThunder.BlackboxSystem.Benchmarks.csproj` and requires a .NET 10 SDK. Build before measuring, then run the selected mode without rebuilding:
+The current project is `benchmarks/BlackThunder.BlackboxSystem.Benchmarks/BlackThunder.BlackboxSystem.Benchmarks.csproj` and requires a .NET 10 SDK. It references the library project, so measurements use the `netstandard2.1` build that consumers receive; internal registry lookup is reached through `InternalsVisibleTo`. Build before measuring, then run the selected mode without rebuilding:
 
 ```powershell
 dotnet build benchmarks/BlackThunder.BlackboxSystem.Benchmarks/BlackThunder.BlackboxSystem.Benchmarks.csproj -c Release

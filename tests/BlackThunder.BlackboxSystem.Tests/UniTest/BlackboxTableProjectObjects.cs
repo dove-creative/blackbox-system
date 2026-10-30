@@ -54,7 +54,7 @@ namespace BlackThunder.BlackboxSystem.Tests
         private Lab<BlackboxTableModel> CreateLab(TableScenario scenario)
         {
             return new Lab<BlackboxTableModel>(
-                Name + "_" + scenario.ID,
+                Name + "_" + scenario.Id,
                 actor: (model, _) => scenario.Execute(model));
         }
     }
@@ -117,13 +117,13 @@ namespace BlackThunder.BlackboxSystem.Tests
 
     internal sealed class TableScenario
     {
-        public readonly string ID;
+        public readonly string Id;
         public readonly Action<BlackboxTableModel> Execute;
         public readonly Func<BlackboxTableModel, bool> CanRun;
 
         public TableScenario(string id, Action<BlackboxTableModel> execute, Func<BlackboxTableModel, bool> canRun)
         {
-            ID = id;
+            Id = id;
             Execute = execute;
             CanRun = canRun;
         }

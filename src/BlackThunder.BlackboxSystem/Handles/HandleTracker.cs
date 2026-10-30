@@ -5,6 +5,7 @@ namespace BlackThunder.BlackboxSystem
     // Shared by contexts in one session stripe; never holds a context or subject reference.
     internal sealed class HandleTracker<T>
     {
+        // Front
         internal sealed class Segment
         {
             internal readonly long[] Ids = new long[32];
@@ -13,11 +14,12 @@ namespace BlackThunder.BlackboxSystem
             internal Segment(Segment next) => Next = next;
         }
 
+        // Internal
         private static readonly Segment _closed = new(null);
         private Segment _head = new(null);
 
 
-        // Registration and retirement
+        // Content
         internal HandleLease<T> Register(SessionState state)
         {
             if (!state.CheckWrite()) return default;

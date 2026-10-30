@@ -8,12 +8,7 @@ namespace BlackThunder.BlackboxSystem
     // Explicit sessions stay strongly rooted until disposed so abandoned sessions remain diagnosable.
     internal static class BlackboxSessionRegistry
     {
-        private const int DefaultBuckets = 65536, ExplicitBuckets = 256;
-        private static readonly AsyncLocal<BlackboxSession> _ambient = new();
-        private static readonly object _activeSessionsLock = new();
-        private static readonly List<BlackboxSession> _activeSessions = new();
-        private static BlackboxSession _default = new(new SessionSettings(), null, DefaultBuckets);
-
+        // Front
         internal static BlackboxSession Current => _ambient.Value ?? Volatile.Read(ref _default);
         internal static BlackboxSession Default => Volatile.Read(ref _default);
         internal static Guid CurrentKey => Current.SessionKey;
@@ -31,7 +26,15 @@ namespace BlackThunder.BlackboxSystem
         internal static Action<BlackboxSession> BeforeDefaultSessionExchange;
 #endif
 
+        // Internal
+        private const int DefaultBuckets = 65536, ExplicitBuckets = 256;
+        private static readonly AsyncLocal<BlackboxSession> _ambient = new();
+        private static readonly object _activeSessionsLock = new();
+        private static readonly List<BlackboxSession> _activeSessions = new();
+        private static BlackboxSession _default = new(new SessionSettings(), null, DefaultBuckets);
 
+
+        // Content --------------------
         // Session creation and binding
         // Synchronous so the binding stays visible to the caller's logical scope.
         internal static BlackboxSession Begin(int buckets = ExplicitBuckets)

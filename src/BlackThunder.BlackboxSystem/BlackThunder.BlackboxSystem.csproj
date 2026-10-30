@@ -13,8 +13,6 @@
     <RepositoryUrl>https://github.com/dove-creative/blackbox-system</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <PublishRepositoryUrl>true</PublishRepositoryUrl>
-    <Nullable>disable</Nullable>
-    <ImplicitUsings>disable</ImplicitUsings>
   </PropertyGroup>
 
   <ItemGroup>

@@ -8,6 +8,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BlackThunder.BlackboxSystem
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BlackThunder.BlackboxSystem.Samples", "samples\BlackThunder.BlackboxSystem.Samples.csproj", "{BD0BA0E2-9C9A-4CE3-BD64-8175EDBB4A26}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BlackThunder.BlackboxSystem.Benchmarks", "benchmarks\BlackThunder.BlackboxSystem.Benchmarks\BlackThunder.BlackboxSystem.Benchmarks.csproj", "{BCCA8B4F-794D-444D-AC32-2F4CD2DB145D}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BlackThunder.BlackboxSystem.Tests.CSharp10", "tests\BlackThunder.BlackboxSystem.Tests.CSharp10\BlackThunder.BlackboxSystem.Tests.CSharp10.csproj", "{616F73D7-B796-4044-98C9-A593320910D4}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -26,5 +30,13 @@ Global
 		{BD0BA0E2-9C9A-4CE3-BD64-8175EDBB4A26}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{BD0BA0E2-9C9A-4CE3-BD64-8175EDBB4A26}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{BD0BA0E2-9C9A-4CE3-BD64-8175EDBB4A26}.Release|Any CPU.Build.0 = Release|Any CPU
+		{BCCA8B4F-794D-444D-AC32-2F4CD2DB145D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{BCCA8B4F-794D-444D-AC32-2F4CD2DB145D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{BCCA8B4F-794D-444D-AC32-2F4CD2DB145D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{BCCA8B4F-794D-444D-AC32-2F4CD2DB145D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{616F73D7-B796-4044-98C9-A593320910D4}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{616F73D7-B796-4044-98C9-A593320910D4}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{616F73D7-B796-4044-98C9-A593320910D4}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{616F73D7-B796-4044-98C9-A593320910D4}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal

@@ -10,9 +10,7 @@ namespace BlackThunder.BlackboxSystem
 
     internal static class Infrastructure
     {
-        private static SessionSettings Settings => BlackboxSessionRegistry.Current.State.Settings;
-
-        // Session configuration
+        // Front
         public static string LogDirectory
         {
             get => Settings.LogDirectory;
@@ -96,7 +94,12 @@ namespace BlackThunder.BlackboxSystem
             }
         }
 
+        // Internal
+        private static SessionSettings Settings => BlackboxSessionRegistry.Current.State.Settings;
 
+
+        // Content --------------------
+        // Session configuration
         internal static void Update(Action<SessionSettings> change)
         {
             var state = BlackboxSessionRegistry.Current.State;

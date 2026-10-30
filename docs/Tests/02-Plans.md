@@ -24,7 +24,7 @@ Blackbox는 POCO 중심의 기록 프레임워크이므로, 테스트는 .NET에
 - `01-Tables.md`의 `X` 칸은 논리적으로 존재할 수 없는 조합이므로 테스트 대상에서 제외한다.
 - `X`를 제외한 모든 결과 칸은 테스트에 포함한다. `-`, `^`, 예외, 상태 변화, 고유 동작, 내부 동작 칸은 모두 테스트 함수 또는 한 테스트 안의 독립 assert 구간으로 대응시킨다.
 - public API 테스트는 `BlackboxHandle` 기준으로 작성하고, internal 구조 검증이 필요한 경우에만 `Blackbox`, `LogContext`, `LogData`, export tools를 직접 호출한다.
-- C# 9 테스트에서는 `BlackboxHandle.WriteHandler`를 직접 구성해 handler 상태와 ref 오버로드를 검증한다. 일반 interpolated string 호출은 식을 먼저 평가하고 string 오버로드로 전달하는 fallback 경로로 검증한다. 자동 handler 변환과 식 평가 생략은 C# 10 이상 호출자에서 별도로 확인한다.
+- C# 9 테스트에서는 `BlackboxHandle.WriteHandler`를 직접 구성해 handler 상태와 ref 오버로드를 검증한다. 일반 interpolated string 호출은 식을 먼저 평가하고 string 오버로드로 전달하는 fallback 경로로 검증한다. 자동 handler 변환과 식 평가 생략은 C# 10으로 컴파일하는 `tests/BlackThunder.BlackboxSystem.Tests.CSharp10`에서 공개 API만으로 확인한다.
 - 파일 출력 테스트는 임시 폴더를 사용한다. 일반 export 테스트에서는 자동 open을 `OpenLogOption.Never`로 끄고, `OpenLog` 전용 칸은 테스트 빌드 hook으로 외부 프로세스 실행 없이 실패 warning 경로를 검증한다.
 
 ### 1-3. 초기 예상 규모와 현재 검증

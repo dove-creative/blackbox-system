@@ -13,31 +13,10 @@ namespace BlackThunder.BlackboxSystem
 
     internal class Blackbox
     {
-        private sealed class ContextNode
-        {
-            internal readonly ThreadToken Token;
-            internal readonly LogContext Context;
-            internal readonly ContextNode Next;
-
-            internal ContextNode(ThreadToken token, LogContext context, ContextNode next)
-            {
-                Token = token;
-                Context = context;
-                Next = next;
-            }
-        }
-
-        // Identity and session state
-        private readonly object _strongOwner;
-        private readonly WeakReference<object> _weakOwner;
-        private readonly int _bufferSize;
-        private ContextNode _contexts;
-        private string _label;
-        private long _scopeId = -1;
+        // Front
         internal readonly SessionState State;
         internal readonly string TypeName;
 
-        // Identity and context views
         public long Id { get; }
         public object Owner => _strongOwner ?? (_weakOwner?.TryGetTarget(out var owner) == true ? owner : null);
         public string OwnerString => Volatile.Read(ref _label) ?? TypeName;
@@ -81,7 +60,30 @@ namespace BlackThunder.BlackboxSystem
             }
         }
 
+        // Internal
+        private readonly object _strongOwner;
+        private readonly WeakReference<object> _weakOwner;
+        private readonly int _bufferSize;
+        private ContextNode _contexts;
+        private string _label;
+        private long _scopeId = -1;
 
+        private sealed class ContextNode
+        {
+            internal readonly ThreadToken Token;
+            internal readonly LogContext Context;
+            internal readonly ContextNode Next;
+
+            internal ContextNode(ThreadToken token, LogContext context, ContextNode next)
+            {
+                Token = token;
+                Context = context;
+                Next = next;
+            }
+        }
+
+
+        // Content --------------------
         // Construction and labeling
         internal Blackbox(object owner, bool strongReference, SessionState state)
         {

@@ -7,6 +7,12 @@ namespace BlackThunder.BlackboxSystem
 {
     internal sealed class SubjectStore
     {
+        // Front
+#if BLACKBOX_TESTS
+        internal Action<int> BeforeCleanupPublish;
+#endif
+
+        // Internal
         private const int CleanupBucketsPerInsertion = 16;
 
         private sealed class Node
@@ -26,11 +32,10 @@ namespace BlackThunder.BlackboxSystem
         private readonly Node[] _buckets;
         private readonly SessionState _state;
         private int _cleanupCursor;
-#if BLACKBOX_TESTS
-        internal Action<int> BeforeCleanupPublish;
-#endif
 
 
+        // Content --------------------
+        // Construction
         internal SubjectStore(SessionState state, int capacity)
         {
             if (capacity < 1 || (capacity & (capacity - 1)) != 0)
