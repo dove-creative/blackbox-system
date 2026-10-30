@@ -33,7 +33,7 @@ namespace BlackThunder.BlackboxSystem.Samples.NativeCSharp
                 HP = hp;
 
                 // Assign the explicit label after the object's name has been initialized.
-                using var _ = BlackboxHandle.Of(this).Label(Name).Construct();
+                using var _ = BlackboxHandle.Of(this, label: Name).Construct();
             }
 
             public void TakeDamage(int damage)

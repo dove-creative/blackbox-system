@@ -42,7 +42,7 @@ namespace BlackThunder.BlackboxSystem.Samples.NativeCSharp
                 HP = hp;
 
                 // Construct starts this object's Blackbox history.
-                using var _ = BlackboxHandle.Of(this).Label(Name).Construct();
+                using var _ = BlackboxHandle.Of(this, label: Name).Construct();
             }
 
             public void Attack(Monster monster, int damage)
@@ -70,7 +70,7 @@ namespace BlackThunder.BlackboxSystem.Samples.NativeCSharp
                 HP = hp;
 
                 // Construct stores a reusable handle for this monster's logs.
-                using var _ = BlackboxHandle.Of(this).Label(Name).Construct(out _bb);
+                using var _ = BlackboxHandle.Of(this, label: Name).Construct(out _bb);
             }
 
             public void TakeDamage(int damage)
@@ -105,7 +105,7 @@ namespace BlackThunder.BlackboxSystem.Samples.NativeCSharp
                 Name = name;
 
                 // Construct stores a reusable handle for this home's logs.
-                using var _ = BlackboxHandle.Of(this).Label(Name).Construct(out _bb);
+                using var _ = BlackboxHandle.Of(this, label: Name).Construct(out _bb);
             }
 
             public void Register(Monster monster)

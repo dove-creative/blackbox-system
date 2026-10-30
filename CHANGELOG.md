@@ -6,6 +6,10 @@ The format follows Keep a Changelog, and version numbers follow Semantic Version
 
 ## [Unreleased]
 
+### Changed
+
+- Replaced `BlackboxHandle.Of(subject).Label(name)` with `BlackboxHandle.Of(subject, label: name)` and removed the public `Label` method. The optional label keeps the first-nonblank-name policy within each session; omitted or blank labels preserve the existing name, and conflicting names keep the first value and warn. Existing source calls to `Of(subject)` remain valid; consumers must rebuild against the updated signature.
+
 ## [0.2.0] - 2026-10-29
 
 ### Added

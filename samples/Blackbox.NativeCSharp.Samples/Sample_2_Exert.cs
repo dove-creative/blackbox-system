@@ -34,7 +34,7 @@ namespace BlackThunder.BlackboxSystem.Samples.NativeCSharp
                 HP = hp;
 
                 // Construct starts this object's Blackbox history.
-                using var _ = BlackboxHandle.Of(this).Label(Name).Construct();
+                using var _ = BlackboxHandle.Of(this, label: Name).Construct();
             }
 
             public void TakeDamage(int damage)
@@ -75,7 +75,7 @@ namespace BlackThunder.BlackboxSystem.Samples.NativeCSharp
                 HealAmount = healAmount;
 
                 // Construct gives the potion its own Blackbox history.
-                using var _ = BlackboxHandle.Of(this).Label(Name).Construct();
+                using var _ = BlackboxHandle.Of(this, label: Name).Construct();
             }
 
             public int Drink()

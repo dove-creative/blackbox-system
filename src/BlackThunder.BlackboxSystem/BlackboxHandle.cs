@@ -118,13 +118,6 @@ namespace BlackThunder.BlackboxSystem
         private readonly Blackbox Blackbox => _blackbox != null && _blackbox.State.CheckWrite() ? _blackbox : null;
         internal BlackboxHandle(Blackbox blackbox, BlackboxSession session) { _blackbox = blackbox; _session = session; }
 
-        /// <summary>Assign an optional, immutable display label. The first nonblank label wins.</summary>
-        public readonly BlackboxHandle Label(string label)
-        {
-            _blackbox?.SetLabel(label);
-            return this;
-        }
-
         #region Configuration
         public static void Configure(
             string logDirectory,
@@ -208,7 +201,10 @@ namespace BlackThunder.BlackboxSystem
         #endregion
 
         #region Helpers
-        public static BlackboxHandle Of<T>(T subject) where T : class
+        /// <summary>Get the subject's handle in the current session, optionally assigning an immutable display label.</summary>
+        /// <param name="subject">The object whose activity is recorded.</param>
+        /// <param name="label">The first nonblank label wins. Omission or blank labels preserve the existing name; conflicting labels warn.</param>
+        public static BlackboxHandle Of<T>(T subject, string label = null) where T : class
         {
             var session = BlackboxSessionRegistry.Current;
             if (session.State.Settings.UseBlackbox != UseBlackboxOption.Use) return default;
@@ -218,7 +214,9 @@ namespace BlackThunder.BlackboxSystem
                     nameof(subject),
                     $"{nameof(subject)} cannot be null.");
 
-            return new BlackboxHandle(session.Subjects.GetOrAdd(subject), session);
+            var blackbox = session.Subjects.GetOrAdd(subject);
+            if (label != null) blackbox?.SetLabel(label);
+            return new BlackboxHandle(blackbox, session);
         }
 
         public ScopeHandle Construct([CallerMemberName] string methodName = "") => Construct(out _, methodName);

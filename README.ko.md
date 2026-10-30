@@ -84,7 +84,7 @@ if (_bb.SessionKey != BlackboxHandle.CurrentSessionKey)
 Subject의 `ToString()`을 자동 호출하지 않는다. 객체 이름은 한 번 명시한다.
 
 ```csharp
-using var scope = BlackboxHandle.Of(this).Label(Name).Construct(out _bb);
+using var scope = BlackboxHandle.Of(this, label: Name).Construct(out _bb);
 ```
 
 이름이 있으면 `Forest (MonsterHome #2)`, 없으면 `MonsterHome #2`로 표시한다. 최초의 공백 아닌 이름이 유지된다. 변하는 도메인 상태는 메시지에 명시한다. 기본 Subject 참조는 약하며, `StrongReference`는 Blackbox가 도달 가능한 동안 Subject를 유지하므로 Dispose 후 보관한 핸들도 수명을 늘릴 수 있다. 내부 기록·등록에는 잠금을 사용하지 않지만 불변 로그 게시에는 할당이 필요하다. 런타임·GC·I/O·명시적 포맷팅과 외부 로거는 이 보장의 범위 밖이다.
@@ -122,7 +122,7 @@ public class Loader
 {
     public Loader()
     {
-        using var scope = BlackboxHandle.Of(this).Label("Loader").Construct();
+        using var scope = BlackboxHandle.Of(this, label: "Loader").Construct();
     }
 
     public void Load(Worker worker)
@@ -163,11 +163,10 @@ dotnet run --project samples/Blackbox.NativeCSharp.Samples/Blackbox.NativeCSharp
 
 ## 주요 API
 
-- `BlackboxHandle.Of(subject)`: 대상 객체의 기록 진입점을 얻는다.
+- `BlackboxHandle.Of(subject, label: name)`: 현재 세션에서 대상 객체의 기록 진입점을 얻는다. 이름은 선택 사항이며 최초의 공백 아닌 이름만 저장한다. 생략하면 기존 이름을 유지한다.
 - `BlackboxHandle.BeginSession()`: 격리된 테스트·디버그 세션을 시작한다.
 - `BlackboxHandle.ActiveSessionCount` / `GetActiveSessionKeys()`: 프로세스 전체의 미종료 명시적 세션을 확인한다.
 - `BlackboxHandle.DisposeActiveSessions()`: 해당 세션의 스냅샷을 일괄 종료한다.
-- `Label(name)`: 최초의 공백 아닌 이름을 저장하고 같은 핸들을 반환한다.
 - `Write(message)`: 한 줄 활동 로그를 남긴다.
 - `Write(message).With(targets)`: 활동 로그에 관련 대상을 붙인다.
 - `Scope(message)`: 스코프 시작 로그를 남기고 `ScopeHandle`을 반환한다.

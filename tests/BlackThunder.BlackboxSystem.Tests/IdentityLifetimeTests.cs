@@ -27,7 +27,7 @@ namespace BlackThunder.BlackboxSystem.Tests
             BlackboxHandle.LogDirectory = BlackboxTestDoubles.CreateTempDirectory();
             var owner = new ExplosiveOwner();
             var target = new ExplosiveOwner();
-            using (BlackboxHandle.Of(owner).Label("Forest").Construct(out var handle))
+            using (BlackboxHandle.Of(owner, label: "Forest").Construct(out var handle))
             {
                 handle.Write("uses %0").With(target);
                 handle.Exert(target, "call").Dispose();
@@ -41,25 +41,102 @@ namespace BlackThunder.BlackboxSystem.Tests
         }
 
         [Test]
-        public void LabelsAreSetOnceAndInvalidHandlesCannotSetThem()
+        public void OfLabelsAreSetOnceUnderConcurrentLookup()
         {
             using var session = BlackboxHandle.BeginSession();
             var warnings = new ConcurrentQueue<string>();
             BlackboxHandle.WarningLogger = warnings.Enqueue;
             var owner = new object();
             var handle = BlackboxHandle.Of(owner);
-            handle.Label(null).Label(" ");
+            BlackboxHandle.Of(owner, label: null);
+            BlackboxHandle.Of(owner, label: " ");
             Assert.That(handle.OwnerString, Is.EqualTo("Object"));
-            Parallel.For(0, 30, i => handle.Label("name " + i));
+            Parallel.For(0, 30, i => BlackboxHandle.Of(owner, label: "name " + i));
             var chosen = handle.OwnerString;
-            handle.Label(chosen);
-            handle.Label("different");
+            Assert.That(chosen, Does.StartWith("name "));
+            BlackboxHandle.Of(owner, label: chosen);
+            BlackboxHandle.Of(owner, label: "different");
             Assert.That(handle.OwnerString, Is.EqualTo(chosen));
             Assert.That(warnings.Count(s => s.Contains("already assigned")), Is.EqualTo(1));
-            session.Dispose();
-            handle.Label("after disposal");
-            Assert.That(handle.OwnerString, Is.EqualTo(chosen));
-            Assert.That(default(BlackboxHandle).Label("ignored").IsValid, Is.False);
+            Assert.That(BlackboxSessionRegistry.Count(), Is.EqualTo(1));
+        }
+
+        [Test]
+        public void OfLabelPreservesSubjectIdentityAndExistingRecords()
+        {
+            using var session = BlackboxHandle.BeginSession();
+            var warnings = new ConcurrentQueue<string>();
+            BlackboxHandle.WarningLogger = warnings.Enqueue;
+            var owner = new object();
+            var original = BlackboxHandle.Of(owner);
+            original.Write("before label");
+            var labeled = BlackboxHandle.Of(owner, label: "Forest");
+            labeled.Write("after label");
+
+            Assert.That(labeled.Id, Is.EqualTo(original.Id));
+            Assert.That(labeled.SessionKey, Is.EqualTo(original.SessionKey));
+            Assert.That(original.OwnerString, Is.EqualTo("Forest"));
+            Assert.That(BlackboxHandle.Of(owner).OwnerString, Is.EqualTo("Forest"));
+            foreach (var label in new[] { null, "", " ", "Forest" })
+            {
+                var repeated = BlackboxHandle.Of(owner, label: label);
+                Assert.That(repeated.Id, Is.EqualTo(original.Id));
+                Assert.That(repeated.OwnerString, Is.EqualTo("Forest"));
+            }
+            Assert.That(warnings, Is.Empty);
+            Assert.That(BlackboxSessionRegistry.Count(), Is.EqualTo(1));
+            Assert.That(BlackboxSessionRegistry.GetBlackbox(owner).GetLogs().Select(log => log.Message),
+                Is.EqualTo(new[] { "before label", "after label" }));
+        }
+
+        [Test]
+        public void OfLabelsAreIsolatedPerSession()
+        {
+            using var outer = BlackboxHandle.BeginSession();
+            var owner = new object();
+            var outerHandle = BlackboxHandle.Of(owner, label: "Outer");
+            using (BlackboxHandle.BeginSession())
+            {
+                var innerHandle = BlackboxHandle.Of(owner, label: "Inner");
+                Assert.That(innerHandle.SessionKey, Is.Not.EqualTo(outerHandle.SessionKey));
+                Assert.That(innerHandle.OwnerString, Is.EqualTo("Inner"));
+                Assert.That(outerHandle.OwnerString, Is.EqualTo("Outer"));
+            }
+            Assert.That(BlackboxHandle.Of(owner).OwnerString, Is.EqualTo("Outer"));
+        }
+
+        [Test]
+        public void OfDoesNotAssignLabelsWhenRecordingIsDisabled()
+        {
+            using var session = BlackboxHandle.BeginSession();
+            var owner = new object();
+            var handle = BlackboxHandle.Of(owner);
+            var other = new object();
+            BlackboxHandle.UseBlackbox = false;
+
+            Assert.That(BlackboxHandle.Of(owner, label: "ignored").IsValid, Is.False);
+            Assert.That(BlackboxHandle.Of(other, label: "ignored").IsValid, Is.False);
+            Assert.That(BlackboxHandle.Of<object>(null, label: "ignored").IsValid, Is.False);
+            Assert.That(handle.OwnerString, Is.EqualTo("Object"));
+            Assert.That(BlackboxSessionRegistry.Count(), Is.EqualTo(1));
+
+            BlackboxHandle.UseBlackbox = true;
+            Assert.That(BlackboxHandle.Of(owner, label: "enabled").OwnerString, Is.EqualTo("enabled"));
+        }
+
+        [Test]
+        public void OfDoesNotAssignLabelsInDisposedSession()
+        {
+            using var session = BlackboxHandle.BeginSession();
+            var owner = new object();
+            var handle = BlackboxHandle.Of(owner);
+            // Dispose in a child flow so this flow stays bound to the retired session.
+            Task.Run(session.Dispose).GetAwaiter().GetResult();
+
+            Assert.That(BlackboxHandle.Of(owner, label: "ignored").IsValid, Is.False);
+            Assert.That(BlackboxHandle.Of(new object(), label: "ignored").IsValid, Is.False);
+            Assert.That(handle.OwnerString, Is.EqualTo("Object"));
+            Assert.That(BlackboxSessionRegistry.Count(), Is.EqualTo(1));
         }
 
         [Test]
@@ -74,7 +151,7 @@ namespace BlackThunder.BlackboxSystem.Tests
             Assert.That(TypeDisplayName.Format(generated), Does.EndWith(generated.Name));
             using var session = BlackboxHandle.BeginSession();
             BlackboxHandle.LogDirectory = BlackboxTestDoubles.CreateTempDirectory();
-            var handle = BlackboxHandle.Of(closure.Target).Label("<script>&\"");
+            var handle = BlackboxHandle.Of(closure.Target, label: "<script>&\"");
             handle.Write("hello");
             handle.Export(format: ExportFormat.Html, openLogOption: OpenLogOption.Never);
             var html = File.ReadAllText(Directory.GetFiles(BlackboxHandle.LogDirectory).Single());
@@ -198,13 +275,13 @@ namespace BlackThunder.BlackboxSystem.Tests
         private static (WeakReference Weak, BlackboxHandle Handle) MakeWeakHandle()
         {
             var owner = new object();
-            return (new WeakReference(owner), BlackboxHandle.Of(owner).Label("remembered"));
+            return (new WeakReference(owner), BlackboxHandle.Of(owner, label: "remembered"));
         }
         [MethodImpl(MethodImplOptions.NoInlining)]
         private static (WeakReference Weak, BlackboxHandle Handle) MakeStringSubject()
         {
             var owner = new string('x', 20);
-            return (new WeakReference(owner), BlackboxHandle.Of(owner).Label(owner));
+            return (new WeakReference(owner), BlackboxHandle.Of(owner, label: owner));
         }
         [MethodImpl(MethodImplOptions.NoInlining)]
         private static WeakReference MakeDisposedSession(object subject)

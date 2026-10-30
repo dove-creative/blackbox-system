@@ -84,7 +84,7 @@ These read-only `Guid` properties expose no session object and perform no lockin
 Subject `ToString()` is never called automatically. Assign an optional name once:
 
 ```csharp
-using var scope = BlackboxHandle.Of(this).Label(Name).Construct(out _bb);
+using var scope = BlackboxHandle.Of(this, label: Name).Construct(out _bb);
 ```
 
 The display is `Forest (MonsterHome #2)`, or `MonsterHome #2` without a label. The first nonblank label wins. Record changing domain state explicitly in messages. Subjects are weakly held by default; `StrongReference` keeps them alive while their Blackbox remains reachable, including through retained handles after Dispose. Internal recording and registration use no locks, but immutable log publication allocates; runtime, GC, I/O and caller-provided formatting/loggers are outside that guarantee.
@@ -122,7 +122,7 @@ public class Loader
 {
     public Loader()
     {
-        using var scope = BlackboxHandle.Of(this).Label("Loader").Construct();
+        using var scope = BlackboxHandle.Of(this, label: "Loader").Construct();
     }
 
     public void Load(Worker worker)
@@ -163,11 +163,10 @@ The sample runs with the default `UseBlackbox = true` setting. Logs are written 
 
 ## Main APIs
 
-- `BlackboxHandle.Of(subject)`: gets the recording entry point for the target object.
+- `BlackboxHandle.Of(subject, label: name)`: gets the recording entry point for the target object in the current session. The label is optional; the first nonblank name wins, and omitting it preserves the existing name.
 - `BlackboxHandle.BeginSession()`: begins an isolated test/debug session.
 - `BlackboxHandle.ActiveSessionCount` / `GetActiveSessionKeys()`: observes undisposed explicit sessions across the process.
 - `BlackboxHandle.DisposeActiveSessions()`: disposes a snapshot of those sessions for cleanup.
-- `Label(name)`: assigns the first nonblank display label and returns the same handle.
 - `Write(message)`: records a one-line activity log.
 - `Write(message).With(targets)`: attaches related targets to an activity log.
 - `Scope(message)`: records a scope-start log and returns a `ScopeHandle`.

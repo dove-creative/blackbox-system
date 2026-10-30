@@ -103,7 +103,7 @@ namespace BlackThunder.BlackboxSystem.Tests
             return box;
         }
 
-        public static BlackboxHandle HandleFor<T>(T owner) where T : class => BlackboxHandle.Of(owner).Label(NameOf(owner));
+        public static BlackboxHandle HandleFor<T>(T owner) where T : class => BlackboxHandle.Of(owner, label: NameOf(owner));
         // Front-side scope, exert and tag binding for Blackboxes owned by the current session.
         public static ScopeHandle Scope(Blackbox box, string message, string methodName) =>
             BlackboxSessionRegistry.Current.OpenScope(box, message, methodName);
