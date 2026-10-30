@@ -1,6 +1,7 @@
 bin/
 obj/
 .vs/
+.obsidian/
 *.suo
 *.user
 TestResults/
