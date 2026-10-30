@@ -48,7 +48,7 @@ namespace BlackThunder.BlackboxSystem
         public readonly long Id => _blackbox?.Id ?? -1;
         public readonly bool IsValid => _blackbox != null && _blackbox.State.CanWrite;
         /// <summary>The bound session's key, or Guid.Empty when IsValid is false.</summary>
-        public readonly Guid SessionKey => IsValid ? _blackbox.State.Session.SessionKey : Guid.Empty;
+        public readonly Guid SessionKey => IsValid ? _session.SessionKey : Guid.Empty;
         internal readonly bool CanRecord => Blackbox != null;
 
         private const string InvalidHandleMessage = "[BlackboxHandle] Invalid Handle";
@@ -113,8 +113,10 @@ namespace BlackThunder.BlackboxSystem
         }
 
         private readonly Blackbox _blackbox;
+        // The session that owns _blackbox: target lookup, handle registration and export go through it.
+        private readonly BlackboxSession _session;
         private readonly Blackbox Blackbox => _blackbox != null && _blackbox.State.CheckWrite() ? _blackbox : null;
-        private BlackboxHandle(Blackbox blackbox) { _blackbox = blackbox; }
+        internal BlackboxHandle(Blackbox blackbox, BlackboxSession session) { _blackbox = blackbox; _session = session; }
 
         /// <summary>Assign an optional, immutable display label. The first nonblank label wins.</summary>
         public readonly BlackboxHandle Label(string label)
@@ -150,7 +152,7 @@ namespace BlackThunder.BlackboxSystem
             TargetTypes tagTargetTypes = TargetTypes.BasedOnSettings,
             UseBlackboxOption useBlackbox = UseBlackboxOption.BasedOnSettings)
         {
-            BlackboxSession.CurrentState.UpdateSettings(s =>
+            Infrastructure.Update(s =>
             {
                 s.LogDirectory = logDirectory;
                 s.NormalLogger = normalLogger;
@@ -164,28 +166,59 @@ namespace BlackThunder.BlackboxSystem
                 if ((tagTargetTypes & TargetTypes.BasedOnSettings) == 0) s.TagTargetTypes = tagTargetTypes;
             });
         }
+        #endregion
+
+        #region Sessions
         /// <summary>
-        /// Debug-only reset helper for clearing registry and runtime state.
+        /// Starts an isolated recording session for this execution flow and the Tasks/Threads it starts.
         /// </summary>
         /// <remarks>
-        /// Retires the current generation without modifying other sessions or reusing its buffers.
-        /// Existing handles remain bound to the retired generation.
+        /// Call synchronously in the same logical scope that will dispose the session.
+        /// The session copies the current settings; disposing it restores the previous binding.
+        /// Explicit sessions are strongly retained until disposed, even if callers drop all references.
         /// </remarks>
-        public static void ForceReset() => BlackboxRegistry.ForceReset();
+        public static BlackboxSession BeginSession() => BlackboxSessionRegistry.Begin();
+        /// <summary>The session key bound to this execution flow, or DefaultSessionKey when unbound.</summary>
+        public static Guid CurrentSessionKey => BlackboxSessionRegistry.CurrentKey;
+        /// <summary>The current default session's key. RestartDefaultSession creates a new key.</summary>
+        public static Guid DefaultSessionKey => BlackboxSessionRegistry.DefaultKey;
+        /// <summary>The process-wide number of undisposed explicit sessions, excluding the default session.</summary>
+        /// <remarks>Uses a lock. Parallel tests observe each other's sessions.</remarks>
+        public static int ActiveSessionCount => BlackboxSessionRegistry.ActiveSessionCount;
+        /// <summary>Returns a snapshot of active explicit session keys in start order.</summary>
+        /// <remarks>Uses a lock. The returned array is independent of the process-wide active session list.</remarks>
+        public static Guid[] GetActiveSessionKeys() => BlackboxSessionRegistry.GetActiveSessionKeys();
+        /// <summary>Disposes a snapshot of all active explicit sessions, leaving the default session unchanged.</summary>
+        /// <remarks>
+        /// Takes the snapshot under a lock, then disposes outside the lock in reverse start order
+        /// so nested sessions in the calling flow restore their previous bindings.
+        /// Does not change bindings in other execution flows: they remain bound to disposed sessions
+        /// and further recording is rejected. Sessions started after the snapshot are not included.
+        /// This is process-wide cleanup and can also dispose sessions owned by parallel tests.
+        /// </remarks>
+        public static void DisposeActiveSessions() => BlackboxSessionRegistry.DisposeActiveSessions();
+        /// <summary>
+        /// Ends the shared default session and replaces it with a new session using its settings.
+        /// </summary>
+        /// <remarks>
+        /// Does not change an explicit session or the caller's execution-context binding.
+        /// Existing default-session handles stop recording but can still export their retained logs.
+        /// </remarks>
+        public static void RestartDefaultSession() => BlackboxSessionRegistry.RestartDefaultSession();
         #endregion
 
         #region Helpers
         public static BlackboxHandle Of<T>(T subject) where T : class
         {
-            var state = BlackboxSession.CurrentState;
-            if (state.Settings.UseBlackbox != UseBlackboxOption.Use) return default;
+            var session = BlackboxSessionRegistry.Current;
+            if (session.State.Settings.UseBlackbox != UseBlackboxOption.Use) return default;
 
             if (subject == null)
                 throw new ArgumentNullException(
                     nameof(subject),
                     $"{nameof(subject)} cannot be null.");
 
-            return new BlackboxHandle(state.Subjects.GetOrAdd(subject));
+            return new BlackboxHandle(session.Subjects.GetOrAdd(subject), session);
         }
 
         public ScopeHandle Construct([CallerMemberName] string methodName = "") => Construct(out _, methodName);
@@ -218,8 +251,8 @@ namespace BlackThunder.BlackboxSystem
             if (!string.IsNullOrWhiteSpace(message))
                 constructMessage += $" {message}";
 
-            blackboxHandle = new BlackboxHandle(blackbox);
-            return blackbox.WriteScope(constructMessage, methodName);
+            blackboxHandle = new BlackboxHandle(blackbox, _session);
+            return _session.OpenScope(blackbox, constructMessage, methodName);
         }
 
         public readonly BlackboxHandle When(bool condition)
@@ -255,7 +288,7 @@ namespace BlackThunder.BlackboxSystem
                 disposerMessage += $" {message}";
 
             blackbox.Write(disposerMessage, methodName);
-            return new BlackboxHandle(blackbox);
+            return new BlackboxHandle(blackbox, _session);
         }
         #endregion
 
@@ -266,7 +299,8 @@ namespace BlackThunder.BlackboxSystem
         }
         public readonly TagHandle Write(string message, [CallerMemberName] string methodName = "")
         {
-            return Blackbox?.Write(message, methodName) ?? TagHandle.FromMessage(message);
+            var blackbox = Blackbox;
+            return blackbox == null ? TagHandle.FromMessage(message) : blackbox.Write(message, methodName).Bind(_session);
         }
 
         public readonly ScopeHandle Scope([InterpolatedStringHandlerArgument("")] ref WriteHandler handler, [CallerMemberName] string methodName = "")
@@ -276,7 +310,8 @@ namespace BlackThunder.BlackboxSystem
         }
         public readonly ScopeHandle Scope(string message, [CallerMemberName] string methodName = "")
         {
-            return Blackbox?.WriteScope(message, methodName) ?? default;
+            var blackbox = Blackbox;
+            return blackbox == null ? default : _session.OpenScope(blackbox, message, methodName);
         }
 
         public readonly string ExertMessage<T>(T other, [InterpolatedStringHandlerArgument("")] ref WriteHandler handler, [CallerMemberName] string methodName = "") where T : class
@@ -286,7 +321,7 @@ namespace BlackThunder.BlackboxSystem
         }
         public readonly string ExertMessage<T>(T other, string message, [CallerMemberName] string methodName = "") where T : class
         {
-            return Blackbox?.ExertMessage(_blackbox.State.Subjects.GetOrAdd(other), message, methodName) ?? message;
+            return Blackbox?.ExertMessage(_session.Subjects.GetOrAdd(other), message, methodName) ?? message;
         }
 
         public readonly ExertHandle Exert<T>(T other, [InterpolatedStringHandlerArgument("")] ref WriteHandler handler, [CallerMemberName] string methodName = "") where T : class
@@ -296,7 +331,8 @@ namespace BlackThunder.BlackboxSystem
         }
         public readonly ExertHandle Exert<T>(T other, string message, [CallerMemberName] string methodName = "") where T : class
         {
-            return Blackbox?.Exert(_blackbox.State.Subjects.GetOrAdd(other), message, methodName) ?? default;
+            var blackbox = Blackbox;
+            return blackbox == null ? default : _session.Exert(blackbox, _session.Subjects.GetOrAdd(other), message, methodName);
         }
 
 
@@ -311,7 +347,7 @@ namespace BlackThunder.BlackboxSystem
         {
             var messageStr = ToMessageString(message);
             
-            var settings = _blackbox?.State.Settings ?? BlackboxSession.CurrentState.Settings;
+            var settings = _blackbox?.State.Settings ?? BlackboxSessionRegistry.Current.State.Settings;
             if ((exceptionHandlingOption == ExceptionHandlingOption.BasedOnSettings ? settings.ExceptionHandlingOption : exceptionHandlingOption) == ExceptionHandlingOption.CrashExport)
             {
                 CrashExport(messageStr, others, methodName: methodName);
@@ -334,7 +370,7 @@ namespace BlackThunder.BlackboxSystem
                 foreach (var target in others.Value.Targets)
                     if (target.target != null)
                     {
-                        var peer = box.State.Subjects.GetOrAdd(target.target);
+                        var peer = _session.Subjects.GetOrAdd(target.target);
                         if (peer != null) crashMessage += $" ({target.context}: {peer.DisplayName})";
                     }
             var crash = new CrashInfo(crashMessage, new StackTrace(true).ToString());
@@ -391,11 +427,11 @@ namespace BlackThunder.BlackboxSystem
             var open = (openLogOption == OpenLogOption.BasedOnSettings ? settings.OpenLogOption : openLogOption) == OpenLogOption.Open;
             var resolvedFormat = format == ExportFormat.BasedOnSettings ? settings.ExportFormat : format;
             var maxSequence = blackbox.State.CurrentSequence;
-            blackbox.State.Subjects.Cleanup();
+            _session.Subjects.Cleanup();
             if (resolvedFormat == ExportFormat.Html)
-                HtmlExporter.Export(blackbox, recursionDepth, isCrash, full, open, maxSequence, settings);
+                HtmlExporter.Export(_session, blackbox, recursionDepth, isCrash, full, open, maxSequence, settings);
             else
-                TxtExporter.Export(blackbox, recursionDepth, isCrash, full, open, maxSequence, settings);
+                TxtExporter.Export(_session, blackbox, recursionDepth, isCrash, full, open, maxSequence, settings);
         }
 
         private readonly string ToMessageString(object obj) => obj?.ToString() ?? "null";

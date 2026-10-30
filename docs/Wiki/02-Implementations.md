@@ -12,14 +12,15 @@
 
 Blackbox는 한 객체의 실행 맥락을 기록하는 내부 엔진을 중심으로, 객체 간 상호작용과 스코프 흐름을 같은 로그 체계 안에 담는 프레임워크이다.
 
-이 프레임워크의 구현은 크게 열 요소로 나뉜다.
+이 프레임워크의 구현은 크게 열한 요소로 나뉜다.
 
 - `Blackbox`: 실제 기록 규칙을 적용하고 객체별 로그 흐름을 관리하는 중심 객체
-- `BlackboxRuntime`: 전역 id, 상호작용 id, sequence를 발급하는 실행 상태
+- `BlackboxSession`: SessionState·저장소·핸들 추적기를 소유하는 기록 수명 단위
+- `SessionState`: 기록 코드가 보는 세션 데이터(설정·카운터·크래시·종료 여부)
 - `LogContext`: 스레드별 로그 버퍼, 열린 스코프 목록, 상호작용 병합 탐색을 맡는 실행 문맥
 - `LogData`: 한 줄 로그가 가지는 정보 단위
 - `LogFormatter`: `LogData`를 텍스트/HTML 출력에서 읽을 수 있는 문자열로 변환하는 포맷팅 도구
-- `BlackboxRegistry`: 객체와 `Blackbox`를 연결하는 전역 조회 구조
+- `BlackboxSessionRegistry`: 현재 실행 흐름이 기록할 세션(바인딩된 세션 또는 기본 세션)을 찾는 조회 구조
 - `BlackboxHandle`: 외부에서 기록 기능을 호출하는 진입점
 - `ScopeHandle`: 열린 스코프를 닫는 `IDisposable` 핸들
 - `ExertHandle`: 객체 간 상호작용 후 받는 쪽 스코프 병합을 시도하는 `IDisposable` 핸들
@@ -68,23 +69,31 @@ Blackbox는 한 객체의 실행 맥락을 기록하는 내부 엔진을 중심�
 
 즉, `Blackbox`는 기록 저장소 자체라기보다 객체별 기록 규칙과 전체 출력 순서를 조율하는 중심 엔진이다.
 
-### 3-2. BlackboxRuntime
+### 3-2. SessionState
 
-`BlackboxRuntime`은 `Blackbox` 인스턴스들이 공유하는 전역 번호 발급 지점이다.
+`SessionState`는 기록 코드(`Blackbox`, `LogContext`)가 세션에 대해 아는 유일한 객체다. `BlackboxSession`이 만들고 소유하며, `Blackbox`는 생성자로 소속 세션의 `SessionState`를 주입받는다. 필드와 원자적 접근자만 가진 데이터 객체이며 세션, 저장소, 핸들 추적기, 레지스트리를 참조하지 않는다.
 
-객체 id, 상호작용 id, 로그 sequence는 특정 owner 하나의 지역 상태가 아니다. 여러 `Blackbox`가 같은 실행 안에서 함께 기록되므로, 이 값들은 `BlackboxRuntime`이 원자적으로 증가시킨다. 이렇게 해야 나중에 여러 owner와 여러 스레드 문맥에서 수집한 로그를 하나의 순서로 다시 정렬할 수 있다.
+- 세션이 써 넣고 기록 코드가 읽는 값: 종료 여부, 크래시 정보, 설정 스냅샷
+- 기록 코드가 원자적으로 증가시키는 값: blackbox id, interaction id, sequence
+- 경고 원인별 1회 표시: 표시에 성공한 기록 코드가 설정의 경고 로거를 호출한다.
+
+기록 가능 여부 판단과 경고 출력은 `SessionStateGuard`(기록 코드 쪽 정책)가 이 데이터를 읽어 수행한다.
+
+객체 id, 상호작용 id, 로그 sequence는 특정 owner 하나의 지역 상태가 아니다. 같은 세션의 여러 `Blackbox`가 함께 기록되므로, 세션 단위로 번호를 발급해야 여러 owner와 여러 스레드 문맥에서 수집한 로그를 하나의 순서로 다시 정렬할 수 있다. `Blackbox`는 현재 실행 흐름의 세션이 아니라 자신이 속한 세션의 카운터를 사용한다. 따라서 다른 세션에서 사용된 보관 핸들도 원래 세션의 순서를 섞지 않는다.
 
 보유 정보:
 
+- `Settings` / `Crash` / `IsActive`: 세션이 써 넣는 설정 스냅샷, 크래시 정보, 종료 여부
 - `CurrentSequence`: 지금까지 발급된 마지막 sequence
-- 내부 blackbox id / interaction id / sequence counter: 객체, 상호작용, 로그 순서를 나누어 관리하는 전역 counter
+- 내부 blackbox id / interaction id / sequence counter: 객체, 상호작용, 로그 순서를 나누어 관리하는 세션별 counter
 
 제공 서비스와 이유:
 
-- `GetNextBlackboxId()`: owner별 `Blackbox` 식별자 발급
-- `GetNextInteractionId()`: 객체 간 상호작용을 양쪽 로그에서 연결할 번호 발급
-- `GetNextSequence()`: 전체 로그 발생 순서 정렬을 위한 번호 발급
-- `Reset()`: `ForceReset()` 시 실행 상태 초기화
+- `NextBoxId()`: owner별 `Blackbox` 식별자 발급
+- `NextInteractionId()`: 객체 간 상호작용을 양쪽 로그에서 연결할 번호 발급
+- `NextSequence()`: 전체 로그 발생 순서 정렬을 위한 번호 발급
+- `TryDeactivate()` / `TryFreeze(...)` / `TryUpdateSettings(...)`: 세션이 종료·동결·설정 변경을 원자적으로 기록
+- `TryMarkWarned(...)`: 경고 원인별 최초 1회 판정
 
 ### 3-3. LogContext
 
@@ -151,22 +160,31 @@ Blackbox는 한 객체의 실행 맥락을 기록하는 내부 엔진을 중심�
 - `RenderMethodLabel(...)`: 스코프 종류에 따라 메서드 표시를 open/close/step 형태로 생성
 - `Arrow(...)` / `TagRef(...)`: 상호작용 id와 대상 참조를 일관된 문자열로 표시
 
-### 3-6. BlackboxRegistry
+### 3-6. BlackboxSessionRegistry
 
-`BlackboxRegistry`는 객체와 `Blackbox`를 연결하는 전역 조회 지점이다.
+`BlackboxSessionRegistry`는 현재 실행 흐름이 어느 세션에 기록할지 정하는 내부 조회 지점이며, 미종료 명시적 세션도 추적한다. 세션 밖이면 공유 기본 세션을, `BeginSession()` 이후 흐름이면 그 흐름에 바인딩된 세션을 돌려준다. 활성 명시적 세션은 잠금으로 보호하는 강한 참조 목록에 시작 순서로 보관하여, Dispose 누락이 GC로 숨겨지지 않게 한다. 기본 세션과 재시작 경쟁 후보는 목록에 넣지 않는다.
 
-동일한 객체에 대해 여러 번 기록을 남겨도 항상 같은 `Blackbox`를 찾아야 로그가 하나의 맥락으로 이어진다. registry는 이 연결을 보장하는 구조이다. 이 구조 덕분에 외부에서는 별도 등록 과정 없이 `BlackboxHandle.Of(subject)`를 호출하는 것만으로 기록을 시작할 수 있다. 내부에서는 같은 객체 identity를 기준으로 대응되는 `Blackbox`를 재사용한다.
+객체와 `Blackbox`의 연결은 각 세션이 소유한 SubjectStore가 맡는다. 동일한 객체에 대해 여러 번 기록을 남겨도 같은 세션 안에서는 항상 같은 `Blackbox`를 찾으므로 로그가 하나의 맥락으로 이어진다. 이 덕분에 외부에서는 별도 등록 과정 없이 `BlackboxHandle.Of(subject)`를 호출하는 것만으로 기록을 시작할 수 있다. SubjectStore는 참조 동일성 기반 버킷과 CAS를 사용하며 각 세션의 저장소는 독립적이다.
 
 보유 정보:
 
-- `_subjects`: 대상 객체 identity와 `Blackbox` 사이의 연결을 저장하는 `ConditionalWeakTable`
-- `_lock`: debug/test 성격의 count와 reset 작업을 안전한 시점에서 보호하기 위한 동기화 객체
+- 실행 흐름별 세션 바인딩(`AsyncLocal`)
+- 공유 기본 세션 참조
+- 활성 명시적 세션 목록(`List<BlackboxSession>`)과 이를 보호하는 잠금 객체
 
 제공 서비스와 이유:
 
-- `GetBlackbox(...)`: 대상 객체에 대응되는 `Blackbox` 조회 또는 생성
-- `Contains(...)` / `Count()`: registry 상태의 테스트와 디버그 관찰
-- `ForceReset()`: 테스트나 반복 실험에서 registry, runtime, 핸들 id 상태 초기화
+- `Current` / `CurrentKey`: 현재 흐름의 세션과 그 키 조회. 바인딩이 없으면 기본 세션
+- `Default` / `DefaultKey`: 공유 기본 세션과 그 키 조회
+- `Begin(...)`: 명시적 세션을 목록에 추가한 뒤 현재 흐름에 바인딩
+- `Remove(...)` / `Restore(...)`: 최초 `BlackboxSession.Dispose()`에서만 활성 목록 제거와 호출한 흐름의 바인딩 복원
+- `ActiveSessionCount` / `GetActiveSessionKeys()`: 미종료 명시적 세션 수와 시작 순서의 독립된 키 배열 스냅샷 조회
+- `DisposeActiveSessions()`: 잠금 안에서 스냅샷을 만든 뒤 잠금 밖에서 시작 역순으로 Dispose. 다른 흐름의 바인딩은 그대로 남아 기록이 거부됨
+- `RestartDefaultSession()`: 기본 세션을 새 세션으로 CAS 교체한 뒤 이전 세션 종료
+- `GetBlackbox(...)`: 현재 세션에서 대상 객체에 대응되는 `Blackbox` 조회 또는 생성
+- `Contains(...)` / `Count()`: 현재 세션 저장소 상태의 테스트와 디버그 관찰
+
+세션 관련 static 상태와 동작은 모두 이 레지스트리에 있다. `BlackboxSession`에는 공개 static 멤버가 없다. 공개 입구는 `BlackboxHandle`의 `BeginSession()`, `CurrentSessionKey`/`DefaultSessionKey`, `RestartDefaultSession()`, `ActiveSessionCount`, `GetActiveSessionKeys()`, `DisposeActiveSessions()`이며 실제 동작은 이 레지스트리에 위임한다. 잠금은 세션 시작·종료·활성 목록 조회에만 사용하고 기록·Subject 조회·등록은 무잠금으로 유지한다. 목록은 전역이므로 병렬 테스트에서는 다른 테스트의 세션도 보인다.
 
 ### 3-7. BlackboxHandle
 
@@ -189,7 +207,7 @@ Blackbox는 한 객체의 실행 맥락을 기록하는 내부 엔진을 중심�
 
 제공 서비스와 이유:
 
-- `Configure(...)` / `ForceReset()` / `Of(...)`: 기록 환경 준비와 대상 객체 핸들 획득
+- `Configure(...)` / `RestartDefaultSession()` / `Of(...)`: 기록 환경 준비와 대상 객체 핸들 획득
 - `Construct(...)` / `Dispose(...)` / `When(...)`: 생성·해제 기록과 조건부 기록 진입 패턴 표현
 - `Write(...)` / `Scope(...)`: 자기 객체의 일반 기록과 스코프 기록
 - `ExertMessage(...)` / `Exert(...)`: caller 기준의 객체 간 상호작용 방향 명시
@@ -252,8 +270,7 @@ Blackbox는 한 객체의 실행 맥락을 기록하는 내부 엔진을 중심�
 - `GetHandleId()`: 새 핸들 id 발급
 - `TryDisposeHandleId(...)`: 살아 있는 id만 한 번 disposed 상태로 전환
 - `IsAlive(...)`: 핸들 관찰 속성의 기준 상태 제공
-- `WarnIfThreadMismatch(...)`: 생성 스레드와 dispose 스레드가 다를 때 warning 출력
-- `Reset()`: `BlackboxRegistry.ForceReset()` 시 테스트나 반복 실험용 안전 지점에서 핸들 id 상태 초기화
+세션 종료 시 해당 세션의 HandleTracker가 미반환 ID를 회수한다. 전역 핸들 풀과 슬롯 세대는 초기화하지 않는다.
 
 ## 4. 기록 파이프라인
 
@@ -330,13 +347,13 @@ Blackbox는 하나의 owner 객체가 여러 스레드에서 기록될 수 있�
 - `ScopeHandle`과 `ExertHandle`은 생성 스레드와 dispose 스레드가 다르면 warning을 남긴다.
 - `Exert(...)` 병합은 받는 쪽 상호작용 로그가 저장된 대상 문맥 안에서만 시도하며, 상호작용과 받는 쪽 스코프가 서로 다른 스레드 문맥에 기록되면 두 로그를 병합하지 않는다.
 - `.With(...)` 태그 해석은 원본 로그가 저장된 문맥에서 시작되고, 대상 로그는 대상 `Blackbox`의 현재 문맥에 저장된다.
-- 스코프 id, interaction id, sequence는 `Blackbox` / `BlackboxRuntime`이 원자적으로 발급한다.
+- 스코프 id, interaction id, sequence는 `Blackbox`와 그 `Blackbox`가 속한 `BlackboxSession`이 원자적으로 발급한다.
 - `LogData`에는 `ThreadId`와 `ThreadName`이 저장되어 출력 결과에서 어느 스레드의 기록인지 확인할 수 있다.
 - 모든 로그에는 전역 `Sequence`가 부여되어, 여러 문맥에서 모은 로그를 출력할 때 전체 발생 순서를 다시 맞출 수 있다.
 
 이 구조는 스레드별 로그 버퍼와 전역 출력 순서를 분리하는 데 초점이 있다. 예를 들어 A 스레드가 스코프를 열고 B 스레드가 같은 owner 객체에 로그를 남기더라도, B 스레드의 기록은 B의 문맥에 쌓이고 출력 시점에 sequence 기준으로 다시 합쳐진다.
 
-반대로 `LogContext` 하나를 여러 스레드가 동시에 직접 수정하는 상황은 안정적인 기본 사용 흐름으로 보지 않는다. 핸들이 생성 스레드와 다른 스레드에서 dispose되면 warning을 남기는 이유도 여기에 있다. registry reset, 설정 변경, 출력 완료 상태 같은 전역 상태 역시 안전한 시점에서 다루어야 한다. 특히 `ForceReset()`은 디버그나 테스트용 초기화에 가깝고, 다른 스레드가 동시에 기록 중일 때 호출하는 것을 전제로 하지 않는다.
+핸들이 생성 스레드와 다른 스레드에서 dispose되면 세션별·원인별 최초 한 번 warning을 남긴다. 기본 세션 재시작과 기록이 겹치면 이전 세션 안에서 기록이 완료되거나 거부될 수 있지만 새 세션의 저장소와 버퍼는 오염시키지 않는다. 종료 시점까지 모든 기록을 보존해야 한다면 자식 작업을 await/join한 뒤 종료한다.
 
 ## 6. 구조적 의도
 
@@ -376,17 +393,17 @@ Blackbox는 기록 시점부터 스코프 id, 스코프 종류, 상호작용 상
 
 기본 기록 상태는 켜져 있으며, 필요한 경우 `BlackboxHandle.UseBlackbox = false`나 `Configure(..., useBlackbox: UseBlackboxOption.DoNotUse)`로 끌 수 있다.
 
-### 7-2. 출력 이후의 기록 중단
+### 7-2. 출력과 세션 동결
 
-출력이 한 번 실행되면 내부 전역 상태가 출력 완료 상태로 바뀐다. 이후 기록이나 중복 출력은 의도적으로 제한된다. 같은 프로세스에서 여러 실험을 반복해야 한다면 안전한 시점에서 `BlackboxHandle.ForceReset()`으로 registry와 runtime 상태를 초기화해야 한다.
+일반 Export는 기록을 계속 허용하고 반복할 수 있다. CrashExport는 해당 세션을 동결한다. 새 명시적 기록 수명은 Dispose 후 Begin으로 시작하고, 공유 기본 세션의 새 기록 수명은 BlackboxHandle.RestartDefaultSession()으로 시작한다.
 
-### 7-3. 전역 설정 변경 시점
+### 7-3. 세션 설정 변경 시점
 
 `LogDirectory`, logger, 출력 option, `MaxLogCount`, `StrongReference`, `TagTargetTypes` 같은 값은 기록 구조의 동작 방식에 영향을 준다. 특히 `MaxLogCount`는 새 `Blackbox`의 `LogContext`가 만들어질 때 buffer 크기로 사용되므로, 실행 중 임의로 바꾸기보다 기록 시작 전에 설정하는 편이 안전하다.
 
-### 7-4. 핸들 reset의 안전 지점
+### 7-4. 기본 세션 재시작과 기존 핸들
 
-`BlackboxHandle.ForceReset()`은 registry와 runtime뿐 아니라 `ScopeHandle` / `ExertHandle`의 `HandleManager` 상태도 초기화한다. 이 초기화는 이전에 발급된 핸들이 더 이상 사용되지 않는 안전 지점에서만 호출해야 한다. reset 이후 이전 핸들의 dispose나 alive 조회가 의미 있게 보존되는 구조는 아니다.
+`BlackboxHandle.RestartDefaultSession()`은 기본 세션을 새 인스턴스로 교체하고 이전 세션을 종료한다. 이전 기본 설정을 상속하지만 세션 키와 저장소·카운터·크래시·경고 상태는 새로 시작한다. 명시적 세션과 그 핸들은 영향을 받지 않는다. 종료된 기본 세션의 핸들은 기록이 거부되지만 이전 로그를 출력할 수 있다. 전역 HandleManager를 초기화하지 않으므로 오래된 핸들의 Dispose가 재사용된 슬롯을 해제하지 않는다.
 
 ### 7-5. 태그 대상 표시 정책
 

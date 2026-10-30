@@ -12,7 +12,7 @@ namespace BlackThunder.BlackboxSystem.Exporters
         internal static Action<ProcessStartInfo> OpenLogProcess = startInfo => Process.Start(startInfo);
 #endif
 
-        public static void Export(Blackbox blackbox, int recursionDepth, bool isCrash, bool fullExport, bool openLog, long maxSequence = -1, SessionSettings settings = null)
+        public static void Export(BlackboxSession session, Blackbox blackbox, int recursionDepth, bool isCrash, bool fullExport, bool openLog, long maxSequence = -1, SessionSettings settings = null)
         {
             settings ??= blackbox.State.Settings;
             var sb = new StringBuilder();
@@ -24,7 +24,7 @@ namespace BlackThunder.BlackboxSystem.Exporters
             BuildHtml(nodes, sb);
             AppendDocumentEnd(sb);
 
-            var fullPath = Tools.WriteExportFile(blackbox, settings, ".html", isCrash, sb.ToString());
+            var fullPath = Tools.WriteExportFile(session, blackbox, settings, ".html", isCrash, sb.ToString());
 
             settings.Log($"[HtmlExporter] Exported to '{fullPath}'");
 

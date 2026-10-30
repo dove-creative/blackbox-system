@@ -16,7 +16,7 @@ namespace BlackThunder.BlackboxSystem.Tests
 
             // Table 6-2 / LogDirectoryMissing x Export.Normal
             Assert.That(
-                () => TxtExporter.Export(blackbox, 10, false, true, false),
+                () => TxtExporter.Export(BlackboxSessionRegistry.Current, blackbox, 10, false, true, false),
                 Throws.TypeOf<InvalidOperationException>());
         }
 
@@ -29,10 +29,10 @@ namespace BlackThunder.BlackboxSystem.Tests
             blackbox.Write("hello", "Run");
 
             // Table 6-2 / TxtReady x Export.Normal
-            TxtExporter.Export(blackbox, 10, false, true, false);
+            TxtExporter.Export(BlackboxSessionRegistry.Current, blackbox, 10, false, true, false);
 
             // Table 6-2 / TxtReady x Export.Crash
-            TxtExporter.Export(blackbox, 10, true, true, false);
+            TxtExporter.Export(BlackboxSessionRegistry.Current, blackbox, 10, true, true, false);
 
             var normalFile = BlackboxTestDoubles.GetFiles(directory, "Blackbox*.txt").Single();
             var crashFile = BlackboxTestDoubles.GetFiles(directory, "[CRASH]*.txt").Single();
@@ -49,7 +49,7 @@ namespace BlackThunder.BlackboxSystem.Tests
 
             // Table 6-2 / LogDirectoryMissing x Export.Crash
             Assert.That(
-                () => HtmlExporter.Export(blackbox, 10, true, true, false),
+                () => HtmlExporter.Export(BlackboxSessionRegistry.Current, blackbox, 10, true, true, false),
                 Throws.TypeOf<InvalidOperationException>());
         }
 
@@ -62,10 +62,10 @@ namespace BlackThunder.BlackboxSystem.Tests
             blackbox.Write("hello", "Run");
 
             // Table 6-2 / HtmlReady x Export.Normal
-            HtmlExporter.Export(blackbox, 10, false, true, false);
+            HtmlExporter.Export(BlackboxSessionRegistry.Current, blackbox, 10, false, true, false);
 
             // Table 6-2 / HtmlReady x Export.Crash
-            HtmlExporter.Export(blackbox, 10, true, true, false);
+            HtmlExporter.Export(BlackboxSessionRegistry.Current, blackbox, 10, true, true, false);
 
             var normalFile = BlackboxTestDoubles.GetFiles(directory, "Blackbox*.html").Single();
             var crashFile = BlackboxTestDoubles.GetFiles(directory, "[CRASH]*.html").Single();
@@ -85,7 +85,7 @@ namespace BlackThunder.BlackboxSystem.Tests
             source.ExertMessage(target, "call", "Run");
 
             // Table 6-2 / HtmlReady x Export.Normal
-            HtmlExporter.Export(source, 10, false, true, false);
+            HtmlExporter.Export(BlackboxSessionRegistry.Current, source, 10, false, true, false);
 
             var html = File.ReadAllText(BlackboxTestDoubles.GetFiles(directory, "Blackbox*.html").Single());
             Assert.That(html, Does.Contain("class='interaction'"));
@@ -102,10 +102,10 @@ namespace BlackThunder.BlackboxSystem.Tests
             var targetOwner = BlackboxTestDoubles.Owner("target");
             var target = BlackboxTestDoubles.BlackboxFor(targetOwner);
             source.ExertMessage(target, "include target", "Run");
-            source.Write("uses %0", "Tag").With(targetOwner, TargetTypes.Full);
+            BlackboxTestDoubles.Bind(source.Write("uses %0", "Tag")).With(targetOwner, TargetTypes.Full);
 
             // Table 6-2 / HtmlReady x Export.Normal
-            HtmlExporter.Export(source, 10, false, true, false);
+            HtmlExporter.Export(BlackboxSessionRegistry.Current, source, 10, false, true, false);
 
             var html = File.ReadAllText(BlackboxTestDoubles.GetFiles(directory, "Blackbox*.html").Single());
             Assert.That(html, Does.Contain("uses &#39;target (BlackboxTestDoubles.NamedOwner #1)&#39;"));
@@ -135,10 +135,10 @@ namespace BlackThunder.BlackboxSystem.Tests
             try
             {
                 // Table 6-2 / TxtReady x Export.OpenLog
-                TxtExporter.Export(blackbox, 10, false, true, true);
+                TxtExporter.Export(BlackboxSessionRegistry.Current, blackbox, 10, false, true, true);
 
                 // Table 6-2 / HtmlReady x Export.OpenLog
-                HtmlExporter.Export(blackbox, 10, false, true, true);
+                HtmlExporter.Export(BlackboxSessionRegistry.Current, blackbox, 10, false, true, true);
             }
             finally
             {

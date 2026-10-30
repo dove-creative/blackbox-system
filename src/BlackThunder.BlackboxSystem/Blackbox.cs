@@ -68,7 +68,6 @@ namespace BlackThunder.BlackboxSystem
                 }
             }
         }
-        public Blackbox(object owner, bool strongReference) : this(owner, strongReference, BlackboxSession.CurrentState) { }
         internal Blackbox(object owner, bool strongReference, SessionState state)
         {
             if (owner == null) throw new ArgumentNullException(nameof(owner));
@@ -88,7 +87,6 @@ namespace BlackThunder.BlackboxSystem
             if (old != null && !string.Equals(old, label, StringComparison.Ordinal))
                 State.WarnOnce(SessionWarning.LabelAlreadySet, "[Blackbox] Label was already assigned; keeping the first label.");
         }
-        public static long GetCurrentSequence() => BlackboxSession.CurrentState.CurrentSequence;
         public TagHandle Write(string message, string methodName)
         {
             if (!State.CheckWrite()) return TagHandle.FromMessage(message);
@@ -99,24 +97,29 @@ namespace BlackThunder.BlackboxSystem
             if (State.CheckWrite()) CurrentContext.EnqueueTagLog(message, -1, methodName, interactionId, taggedBy, tags, targetTypes);
             return message;
         }
-        public ScopeHandle WriteScope(string message, string methodName)
+        // Records the scope-open log. The owning session turns the result into a registered ScopeHandle.
+        internal bool WriteScope(string message, string methodName, out LogContext context, out long scopeId, out TagHandle tag)
         {
-            if (!State.CheckWrite()) return default;
-            var context = CurrentContext;
-            var scopeId = Interlocked.Increment(ref _scopeId);
-            var tag = context.OpenScope(message, -1, methodName, scopeId);
-            return new ScopeHandle(context, scopeId, tag);
+            context = null;
+            scopeId = -1;
+            tag = TagHandle.FromMessage(message);
+            if (!State.CheckWrite()) return false;
+            context = CurrentContext;
+            scopeId = Interlocked.Increment(ref _scopeId);
+            tag = context.OpenScope(message, -1, methodName, scopeId);
+            return true;
         }
         public string ExertMessage(Blackbox other, string message, string methodName)
         {
             if (State.CheckWrite()) EnqueueInteraction(other, out _, message, methodName);
             return message;
         }
-        public ExertHandle Exert(Blackbox other, string message, string methodName)
+        // Records the interaction. The owning session registers an ExertHandle for the target context.
+        internal long Exert(Blackbox other, string message, string methodName, out LogContext target)
         {
-            if (!State.CheckWrite()) return default;
-            var id = EnqueueInteraction(other, out var target, message, methodName);
-            return target == null ? default : new ExertHandle(target, id);
+            target = null;
+            if (!State.CheckWrite()) return -1;
+            return EnqueueInteraction(other, out target, message, methodName);
         }
         private long EnqueueInteraction(Blackbox other, out LogContext target, string message, string methodName)
         {

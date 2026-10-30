@@ -68,16 +68,16 @@ namespace BlackThunder.BlackboxSystem.Tests
         public void TryMarkPrintedSucceedsOnceAndResetAllowsPrintingAgain()
         {
             // Table 3-3 / Ready x TryMarkPrinted
-            Assert.That(BlackboxSession.CurrentState.TryFreeze(new CrashInfo("test", string.Empty)), Is.True);
-            Assert.That((BlackboxSession.CurrentState.Crash != null), Is.True);
+            Assert.That(BlackboxSessionRegistry.Current.State.TryFreeze(new CrashInfo("test", string.Empty)), Is.True);
+            Assert.That((BlackboxSessionRegistry.Current.State.Crash != null), Is.True);
 
             // Table 3-3 / Printed x TryMarkPrinted
-            Assert.That(BlackboxSession.CurrentState.TryFreeze(new CrashInfo("test", string.Empty)), Is.False);
+            Assert.That(BlackboxSessionRegistry.Current.State.TryFreeze(new CrashInfo("test", string.Empty)), Is.False);
 
-            // Table 3-3 / Printed x ForceResetRuntimeState
-            BlackboxHandle.ForceReset();
-            Assert.That((BlackboxSession.CurrentState.Crash != null), Is.False);
-            Assert.That(BlackboxSession.CurrentState.TryFreeze(new CrashInfo("test", string.Empty)), Is.True);
+            // Table 3-3 / Printed x RestartDefaultSession
+            BlackboxHandle.RestartDefaultSession();
+            Assert.That((BlackboxSessionRegistry.Current.State.Crash != null), Is.False);
+            Assert.That(BlackboxSessionRegistry.Current.State.TryFreeze(new CrashInfo("test", string.Empty)), Is.True);
         }
     }
 }

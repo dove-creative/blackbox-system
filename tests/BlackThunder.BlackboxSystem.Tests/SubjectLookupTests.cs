@@ -8,15 +8,15 @@ namespace BlackThunder.BlackboxSystem.Tests
     internal sealed class SubjectLookupTests : BlackboxTestBase
     {
         [Test]
-        public void DefaultAndExplicitSessionsPreserveTheirBucketCountsAfterReset()
+        public void DefaultAndExplicitSessionsPreserveTheirBucketCountsAfterDefaultRestart()
         {
             Assert.That(BucketCount(), Is.EqualTo(65536));
-            BlackboxHandle.ForceReset();
+            BlackboxHandle.RestartDefaultSession();
             Assert.That(BucketCount(), Is.EqualTo(65536));
-            using (BlackboxSession.Begin())
+            using (BlackboxHandle.BeginSession())
             {
                 Assert.That(BucketCount(), Is.EqualTo(256));
-                BlackboxHandle.ForceReset();
+                BlackboxHandle.RestartDefaultSession();
                 Assert.That(BucketCount(), Is.EqualTo(256));
             }
             Assert.That(BucketCount(), Is.EqualTo(65536));
@@ -26,8 +26,8 @@ namespace BlackThunder.BlackboxSystem.Tests
         [TestCase(true)]
         public void RegisteredHitsRemainCanonicalAndAllocationFree(bool explicitSession)
         {
-            using var session = explicitSession ? BlackboxSession.Begin() : null;
-            var store = BlackboxSession.CurrentState.Subjects;
+            using var session = explicitSession ? BlackboxHandle.BeginSession() : null;
+            var store = BlackboxSessionRegistry.Current.Subjects;
             var owners = new object[20000];
             var boxes = new Blackbox[owners.Length];
             for (int i = 0; i < owners.Length; i++)
@@ -52,8 +52,8 @@ namespace BlackThunder.BlackboxSystem.Tests
         [Test]
         public void HitKeepsDeadEntriesWhileMissPrunesThemWithoutReplacingLiveBox()
         {
-            using var session = BlackboxSession.BeginForTests(1);
-            var store = BlackboxSession.CurrentState.Subjects;
+            using var session = BlackboxSessionRegistry.Begin(1);
+            var store = BlackboxSessionRegistry.Current.Subjects;
             var living = new object();
             var canonical = store.GetOrAdd(living);
             var deadBoxes = RegisterDiscardedSubjects(store);
@@ -75,7 +75,7 @@ namespace BlackThunder.BlackboxSystem.Tests
 
         private static int BucketCount() => ((Array)typeof(SubjectStore)
             .GetField("_buckets", BindingFlags.Instance | BindingFlags.NonPublic)
-            .GetValue(BlackboxSession.CurrentState.Subjects)).Length;
+            .GetValue(BlackboxSessionRegistry.Current.Subjects)).Length;
 
         [MethodImpl(MethodImplOptions.NoInlining)]
         private static WeakReference[] RegisterDiscardedSubjects(SubjectStore store)

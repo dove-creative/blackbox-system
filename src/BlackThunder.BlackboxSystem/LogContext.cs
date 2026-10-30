@@ -30,8 +30,6 @@ namespace BlackThunder.BlackboxSystem
         private readonly ThreadToken _token;
         private ScopeInfo _openScopes;
         internal SessionState State => _blackbox.State;
-        internal readonly HandleTracker<ScopeHandle> ScopeHandles;
-        internal readonly HandleTracker<ExertHandle> ExertHandles;
         internal bool IsCurrentThread => ReferenceEquals(_token, ThreadToken.Current);
 
         public LogContext(Blackbox blackbox, int bufferSize)
@@ -42,8 +40,6 @@ namespace BlackThunder.BlackboxSystem
             _threadId = Environment.CurrentManagedThreadId;
             _threadName = Thread.CurrentThread.Name;
             _token = ThreadToken.Current;
-            ScopeHandles = State.GetScopeTracker(_token);
-            ExertHandles = State.GetExertTracker(_token);
         }
 
         public TagHandle EnqueueLog(string message, long sequence, string methodName, long scopeId = -1, long interactionId = -1, Blackbox exertingTo = null, Blackbox exertedBy = null)

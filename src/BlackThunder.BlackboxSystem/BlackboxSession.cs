@@ -4,148 +4,65 @@ using System.Threading;
 
 namespace BlackThunder.BlackboxSystem
 {
-    /// <summary>A test/debug recording lifetime inherited through ExecutionContext.</summary>
+    /// <summary>
+    /// A test/debug recording lifetime inherited through ExecutionContext.
+    /// Start one with <see cref="BlackboxHandle.BeginSession"/>.
+    /// </summary>
+    /// <remarks>Explicit sessions are strongly retained until disposed, even if callers drop all references.</remarks>
     public sealed class BlackboxSession : IDisposable
     {
-        private sealed class Binding
-        {
-            internal readonly BlackboxSession Session;
-            internal readonly SessionState State;
-            internal Binding(BlackboxSession session, SessionState state) { Session = session; State = state; }
-        }
-        private static readonly AsyncLocal<Binding> Ambient = new();
-        private static readonly BlackboxSession Default = new(new SessionSettings(), null, 65536);
-        private readonly Binding _previous;
-        private readonly int _bucketCount;
-        private SessionState _current;
-        private long _exportOrdinal;
-
-        public Guid SessionKey { get; } = Guid.NewGuid();
-        /// <summary>The session key bound to this execution flow, or DefaultKey when unbound.</summary>
-        public static Guid CurrentKey => CurrentState.Session.SessionKey;
-        /// <summary>The shared default session's key. This key is unchanged by ForceReset.</summary>
-        public static Guid DefaultKey => Default.SessionKey;
-        internal SessionState Current => Volatile.Read(ref _current);
-        internal static SessionState CurrentState => Ambient.Value?.State ?? Default.Current;
-        internal long NextExportOrdinal() => Interlocked.Increment(ref _exportOrdinal);
-        private BlackboxSession(SessionSettings settings, Binding previous, int buckets)
-        {
-            _previous = previous;
-            _bucketCount = buckets;
-            _current = new SessionState(this, settings, buckets);
-        }
-        /// <summary>Begin synchronously in the same logical scope that will dispose the session.</summary>
-        public static BlackboxSession Begin()
-        {
-            var session = new BlackboxSession(CurrentState.Settings, Ambient.Value, 256);
-            Ambient.Value = new Binding(session, session.Current);
-            return session;
-        }
-#if BLACKBOX_TESTS
-        internal static BlackboxSession BeginForTests(int buckets)
-        {
-            var session = new BlackboxSession(CurrentState.Settings, Ambient.Value, buckets);
-            Ambient.Value = new Binding(session, session.Current);
-            return session;
-        }
-#endif
-        public void Dispose()
-        {
-            Interlocked.Exchange(ref _current, null)?.Retire();
-            if (ReferenceEquals(Ambient.Value?.Session, this)) Ambient.Value = _previous;
-        }
-        internal static void ResetCurrent()
-        {
-            var binding = Ambient.Value;
-            var session = binding?.Session ?? Default;
-            while (true)
-            {
-                var old = session.Current;
-                if (old == null || (binding != null && !ReferenceEquals(binding.State, old)))
-                {
-                    binding?.State.CheckWrite();
-                    return;
-                }
-                var next = new SessionState(session, old.Settings, session._bucketCount);
-                if (!ReferenceEquals(Interlocked.CompareExchange(ref session._current, next, old), old)) continue;
-                old.Retire();
-                // Default callers remain unbound, including NUnit SetUp callers.
-                if (binding != null) Ambient.Value = new Binding(session, next);
-                return;
-            }
-        }
-    }
-    internal enum SessionWarning
-    {
-        Disposed = 1, Reset = 2, CrossThreadClose = 4, LabelAlreadySet = 8,
-        DuplicateScope = 16, MissingScope = 32, OuterScopeClose = 64,
-    }
-    internal sealed class CrashInfo
-    {
-        internal readonly string Message, Stack;
-        internal CrashInfo(string message, string stack) { Message = message; Stack = stack; }
-    }
-    internal sealed class SessionState
-    {
+        private readonly BlackboxSession _previous;
         // Session-owned stripes bound tracking overhead independently of context churn.
         // Segments are reused and grow only when outstanding handles need more cells.
         private const int TrackerStripeCount = 16;
         private readonly HandleTracker<ScopeHandle>[] _scopeTrackers = CreateTrackers<ScopeHandle>();
         private readonly HandleTracker<ExertHandle>[] _exertTrackers = CreateTrackers<ExertHandle>();
-        private SessionSettings _settings;
-        private CrashInfo _crash;
-        private int _warnings;
-        private long _boxId = -1, _interactionId = -1, _sequence = -1;
-        internal readonly BlackboxSession Session;
+        private long _exportOrdinal;
+        // The only session part recording code sees.
+        internal readonly SessionState State;
         internal readonly SubjectStore Subjects;
-        internal SessionSettings Settings => Volatile.Read(ref _settings);
-        internal CrashInfo Crash => Volatile.Read(ref _crash);
-        internal bool IsCurrent => ReferenceEquals(Session.Current, this);
-        internal bool CanWrite => IsCurrent && Crash == null && Settings.UseBlackbox == UseBlackboxOption.Use;
-        internal long CurrentSequence => Volatile.Read(ref _sequence);
-        internal long NextBoxId() => Interlocked.Increment(ref _boxId);
-        internal long NextInteractionId() => Interlocked.Increment(ref _interactionId);
-        internal long NextSequence() => Interlocked.Increment(ref _sequence);
-        internal SessionState(BlackboxSession session, SessionSettings settings, int buckets)
+
+        public Guid SessionKey { get; } = Guid.NewGuid();
+        internal bool IsDisposed => !State.IsActive;
+        internal long NextExportOrdinal() => Interlocked.Increment(ref _exportOrdinal);
+        internal BlackboxSession(SessionSettings settings, BlackboxSession previous, int buckets)
         {
-            Session = session;
-            _settings = settings;
-            Subjects = new SubjectStore(this, buckets);
+            _previous = previous;
+            State = new SessionState(settings);
+            Subjects = new SubjectStore(State, buckets);
         }
-        internal bool CheckWrite()
+        /// <summary>Ends this recording lifetime, reclaims outstanding handle IDs and removes the active session.</summary>
+        /// <remarks>
+        /// Only the first call ends the session and removes it from the active list.
+        /// Every call restores the previous binding in the calling flow if that flow is bound to this session,
+        /// so a flow can unbind itself even after another flow disposed the session first.
+        /// Other execution flows keep their bindings to this disposed session until they dispose it themselves.
+        /// </remarks>
+        public void Dispose()
         {
-            if (!IsCurrent)
+            if (State.TryDeactivate())
             {
-                var disposed = Session.Current == null;
-                WarnOnce(disposed ? SessionWarning.Disposed : SessionWarning.Reset,
-                    disposed ? "[Blackbox] Session has been disposed; recording rejected." : "[Blackbox] Handle or execution context belongs to a reset generation; recording rejected.");
-                return false;
+                Retire();
+                BlackboxSessionRegistry.Remove(this);
             }
-            return Crash == null && Settings.UseBlackbox == UseBlackboxOption.Use;
+            BlackboxSessionRegistry.Restore(this, _previous);
         }
-        internal bool TryFreeze(CrashInfo crash) => IsCurrent && Interlocked.CompareExchange(ref _crash, crash, null) == null;
-        internal void UpdateSettings(Action<SessionSettings> update)
+
+        // Front-side handle creation: the Blackbox records, this session registers the handle in its trackers.
+        internal ScopeHandle OpenScope(Blackbox box, string message, string methodName)
         {
-            if (!IsCurrent) { CheckWrite(); return; }
-            while (true)
-            {
-                var old = Settings;
-                var next = old.Copy();
-                update(next);
-                if (ReferenceEquals(Interlocked.CompareExchange(ref _settings, next, old), old)) return;
-            }
+            if (!box.WriteScope(message, methodName, out var context, out var scopeId, out var tag)) return default;
+            var lease = GetScopeTracker(ThreadToken.Current).Register(State);
+            return new ScopeHandle(context, scopeId, tag.Bind(this), lease);
         }
-        internal void WarnOnce(SessionWarning reason, string message)
+        internal ExertHandle Exert(Blackbox source, Blackbox target, string message, string methodName)
         {
-            int bit = (int)reason;
-            while (true)
-            {
-                var old = Volatile.Read(ref _warnings);
-                if ((old & bit) != 0) return;
-                if (Interlocked.CompareExchange(ref _warnings, old | bit, old) == old) break;
-            }
-            Settings.WarningLogger?.Invoke(message);
+            var interactionId = source.Exert(target, message, methodName, out var targetContext);
+            if (targetContext == null) return default;
+            var lease = GetExertTracker(ThreadToken.Current).Register(State);
+            return new ExertHandle(targetContext, interactionId, lease);
         }
+
         private static HandleTracker<T>[] CreateTrackers<T>()
         {
             var trackers = new HandleTracker<T>[TrackerStripeCount];
@@ -156,15 +73,10 @@ namespace BlackThunder.BlackboxSystem
             _scopeTrackers[RuntimeHelpers.GetHashCode(token) & (TrackerStripeCount - 1)];
         internal HandleTracker<ExertHandle> GetExertTracker(ThreadToken token) =>
             _exertTrackers[RuntimeHelpers.GetHashCode(token) & (TrackerStripeCount - 1)];
-        internal void Retire()
+        private void Retire()
         {
             foreach (var tracker in _scopeTrackers) tracker.Close();
             foreach (var tracker in _exertTrackers) tracker.Close();
         }
-#if BLACKBOX_TESTS
-        internal Action BeforeHandleRegistration;
-        internal Action<long> BeforeLogPublication;
-        internal Action AfterScopeMerge;
-#endif
     }
 }

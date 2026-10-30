@@ -33,7 +33,7 @@ Raw CSV from this local run is in ignored `artifacts/benchmark-{before,after}-{1
 
 ## 2026-10-30: bounded session trackers
 
-The baseline is `1d18d06` (the initial 0.2.0 session implementation). The revised implementation owns 16 trackers per handle type per generation, selected by thread-token hash, instead of retaining two new trackers for every context. Both versions use the new `--scopes` and `--retention` modes in the same harness. Windows x64, .NET SDK 9.0.320, Release, `DOTNET_TieredCompilation=0`; no tests ran during measurement.
+The baseline is `1d18d06` (the initial 0.2.0 session implementation). The revised implementation owns 16 trackers per handle type per session, selected by thread-token hash, instead of retaining two new trackers for every context. Both versions use the new `--scopes` and `--retention` modes in the same harness. Windows x64, .NET SDK 9.0.320, Release, `DOTNET_TieredCompilation=0`; no tests ran during measurement.
 
 Scope open/close warms up 2,000 times per worker, then measures 100,000 operations per worker. Before/after processes alternate for three rounds; the table reports medians. Parallel values remain aggregate ns/op, not per-thread latency. The variation between rounds means these results indicate comparable throughput, not an established speedup.
 
@@ -78,7 +78,7 @@ The same Windows/.NET/Release/TieredCompilation settings apply. Before/after pro
 
 All measured lookup loops allocated zero bytes. The 400,000-subject case is about 57 times faster in this workload. This remains a fixed-size table; still larger live populations will increase chain lengths.
 
-The bucket array itself uses approximately 512 KiB of references per default generation on x64 (plus its array header). There is a separate retention cost: with the batch cleanup protocol above and 65,536 buckets, GC-only heap deltas were 71,808,872 / 71,382,488 / 71,635,208 bytes after 100k/200k/300k objects. Subject cleanup reduced each to 1,400 bytes, with 32 trackers throughout. More buckets can retain more dead entries pending cleanup; the 512 KiB array is not the entire memory tradeoff.
+The bucket array itself uses approximately 512 KiB of references per default session on x64 (plus its array header). There is a separate retention cost: with the batch cleanup protocol above and 65,536 buckets, GC-only heap deltas were 71,808,872 / 71,382,488 / 71,635,208 bytes after 100k/200k/300k objects. Subject cleanup reduced each to 1,400 bytes, with 32 trackers throughout. More buckets can retain more dead entries pending cleanup; the 512 KiB array is not the entire memory tradeoff.
 
 ```powershell
 $env:DOTNET_TieredCompilation = '0'

@@ -50,15 +50,20 @@ namespace BlackThunder.BlackboxSystem
         private readonly LogContext _context;
         private readonly long _logIndex;
         private readonly string _fallbackMessage;
+        // Targets are looked up in this session's store. Recording code creates unbound handles;
+        // the front-side caller binds the session that owns the written Blackbox.
+        private readonly BlackboxSession _session;
 
-        internal TagHandle(LogContext context, long logIndex, string fallbackMessage)
+        internal TagHandle(LogContext context, long logIndex, string fallbackMessage, BlackboxSession session = null)
         {
             _context = context;
             _logIndex = logIndex;
             _fallbackMessage = fallbackMessage;
+            _session = session;
         }
 
         internal static TagHandle FromMessage(string message) => new TagHandle(null, -1, message);
+        internal TagHandle Bind(BlackboxSession session) => new TagHandle(_context, _logIndex, _fallbackMessage, session);
 
         /// <summary>
         /// Attaches related targets to the written log.
@@ -71,6 +76,8 @@ namespace BlackThunder.BlackboxSystem
         {
             if (_context == null || !_context.State.CheckWrite())
                 return _fallbackMessage ?? string.Empty;
+            if (_session == null)
+                return (string)this;
 
             tags ??= new object[1];
 
@@ -87,7 +94,7 @@ namespace BlackThunder.BlackboxSystem
             {
                 var tag = tags[i];
                 if (tag != null)
-                    targets[i] = _context.State.Subjects.GetOrAdd(tag);
+                    targets[i] = _session.Subjects.GetOrAdd(tag);
             }
 
             _context.ResolveWith(

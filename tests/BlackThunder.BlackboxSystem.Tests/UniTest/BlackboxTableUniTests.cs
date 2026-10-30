@@ -78,7 +78,7 @@ namespace BlackThunder.BlackboxSystem.Tests
             if (result != null)
                 CleanupNode(result);
 
-            BlackboxHandle.ForceReset();
+            BlackboxHandle.RestartDefaultSession();
         }
 
         private static void CleanupNode(Node<BlackboxTableModel> node)

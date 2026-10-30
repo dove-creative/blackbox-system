@@ -96,7 +96,7 @@ namespace BlackThunder.BlackboxSystem.Tests
         }
 
         [Test]
-        public void ResetAndRerunStartsClean()
+        public void RestartDefaultAndRerunStartsClean()
         {
             var directory = BlackboxTestDoubles.CreateTempDirectory();
             BlackboxTestDoubles.Reset(logDirectory: directory);
@@ -105,8 +105,8 @@ namespace BlackThunder.BlackboxSystem.Tests
             first.Write("first", "Run");
             first.Export(format: ExportFormat.Txt, openLogOption: OpenLogOption.Never);
 
-            // Table 7 / ResetAndRerun x Run
-            BlackboxHandle.ForceReset();
+            // Table 7 / RestartDefaultAndRerun x Run
+            BlackboxHandle.RestartDefaultSession();
             BlackboxTestDoubles.Reset(logDirectory: directory);
             var second = BlackboxTestDoubles.HandleFor(owner);
             second.Write("second", "Run");

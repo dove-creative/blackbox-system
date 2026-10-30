@@ -10,7 +10,7 @@ namespace BlackThunder.BlackboxSystem.Samples.NativeCSharp
     {
         public static void Run()
         {
-            using var session = BlackboxSession.Begin();
+            using var session = BlackboxHandle.BeginSession();
             SampleEnvironment.Configure("3-Tag");
 
             var player = new Player("Rin", 100);

@@ -3,7 +3,7 @@ using NUnit.Framework;
 
 namespace BlackThunder.BlackboxSystem.Tests
 {
-    internal sealed class BlackboxRegistryTests : BlackboxTestBase
+    internal sealed class BlackboxSessionRegistryTests : BlackboxTestBase
     {
         [Test]
         public void GetBlackboxRejectsNull()
@@ -12,7 +12,7 @@ namespace BlackThunder.BlackboxSystem.Tests
             Assert.That(() => BlackboxTestDoubles.BlackboxFor(null), Throws.TypeOf<ArgumentNullException>());
 
             // Table 3-2 / Registered x Contains.NullSubject
-            Assert.That(() => BlackboxRegistry.Contains(null), Throws.TypeOf<ArgumentNullException>());
+            Assert.That(() => BlackboxSessionRegistry.Contains(null), Throws.TypeOf<ArgumentNullException>());
         }
 
         [Test]
@@ -28,7 +28,7 @@ namespace BlackThunder.BlackboxSystem.Tests
 
             Assert.That(first, Is.SameAs(second));
             Assert.That(first.Owner, Is.SameAs(owner));
-            Assert.That(BlackboxRegistry.Count(), Is.EqualTo(1));
+            Assert.That(BlackboxSessionRegistry.Count(), Is.EqualTo(1));
         }
 
         [Test]
@@ -37,33 +37,33 @@ namespace BlackThunder.BlackboxSystem.Tests
             var owner = BlackboxTestDoubles.Owner("owner");
 
             // Table 3-2 / Empty x Contains.ValidSubject
-            Assert.That(BlackboxRegistry.Contains(owner), Is.False);
+            Assert.That(BlackboxSessionRegistry.Contains(owner), Is.False);
 
             BlackboxTestDoubles.BlackboxFor(owner);
 
             // Table 3-2 / Registered x Contains.ValidSubject
-            Assert.That(BlackboxRegistry.Contains(owner), Is.True);
+            Assert.That(BlackboxSessionRegistry.Contains(owner), Is.True);
 
             // Table 3-2 / Registered x Count
-            Assert.That(BlackboxRegistry.Count(), Is.EqualTo(1));
+            Assert.That(BlackboxSessionRegistry.Count(), Is.EqualTo(1));
         }
 
         [Test]
-        public void ForceResetClearsRegistryRuntimeAndHandles()
+        public void RestartDefaultSessionClearsRegistryRuntimeAndHandles()
         {
             var owner = BlackboxTestDoubles.Owner("owner");
             var blackbox = BlackboxTestDoubles.BlackboxFor(owner);
-            var scope = blackbox.WriteScope("scope", "Run");
+            var scope = BlackboxTestDoubles.Scope(blackbox, "scope", "Run");
             Assert.That(scope.IsAlive, Is.True);
-            Assert.That(BlackboxRuntime.GetNextSequence(), Is.GreaterThanOrEqualTo(0));
+            Assert.That(BlackboxSessionRegistry.Current.State.NextSequence(), Is.GreaterThanOrEqualTo(0));
 
-            // Table 3-2 / Registered x ForceReset
-            BlackboxRegistry.ForceReset();
+            // Table 3-2 / Registered x RestartDefaultSession
+            BlackboxHandle.RestartDefaultSession();
 
-            Assert.That(BlackboxRegistry.Count(), Is.EqualTo(0));
+            Assert.That(BlackboxSessionRegistry.Count(), Is.EqualTo(0));
             Assert.That(scope.IsAlive, Is.False);
-            Assert.That(BlackboxRuntime.GetNextSequence(), Is.EqualTo(0));
-            Assert.That((BlackboxSession.CurrentState.Crash != null), Is.False);
+            Assert.That(BlackboxSessionRegistry.Current.State.NextSequence(), Is.EqualTo(0));
+            Assert.That((BlackboxSessionRegistry.Current.State.Crash != null), Is.False);
         }
 
         [Test]

@@ -72,7 +72,7 @@ namespace BlackThunder.BlackboxSystem.Tests
 
         public void Ignite(string projectName)
         {
-            BlackboxHandle.ForceReset();
+            BlackboxHandle.RestartDefaultSession();
 
             ProjectName = projectName;
             Subject = projectName;

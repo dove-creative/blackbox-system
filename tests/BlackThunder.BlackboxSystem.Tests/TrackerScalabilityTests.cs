@@ -13,7 +13,7 @@ namespace BlackThunder.BlackboxSystem.Tests
         [Test]
         public void DefaultSessionReusesTrackersAcrossThousandsOfContexts()
         {
-            Assert.That(BlackboxSession.CurrentKey, Is.EqualTo(BlackboxSession.DefaultKey));
+            Assert.That(BlackboxHandle.CurrentSessionKey, Is.EqualTo(BlackboxHandle.DefaultSessionKey));
             BlackboxHandle.MaxLogCount = 1;
             var initial = CountTrackersUsedByContexts(1);
             Assert.That(initial, Is.EqualTo(2));
@@ -24,15 +24,15 @@ namespace BlackThunder.BlackboxSystem.Tests
         public void DefaultSessionTrackerCountIsBoundedAcrossManyThreads()
         {
             BlackboxHandle.MaxLogCount = 1;
-            var state = BlackboxSession.CurrentState;
+            var recordingSession = BlackboxSessionRegistry.Current;
             var seen = new ConcurrentDictionary<object, byte>();
             RunThreads(48, () =>
             {
                 var owner = new object();
-                var context = state.Subjects.GetOrAdd(owner).CurrentContext;
+                var context = recordingSession.Subjects.GetOrAdd(owner).CurrentContext;
                 context.EnqueueLog("one", -1, "Run");
-                seen.TryAdd(context.ScopeHandles, 0);
-                seen.TryAdd(context.ExertHandles, 0);
+                seen.TryAdd(recordingSession.GetScopeTracker(ThreadToken.Current), 0);
+                seen.TryAdd(recordingSession.GetExertTracker(ThreadToken.Current), 0);
                 GC.KeepAlive(owner);
             });
             Assert.That(seen.Count, Is.InRange(2, 32));
@@ -41,54 +41,54 @@ namespace BlackThunder.BlackboxSystem.Tests
         [Test]
         public void DefaultSessionWriteOnlyChurnDoesNotAccumulateRetainedHeap()
         {
-            Assert.That(BlackboxSession.CurrentKey, Is.EqualTo(BlackboxSession.DefaultKey));
+            Assert.That(BlackboxHandle.CurrentSessionKey, Is.EqualTo(BlackboxHandle.DefaultSessionKey));
             BlackboxHandle.MaxLogCount = 1;
-            var state = BlackboxSession.CurrentState;
+            var recordingSession = BlackboxSessionRegistry.Current;
             var retained = new long[3];
             WriteAndForget(2048);
-            long baseline = CollectAndMeasure(state);
+            long baseline = CollectAndMeasure(recordingSession);
             for (int batch = 0; batch < retained.Length; batch++)
             {
                 WriteAndForget(20000);
-                retained[batch] = CollectAndMeasure(state);
+                retained[batch] = CollectAndMeasure(recordingSession);
             }
             // Allow GC/test-runner noise, but reject the old ~700 bytes per context.
             // 60,000 discarded objects retained roughly 42 MB in that implementation.
             foreach (long bytes in retained)
                 Assert.That(bytes - baseline, Is.LessThan(2 * 1024 * 1024));
             Assert.That(retained[2] - retained[0], Is.LessThan(1024 * 1024));
-            Assert.That(BlackboxSession.CurrentState, Is.SameAs(state));
-            Assert.That(state.Subjects.Count(), Is.Zero);
+            Assert.That(BlackboxSessionRegistry.Current, Is.SameAs(recordingSession));
+            Assert.That(recordingSession.Subjects.Count(), Is.Zero);
             TestContext.WriteLine($"Retained heap after 20k/40k/60k objects: {retained[0] - baseline}, {retained[1] - baseline}, {retained[2] - baseline} bytes");
-            GC.KeepAlive(state);
+            GC.KeepAlive(recordingSession);
         }
 
         [TestCase(false)]
         [TestCase(true)]
         public void SharedTrackerSupportsConcurrentRegistrationAndReuse(bool exert)
         {
-            using var session = BlackboxSession.Begin();
-            var state = BlackboxSession.CurrentState;
-            var context = new LogContext(state.Subjects.GetOrAdd(new object()), 1);
-            if (exert) ExerciseConcurrentReuse(context.ExertHandles, state);
-            else ExerciseConcurrentReuse(context.ScopeHandles, state);
+            using var session = BlackboxHandle.BeginSession();
+            var recordingSession = BlackboxSessionRegistry.Current;
+            var context = new LogContext(recordingSession.Subjects.GetOrAdd(new object()), 1);
+            if (exert) ExerciseConcurrentReuse(recordingSession.GetExertTracker(ThreadToken.Current), recordingSession);
+            else ExerciseConcurrentReuse(recordingSession.GetScopeTracker(ThreadToken.Current), recordingSession);
         }
 
         [TestCase(false, false)]
         [TestCase(false, true)]
         [TestCase(true, false)]
         [TestCase(true, true)]
-        public void SharedTrackerRetirementReturnsPendingAndPublishedIds(bool reset, bool exert)
+        public void SharedTrackerRetirementReturnsPendingAndPublishedIds(bool restartDefault, bool exert)
         {
-            using var session = BlackboxSession.Begin();
-            var state = BlackboxSession.CurrentState;
-            var context = new LogContext(state.Subjects.GetOrAdd(new object()), 1);
-            Action retire = () => { if (reset) BlackboxHandle.ForceReset(); else session.Dispose(); };
-            if (exert) ExerciseRetirement(context.ExertHandles, state, retire, c => c.ExertHandles);
-            else ExerciseRetirement(context.ScopeHandles, state, retire, c => c.ScopeHandles);
+            using var session = restartDefault ? null : BlackboxHandle.BeginSession();
+            var recordingSession = BlackboxSessionRegistry.Current;
+            var context = new LogContext(recordingSession.Subjects.GetOrAdd(new object()), 1);
+            Action retire = () => { if (restartDefault) BlackboxHandle.RestartDefaultSession(); else session.Dispose(); };
+            if (exert) ExerciseRetirement(recordingSession.GetExertTracker(ThreadToken.Current), recordingSession, retire, s => s.GetExertTracker(ThreadToken.Current));
+            else ExerciseRetirement(recordingSession.GetScopeTracker(ThreadToken.Current), recordingSession, retire, s => s.GetScopeTracker(ThreadToken.Current));
         }
 
-        private static void ExerciseConcurrentReuse<T>(HandleTracker<T> tracker, SessionState state)
+        private static void ExerciseConcurrentReuse<T>(HandleTracker<T> tracker, BlackboxSession recordingSession)
         {
             int before = HandleManager<T>.LiveCountForTests;
             var active = new ConcurrentDictionary<long, byte>();
@@ -101,7 +101,7 @@ namespace BlackThunder.BlackboxSystem.Tests
                     {
                         for (int i = 0; i < leases.Length; i++)
                         {
-                            leases[i] = tracker.Register(state);
+                            leases[i] = tracker.Register(recordingSession.State);
                             if (leases[i].Id <= 0 || !active.TryAdd(leases[i].Id, 0))
                                 throw new InvalidOperationException("Registration returned an invalid or duplicate live ID.");
                         }
@@ -118,7 +118,7 @@ namespace BlackThunder.BlackboxSystem.Tests
                         }
                     }
                     var stale = leases[0];
-                    var fresh = tracker.Register(state);
+                    var fresh = tracker.Register(recordingSession.State);
                     try
                     {
                         if (stale.Release() || !HandleManager<T>.IsAlive(fresh.Id))
@@ -131,16 +131,16 @@ namespace BlackThunder.BlackboxSystem.Tests
             Assert.That(HandleManager<T>.LiveCountForTests, Is.EqualTo(before));
         }
 
-        private static void ExerciseRetirement<T>(HandleTracker<T> tracker, SessionState state,
-            Action retire, Func<LogContext, HandleTracker<T>> selectTracker)
+        private static void ExerciseRetirement<T>(HandleTracker<T> tracker, BlackboxSession recordingSession,
+            Action retire, Func<BlackboxSession, HandleTracker<T>> selectTracker)
         {
             const int workers = 8;
             int before = HandleManager<T>.LiveCountForTests;
-            var published = Enumerable.Range(0, 80).Select(_ => tracker.Register(state)).ToArray();
+            var published = Enumerable.Range(0, 80).Select(_ => tracker.Register(recordingSession.State)).ToArray();
             using var ready = new CountdownEvent(workers);
             using var release = new ManualResetEventSlim();
             var errors = new ConcurrentQueue<Exception>();
-            state.BeforeHandleRegistration = () =>
+            recordingSession.State.BeforeHandleRegistration = () =>
             {
                 ready.Signal();
                 if (!release.Wait(10000)) throw new TimeoutException("Retirement registration gate timed out.");
@@ -149,7 +149,7 @@ namespace BlackThunder.BlackboxSystem.Tests
             {
                 try
                 {
-                    var late = tracker.Register(state);
+                    var late = tracker.Register(recordingSession.State);
                     try
                     {
                         if (late.Id != 0) throw new InvalidOperationException("A retired tracker accepted a pending registration.");
@@ -165,11 +165,11 @@ namespace BlackThunder.BlackboxSystem.Tests
                 retire();
                 Assert.That(published.All(lease => !HandleManager<T>.IsAlive(lease.Id)), Is.True);
 
-                using var next = BlackboxSession.Begin();
-                var nextState = BlackboxSession.CurrentState;
-                var nextContext = new LogContext(nextState.Subjects.GetOrAdd(new object()), 1);
-                var nextTracker = selectTracker(nextContext);
-                var fresh = Enumerable.Range(0, 80).Select(_ => nextTracker.Register(nextState)).ToArray();
+                using var next = BlackboxHandle.BeginSession();
+                var nextSession = BlackboxSessionRegistry.Current;
+                var nextContext = new LogContext(nextSession.Subjects.GetOrAdd(new object()), 1);
+                var nextTracker = selectTracker(nextSession);
+                var fresh = Enumerable.Range(0, 80).Select(_ => nextTracker.Register(nextSession.State)).ToArray();
                 try
                 {
                     foreach (var stale in published) Assert.That(stale.Release(), Is.False);
@@ -185,7 +185,7 @@ namespace BlackThunder.BlackboxSystem.Tests
                 release.Set();
                 foreach (var thread in threads) thread.Join(15000);
                 foreach (var lease in published) lease.Release();
-                state.BeforeHandleRegistration = null;
+                recordingSession.State.BeforeHandleRegistration = null;
             }
             Assert.That(HandleManager<T>.LiveCountForTests, Is.EqualTo(before));
         }
@@ -197,11 +197,11 @@ namespace BlackThunder.BlackboxSystem.Tests
             for (int i = 0; i < count; i++)
             {
                 var owner = new object();
-                var box = BlackboxRegistry.GetBlackbox(owner);
+                var box = BlackboxSessionRegistry.GetBlackbox(owner);
                 box.Write("one", "Run");
                 var context = box.CurrentContext;
-                seen.Add(context.ScopeHandles);
-                seen.Add(context.ExertHandles);
+                seen.Add(BlackboxSessionRegistry.Current.GetScopeTracker(ThreadToken.Current));
+                seen.Add(BlackboxSessionRegistry.Current.GetExertTracker(ThreadToken.Current));
                 GC.KeepAlive(owner);
             }
             return seen.Count;
@@ -219,11 +219,11 @@ namespace BlackThunder.BlackboxSystem.Tests
         }
 
         [MethodImpl(MethodImplOptions.NoInlining)]
-        private static long CollectAndMeasure(SessionState state)
+        private static long CollectAndMeasure(BlackboxSession recordingSession)
         {
             BlackboxTestDoubles.ForceFullCollection();
             // Weak registry entries are cleaned independently of tracker ownership.
-            state.Subjects.Cleanup();
+            recordingSession.Subjects.Cleanup();
             BlackboxTestDoubles.ForceFullCollection();
             return GC.GetTotalMemory(true);
         }

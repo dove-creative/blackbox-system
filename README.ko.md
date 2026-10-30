@@ -28,31 +28,58 @@ Blackbox를 사용해 주셔서 감사합니다.
 ## 테스트 세션
 
 ```csharp
-using var session = BlackboxSession.Begin();
+using var session = BlackboxHandle.BeginSession();
 BlackboxHandle.Configure(logDirectory, Console.WriteLine,
     openLogOption: OpenLogOption.Never);
 var system = new SystemUnderTest();
 await system.RunAsync();
 ```
 
-세션 안에서 객체를 만들고 모든 자식 작업을 await/join한 뒤 Dispose한다. `Begin()`은 동기 메서드이며 일반적인 Task·Thread의 실행 문맥 전파를 따라 세션이 전달된다. NUnit에서는 SetUp의 AsyncLocal 전파에 의존하지 않고 테스트 본문에서 세션을 연다. 각 세션은 부모 설정을 복사하고 저장소·크래시 동결·리셋을 격리한다.
+세션 안에서 객체를 만들고 모든 자식 작업을 await/join한 뒤 Dispose한다. `BeginSession()`은 동기 메서드이며 일반적인 Task·Thread의 실행 문맥 전파를 따라 세션이 전달된다. NUnit에서는 SetUp의 AsyncLocal 전파에 의존하지 않고 테스트 본문에서 세션을 연다. 각 세션은 하나의 기록 수명을 가지며 현재 설정을 상속하고 저장소·크래시 동결을 격리한다. 새 명시적 세션이 필요하면 이전 세션을 Dispose한 뒤 BeginSession()을 다시 호출한다.
 
-생성자에서 보관한 핸들을 포함해 모든 핸들은 획득 당시 세션과 세대에 고정된다. 객체를 다른 세션에서 사용해도 핸들이 이동하지 않는다. `Begin()` 없는 코드는 공유 기본 세션을 사용하므로 기본 세션을 리셋·설정하는 테스트는 직렬 실행한다.
+생성자에서 보관한 핸들을 포함해 모든 핸들은 획득 당시 세션에 고정된다. 객체를 다른 세션에서 사용해도 핸들이 이동하지 않는다. `BeginSession()` 없는 코드는 공유 기본 세션을 사용하므로 기본 세션을 재시작·설정하는 테스트는 직렬 실행한다.
 
-현재 흐름과 기본 세션의 키는 `BlackboxSession.CurrentKey`, `BlackboxSession.DefaultKey`로 확인한다. 세션 밖에서 생성자가 `_bb`를 보관한 객체는 세션 안에서 사용해도 유효한 핸들의 키가 기본 세션 키다. 다음 비교로 이 상황을 진단할 수 있다.
+**Dispose하지 않은 명시적 세션은 해제되지 않는다.** 전역 목록이 `Dispose()` 또는 `BlackboxHandle.DisposeActiveSessions()` 호출까지 강한 참조를 유지한다. 참조를 버리고 GC를 실행해도 세션과 미종료 Scope/Exert 핸들 ID는 해제되지 않으며, 정리하지 않으면 프로세스 종료까지 남는다. `ActiveSessionCount`는 이 세션의 개수이고, `GetActiveSessionKeys()`는 시작 순서의 독립된 `Guid[]` 스냅샷을 반환한다. 기본 세션과 재시작 경쟁 후보는 세지 않는다.
+
+NUnit TearDown에서는 정리하기 전에 Dispose 누락을 검사한다.
 
 ```csharp
-if (_bb.SessionKey != BlackboxSession.CurrentKey)
+[NonParallelizable]
+public abstract class BlackboxTestBase
+{
+    [TearDown]
+    public void CheckSessions()
+    {
+        try
+        {
+            Assert.That(BlackboxHandle.ActiveSessionCount, Is.Zero,
+                "종료되지 않은 Blackbox 세션: " +
+                string.Join(", ", BlackboxHandle.GetActiveSessionKeys()));
+        }
+        finally
+        {
+            BlackboxHandle.DisposeActiveSessions();
+        }
+    }
+}
+```
+
+목록은 전역이므로 병렬 테스트에서는 다른 테스트의 세션도 보이며 일괄 정리가 그 세션까지 종료할 수 있다. 위 검사는 직렬 테스트에서 모든 자식 작업이 끝난 뒤 사용한다. 일괄 정리는 잠금 안에서 스냅샷만 만들고 잠금 밖에서 시작 역순으로 Dispose하여 호출한 흐름의 중첩 바인딩을 복원한다. 다른 흐름은 스스로 Dispose할 때까지 종료된 세션에 남아 기록이 거부되며, 스냅샷 이후 시작한 세션은 포함되지 않는다. 세션 종료와 목록 제거는 최초 Dispose에서만 수행하고, 바인딩 복원은 호출한 흐름이 아직 그 세션에 묶여 있으면 Dispose할 때마다 수행한다.
+
+현재 흐름과 기본 세션의 키는 `BlackboxHandle.CurrentSessionKey`, `BlackboxHandle.DefaultSessionKey`로 확인한다. 세션 밖에서 생성자가 `_bb`를 보관한 객체는 세션 안에서 사용해도 유효한 핸들의 키가 기본 세션 키다. 다음 비교로 이 상황을 진단할 수 있다.
+
+```csharp
+if (_bb.SessionKey != BlackboxHandle.CurrentSessionKey)
 {
     /* 이 객체는 다른 세션에서 생성됨 */
 }
 ```
 
-세 속성은 읽기 전용 Guid이며 세션 객체를 노출하지 않고 잠금·할당 없이 읽는다. 무효 핸들(`IsValid == false`)은 `Guid.Empty`를 반환하므로 차이를 해석하기 전에 유효 여부를 확인한다. 키는 세션을 식별하며 리셋된 세대를 구별하는 값은 아니다.
+세 속성은 읽기 전용 Guid이며 세션 객체를 노출하지 않고 잠금·할당 없이 읽는다. 무효 핸들(`IsValid == false`)은 `Guid.Empty`를 반환하므로 차이를 해석하기 전에 유효 여부를 확인한다. 키는 세션의 기록 수명을 식별하며 기본 세션을 재시작하면 DefaultSessionKey도 바뀐다.
 
-일반 `Export()`는 기록을 중단하지 않으며 반복할 수 있다. `CrashExport()`는 해당 세대만 동결하고 최초 한 번 출력한다. 크래시 출력 실패 후에는 일반 Export로 재시도할 수 있다. 실행 중 출력은 근사 스냅샷이며 작업 종료 뒤에는 링 버퍼에 남아 있는 안정된 기록을 출력한다. 파일명에 짧은 세션 키와 출력 일련번호를 넣어 덮어쓰지 않는다. 누적 파일 정리는 호출자가 담당한다.
+일반 `Export()`는 기록을 중단하지 않으며 반복할 수 있다. `CrashExport()`는 해당 세션만 동결하고 최초 한 번 출력한다. 크래시 출력 실패 후에는 일반 Export로 재시도할 수 있다. 실행 중 출력은 근사 스냅샷이며 작업 종료 뒤에는 링 버퍼에 남아 있는 안정된 기록을 출력한다. 파일명에 짧은 세션 키와 출력 일련번호를 넣어 덮어쓰지 않는다. 누적 파일 정리는 호출자가 담당한다.
 
-`ForceReset()`은 현재 세션을 새 세대로 바꾸며 기존 핸들의 기록을 거부한다. 명시적 세션의 기존 자식 실행 문맥도 이전 세대에 남는다. 바인딩 없는 기본 세션 호출은 공유된 현재 세대를 따른다. 작업과 종료가 겹쳐도 이전 버퍼를 재사용하지 않으며, 진행 중이던 기록은 이전 세대 안에서 완료될 수 있다. 보관된 핸들로 이전 기록을 출력하는 것은 가능하다.
+`BlackboxHandle.RestartDefaultSession()`은 공유 기본 세션만 새 인스턴스로 교체하고 이전 세션을 종료한다. 이전 기본 설정을 상속하며 키·저장소·카운터·출력 일련번호·크래시·경고 상태는 새로 시작한다. 명시적 세션 안에서 호출해도 해당 세션과 자식 문맥은 유지된다. 바인딩 없는 호출은 새 기본 세션을 따르고, 기존 핸들은 종료된 세션에 남아 기록이 거부된다. 종료와 경합하는 기록은 이전 세션 안에서 완료될 수 있지만 버퍼를 새 세션에 재사용하지 않는다. 보관된 핸들로 이전 기록을 출력하는 것은 가능하다. 종료된 명시적 세션을 상속한 자식 문맥은 기본 세션으로 자동 전환되지 않는다.
 
 Subject의 `ToString()`을 자동 호출하지 않는다. 객체 이름은 한 번 명시한다.
 
@@ -137,7 +164,9 @@ dotnet run --project samples/Blackbox.NativeCSharp.Samples/Blackbox.NativeCSharp
 ## 주요 API
 
 - `BlackboxHandle.Of(subject)`: 대상 객체의 기록 진입점을 얻는다.
-- `BlackboxSession.Begin()`: 격리된 테스트·디버그 세션을 시작한다.
+- `BlackboxHandle.BeginSession()`: 격리된 테스트·디버그 세션을 시작한다.
+- `BlackboxHandle.ActiveSessionCount` / `GetActiveSessionKeys()`: 프로세스 전체의 미종료 명시적 세션을 확인한다.
+- `BlackboxHandle.DisposeActiveSessions()`: 해당 세션의 스냅샷을 일괄 종료한다.
 - `Label(name)`: 최초의 공백 아닌 이름을 저장하고 같은 핸들을 반환한다.
 - `Write(message)`: 한 줄 활동 로그를 남긴다.
 - `Write(message).With(targets)`: 활동 로그에 관련 대상을 붙인다.
@@ -148,11 +177,11 @@ dotnet run --project samples/Blackbox.NativeCSharp.Samples/Blackbox.NativeCSharp
 - `WriteError(message)`: 오류 메시지를 로그로 남기고 같은 문자열을 반환한다.
 - `Export(...)`: 현재 객체를 중심으로 로그 파일을 출력한다.
 - `CrashExport(...)`: 오류 기록과 출력 생성을 함께 수행한다.
-- `ForceReset()`: 현재 세션을 새 세대로 교체하고 이전 핸들의 기록을 무효화한다.
+- `RestartDefaultSession()`: 설정을 유지하며 공유 기본 세션을 종료·교체한다. 명시적 세션은 변경하지 않는다.
 
 ## 문서
 
-[0.2.0 세션과 기록 계약](docs/Wiki/05-Sessions.md)에서 수명·기본 세션·무잠금 기록·출력 규칙을 설명한다.
+[세션과 기록 계약](docs/Wiki/05-Sessions.md)에서 수명·기본 세션·무잠금 기록·출력 규칙을 설명한다.
 
 ## 테스트
 

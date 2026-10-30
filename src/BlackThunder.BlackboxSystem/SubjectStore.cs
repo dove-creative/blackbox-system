@@ -5,14 +5,6 @@ using System.Threading;
 
 namespace BlackThunder.BlackboxSystem
 {
-    internal static class BlackboxRegistry
-    {
-        internal static Blackbox GetBlackbox(object subject) => BlackboxSession.CurrentState.Subjects.GetOrAdd(subject);
-        internal static bool Contains(object subject) => BlackboxSession.CurrentState.Subjects.Contains(subject);
-        internal static int Count() => BlackboxSession.CurrentState.Subjects.Count();
-        public static void ForceReset() => BlackboxSession.ResetCurrent();
-    }
-
     internal sealed class SubjectStore
     {
         private const int CleanupBucketsPerInsertion = 16;

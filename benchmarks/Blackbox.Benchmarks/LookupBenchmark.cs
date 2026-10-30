@@ -16,24 +16,24 @@ internal static class LookupBenchmark
     [MethodImpl(MethodImplOptions.NoInlining)]
     private static void Measure(int count)
     {
-        BlackboxHandle.ForceReset();
+        BlackboxHandle.RestartDefaultSession();
         var owners = new object[count];
         for (int i = 0; i < count; i++)
         {
             owners[i] = new object();
-            BlackboxRegistry.GetBlackbox(owners[i]);
+            BlackboxSessionRegistry.GetBlackbox(owners[i]);
         }
         var indices = new int[4096];
         var random = new Random(1);
         for (int i = 0; i < indices.Length; i++) indices[i] = random.Next(count);
         Blackbox last = null;
-        for (int i = 0; i < 100_000; i++) last = BlackboxRegistry.GetBlackbox(owners[indices[i & 4095]]);
+        for (int i = 0; i < 100_000; i++) last = BlackboxSessionRegistry.GetBlackbox(owners[indices[i & 4095]]);
 
         const int iterations = 2_000_000;
         var watch = new Stopwatch();
         var allocated = GC.GetAllocatedBytesForCurrentThread();
         watch.Start();
-        for (int i = 0; i < iterations; i++) last = BlackboxRegistry.GetBlackbox(owners[indices[i & 4095]]);
+        for (int i = 0; i < iterations; i++) last = BlackboxSessionRegistry.GetBlackbox(owners[indices[i & 4095]]);
         watch.Stop();
         allocated = GC.GetAllocatedBytesForCurrentThread() - allocated;
         Console.WriteLine(FormattableString.Invariant($"lookup_hit,{count},{iterations},{watch.Elapsed.TotalMilliseconds:F3},{watch.Elapsed.TotalNanoseconds / iterations:F2},{allocated}"));

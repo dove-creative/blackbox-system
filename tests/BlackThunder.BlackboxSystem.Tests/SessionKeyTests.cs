@@ -12,33 +12,33 @@ namespace BlackThunder.BlackboxSystem.Tests
         [Test]
         public void OutsideSessionCurrentKeyIsDefaultKey()
         {
-            Assert.That(BlackboxSession.DefaultKey, Is.Not.EqualTo(Guid.Empty));
-            Assert.That(BlackboxSession.CurrentKey, Is.EqualTo(BlackboxSession.DefaultKey));
+            Assert.That(BlackboxHandle.DefaultSessionKey, Is.Not.EqualTo(Guid.Empty));
+            Assert.That(BlackboxHandle.CurrentSessionKey, Is.EqualTo(BlackboxHandle.DefaultSessionKey));
         }
 
         [Test]
         public void BeginExposesItsKeyWithoutChangingDefaultKey()
         {
-            var defaultKey = BlackboxSession.DefaultKey;
-            using (var session = BlackboxSession.Begin())
+            var defaultKey = BlackboxHandle.DefaultSessionKey;
+            using (var session = BlackboxHandle.BeginSession())
             {
-                Assert.That(BlackboxSession.CurrentKey, Is.EqualTo(session.SessionKey));
+                Assert.That(BlackboxHandle.CurrentSessionKey, Is.EqualTo(session.SessionKey));
                 Assert.That(session.SessionKey, Is.Not.EqualTo(defaultKey));
-                Assert.That(BlackboxSession.DefaultKey, Is.EqualTo(defaultKey));
+                Assert.That(BlackboxHandle.DefaultSessionKey, Is.EqualTo(defaultKey));
             }
-            Assert.That(BlackboxSession.CurrentKey, Is.EqualTo(defaultKey));
+            Assert.That(BlackboxHandle.CurrentSessionKey, Is.EqualTo(defaultKey));
         }
 
         [Test]
         public async Task KeyFlowsThroughTasksThreadsAndAwait()
         {
-            using var session = BlackboxSession.Begin();
-            Assert.That(await Task.Run(() => BlackboxSession.CurrentKey), Is.EqualTo(session.SessionKey));
+            using var session = BlackboxHandle.BeginSession();
+            Assert.That(await Task.Run(() => BlackboxHandle.CurrentSessionKey), Is.EqualTo(session.SessionKey));
             await Task.Yield();
-            Assert.That(BlackboxSession.CurrentKey, Is.EqualTo(session.SessionKey));
+            Assert.That(BlackboxHandle.CurrentSessionKey, Is.EqualTo(session.SessionKey));
 
             Guid threadKey = Guid.Empty;
-            var thread = new Thread(() => threadKey = BlackboxSession.CurrentKey);
+            var thread = new Thread(() => threadKey = BlackboxHandle.CurrentSessionKey);
             thread.Start();
             Assert.That(thread.Join(10000), Is.True);
             Assert.That(threadKey, Is.EqualTo(session.SessionKey));
@@ -53,15 +53,15 @@ namespace BlackThunder.BlackboxSystem.Tests
             {
                 ready.Set();
                 Assert.That(release.Wait(10000), Is.True);
-                return BlackboxSession.CurrentKey;
+                return BlackboxHandle.CurrentSessionKey;
             });
             try
             {
                 Assert.That(ready.Wait(10000), Is.True);
-                using var session = BlackboxSession.Begin();
+                using var session = BlackboxHandle.BeginSession();
                 release.Set();
-                Assert.That(await pending, Is.EqualTo(BlackboxSession.DefaultKey));
-                Assert.That(BlackboxSession.CurrentKey, Is.EqualTo(session.SessionKey));
+                Assert.That(await pending, Is.EqualTo(BlackboxHandle.DefaultSessionKey));
+                Assert.That(BlackboxHandle.CurrentSessionKey, Is.EqualTo(session.SessionKey));
             }
             finally { release.Set(); await pending; }
         }
@@ -75,17 +75,17 @@ namespace BlackThunder.BlackboxSystem.Tests
             var thread = new Thread(() =>
             {
                 ready.Set();
-                if (release.Wait(10000)) threadKey = BlackboxSession.CurrentKey;
+                if (release.Wait(10000)) threadKey = BlackboxHandle.CurrentSessionKey;
             });
             thread.Start();
             try
             {
                 Assert.That(ready.Wait(10000), Is.True);
-                using var session = BlackboxSession.Begin();
+                using var session = BlackboxHandle.BeginSession();
                 release.Set();
                 Assert.That(thread.Join(10000), Is.True);
-                Assert.That(threadKey, Is.EqualTo(BlackboxSession.DefaultKey));
-                Assert.That(BlackboxSession.CurrentKey, Is.EqualTo(session.SessionKey));
+                Assert.That(threadKey, Is.EqualTo(BlackboxHandle.DefaultSessionKey));
+                Assert.That(BlackboxHandle.CurrentSessionKey, Is.EqualTo(session.SessionKey));
             }
             finally { release.Set(); thread.Join(10000); }
         }
@@ -93,25 +93,25 @@ namespace BlackThunder.BlackboxSystem.Tests
         [Test]
         public void DisposingNestedSessionRestoresOuterKey()
         {
-            using var outer = BlackboxSession.Begin();
-            using (var inner = BlackboxSession.Begin())
+            using var outer = BlackboxHandle.BeginSession();
+            using (var inner = BlackboxHandle.BeginSession())
             {
-                Assert.That(BlackboxSession.CurrentKey, Is.EqualTo(inner.SessionKey));
+                Assert.That(BlackboxHandle.CurrentSessionKey, Is.EqualTo(inner.SessionKey));
                 Assert.That(inner.SessionKey, Is.Not.EqualTo(outer.SessionKey));
             }
-            Assert.That(BlackboxSession.CurrentKey, Is.EqualTo(outer.SessionKey));
+            Assert.That(BlackboxHandle.CurrentSessionKey, Is.EqualTo(outer.SessionKey));
         }
 
         [Test]
         public void CachedConstructorHandleStaysInDefaultSession()
         {
             var subject = new CachedRecorder();
-            var originalBox = BlackboxRegistry.GetBlackbox(subject);
-            using var session = BlackboxSession.Begin();
+            var originalBox = BlackboxSessionRegistry.GetBlackbox(subject);
+            using var session = BlackboxHandle.BeginSession();
             subject.Write();
-            Assert.That(subject.Handle.SessionKey, Is.EqualTo(BlackboxSession.DefaultKey));
-            Assert.That(subject.Handle.SessionKey, Is.Not.EqualTo(BlackboxSession.CurrentKey));
-            Assert.That(BlackboxRegistry.Contains(subject), Is.False);
+            Assert.That(subject.Handle.SessionKey, Is.EqualTo(BlackboxHandle.DefaultSessionKey));
+            Assert.That(subject.Handle.SessionKey, Is.Not.EqualTo(BlackboxHandle.CurrentSessionKey));
+            Assert.That(BlackboxSessionRegistry.Contains(subject), Is.False);
             Assert.That(originalBox.GetLogs().Any(log => log.Message == "cached record"), Is.True);
             GC.KeepAlive(subject);
         }
@@ -120,22 +120,22 @@ namespace BlackThunder.BlackboxSystem.Tests
         public void DefaultHandleHasEmptyKey() =>
             Assert.That(default(BlackboxHandle).SessionKey, Is.EqualTo(Guid.Empty));
 
-        [TestCase("reset")]
+        [TestCase("restartDefault")]
         [TestCase("dispose")]
         [TestCase("disabled")]
         [TestCase("frozen")]
         public void InvalidatedHandlesHaveEmptyKeysWithoutWarnings(string reason)
         {
-            using var session = BlackboxSession.Begin();
+            using var session = reason == "restartDefault" ? null : BlackboxHandle.BeginSession();
             var owner = new object();
             var handle = BlackboxHandle.Of(owner);
-            Assert.That(handle.SessionKey, Is.EqualTo(session.SessionKey));
+            Assert.That(handle.SessionKey, Is.EqualTo(BlackboxHandle.CurrentSessionKey));
             switch (reason)
             {
-                case "reset": BlackboxHandle.ForceReset(); break;
+                case "restartDefault": BlackboxHandle.RestartDefaultSession(); break;
                 case "dispose": session.Dispose(); break;
                 case "disabled": BlackboxHandle.UseBlackbox = false; break;
-                case "frozen": BlackboxSession.CurrentState.TryFreeze(new CrashInfo("test", string.Empty)); break;
+                case "frozen": BlackboxSessionRegistry.Current.State.TryFreeze(new CrashInfo("test", string.Empty)); break;
             }
             var warnings = BlackboxTestDoubles.WarningLogs.Count;
             Assert.That(handle.IsValid, Is.False);
@@ -145,42 +145,45 @@ namespace BlackThunder.BlackboxSystem.Tests
         }
 
         [Test]
-        public void ResetChangesGenerationWithoutChangingSessionKeys()
+        public void RestartChangesDefaultKeyWithoutChangingExplicitSessionKeys()
         {
-            var defaultKey = BlackboxSession.DefaultKey;
-            BlackboxHandle.ForceReset();
-            Assert.That(BlackboxSession.CurrentKey, Is.EqualTo(defaultKey));
-            using var session = BlackboxSession.Begin();
+            var defaultKey = BlackboxHandle.DefaultSessionKey;
+            BlackboxHandle.RestartDefaultSession();
+            Assert.That(BlackboxHandle.CurrentSessionKey, Is.Not.EqualTo(defaultKey));
+            defaultKey = BlackboxHandle.DefaultSessionKey;
+            using var session = BlackboxHandle.BeginSession();
             var owner = new object();
             var old = BlackboxHandle.Of(owner);
-            BlackboxHandle.ForceReset();
-            Assert.That(old.SessionKey, Is.EqualTo(Guid.Empty));
+            BlackboxHandle.RestartDefaultSession();
+            Assert.That(old.SessionKey, Is.EqualTo(session.SessionKey));
             Assert.That(BlackboxHandle.Of(owner).SessionKey, Is.EqualTo(session.SessionKey));
-            Assert.That(BlackboxSession.CurrentKey, Is.EqualTo(session.SessionKey));
-            Assert.That(BlackboxSession.DefaultKey, Is.EqualTo(defaultKey));
+            Assert.That(BlackboxHandle.CurrentSessionKey, Is.EqualTo(session.SessionKey));
+            Assert.That(BlackboxHandle.DefaultSessionKey, Is.Not.EqualTo(defaultKey));
             GC.KeepAlive(owner);
         }
 
         [Test]
         public void DiagnosticPropertiesAreReadOnlyAndExposeNoSessionObject()
         {
-            foreach (var name in new[] { "CurrentKey", "DefaultKey" })
+            foreach (var name in new[] { nameof(BlackboxHandle.CurrentSessionKey), nameof(BlackboxHandle.DefaultSessionKey) })
             {
-                var property = typeof(BlackboxSession).GetProperty(name, BindingFlags.Public | BindingFlags.Static);
+                var property = typeof(BlackboxHandle).GetProperty(name, BindingFlags.Public | BindingFlags.Static);
                 Assert.That(property.PropertyType, Is.EqualTo(typeof(Guid)));
                 Assert.That(property.CanWrite, Is.False);
             }
             var handleKey = typeof(BlackboxHandle).GetProperty("SessionKey");
             Assert.That(handleKey.PropertyType, Is.EqualTo(typeof(Guid)));
             Assert.That(handleKey.CanWrite, Is.False);
-            Assert.That(typeof(BlackboxSession).GetProperties(BindingFlags.Public | BindingFlags.Static)
+            Assert.That(typeof(BlackboxHandle).GetProperties(BindingFlags.Public | BindingFlags.Static)
                 .Any(property => property.PropertyType == typeof(BlackboxSession)), Is.False);
+            // Session statics live in the internal registry; the public entry point is BlackboxHandle.
+            Assert.That(typeof(BlackboxSession).GetMembers(BindingFlags.Public | BindingFlags.Static), Is.Empty);
         }
 
         [Test]
         public void RepeatedKeyReadsAllocateNothingAndDoNotLog()
         {
-            using var session = BlackboxSession.Begin();
+            using var session = BlackboxHandle.BeginSession();
             var owner = new object();
             var handle = BlackboxHandle.Of(owner);
             ReadKeys();
@@ -194,7 +197,7 @@ namespace BlackThunder.BlackboxSystem.Tests
 
             void ReadKeys()
             {
-                if (BlackboxSession.CurrentKey != session.SessionKey || BlackboxSession.DefaultKey == Guid.Empty ||
+                if (BlackboxHandle.CurrentSessionKey != session.SessionKey || BlackboxHandle.DefaultSessionKey == Guid.Empty ||
                     handle.SessionKey != session.SessionKey || default(BlackboxHandle).SessionKey != Guid.Empty)
                     throw new InvalidOperationException("Unexpected diagnostic key.");
             }

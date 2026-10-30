@@ -114,7 +114,7 @@ namespace BlackThunder.BlackboxSystem.Tests
             var source = BlackboxTestDoubles.Blackbox("source");
             var target = BlackboxTestDoubles.Blackbox("target");
             var context = new LogContext(source, 10);
-            var handle = context.EnqueueLog("hello %0", 0, "Run");
+            var handle = BlackboxTestDoubles.Bind(context.EnqueueLog("hello %0", 0, "Run"));
 
             // Table 4-1 / ScopeOpen x ResolveWith.ValidTarget
             handle.With(target.Owner, TargetTypes.Full);

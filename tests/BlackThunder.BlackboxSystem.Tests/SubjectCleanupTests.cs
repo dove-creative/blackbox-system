@@ -20,8 +20,8 @@ namespace BlackThunder.BlackboxSystem.Tests
         [TestCase(256, int.MaxValue - 7)]
         public void InsertionsSweepTheWholeTableIncludingAcrossCursorOverflow(int capacity, int start)
         {
-            using var session = BlackboxSession.BeginForTests(capacity);
-            var store = BlackboxSession.CurrentState.Subjects;
+            using var session = BlackboxSessionRegistry.Begin(capacity);
+            var store = BlackboxSessionRegistry.Current.Subjects;
             var living = new object();
             var canonical = store.GetOrAdd(living);
             canonical.Write("keep this log", "Test");
@@ -49,8 +49,8 @@ namespace BlackThunder.BlackboxSystem.Tests
         [Test]
         public async Task ConcurrentRegistrationsReserveOneCleanupRangePerNewSubject()
         {
-            using var session = BlackboxSession.BeginForTests(256);
-            var store = BlackboxSession.CurrentState.Subjects;
+            using var session = BlackboxSessionRegistry.Begin(256);
+            var store = BlackboxSessionRegistry.Current.Subjects;
             var owners = Enumerable.Range(0, 64).Select(_ => new object()).ToArray();
             using var start = new Barrier(8);
             var workers = Enumerable.Range(0, 8).Select(_ => Task.Factory.StartNew(() =>
@@ -71,8 +71,8 @@ namespace BlackThunder.BlackboxSystem.Tests
         [Test]
         public async Task StaleCleanupCannotOverwriteAConcurrentInsertion()
         {
-            using var session = BlackboxSession.BeginForTests(32);
-            var store = BlackboxSession.CurrentState.Subjects;
+            using var session = BlackboxSessionRegistry.Begin(32);
+            var store = BlackboxSessionRegistry.Current.Subjects;
             var living = OwnerInBucket(0, 32);
             var canonical = store.GetOrAdd(living);
             RegisterDiscarded(store, 0, 32);
@@ -110,14 +110,15 @@ namespace BlackThunder.BlackboxSystem.Tests
 
         [TestCase(false)]
         [TestCase(true)]
-        public async Task DelayedSweepAfterRetirementStaysInItsOriginalGeneration(bool reset)
+        public async Task DelayedSweepAfterRetirementStaysInItsOriginalSession(bool restartDefault)
         {
-            using var session = BlackboxSession.BeginForTests(32);
-            var oldState = BlackboxSession.CurrentState;
-            var store = oldState.Subjects;
-            RegisterDiscarded(store, 0, 32);
+            int capacity = restartDefault ? 65536 : 32;
+            using var session = restartDefault ? null : BlackboxSessionRegistry.Begin(capacity);
+            var oldSession = BlackboxSessionRegistry.Current;
+            var store = oldSession.Subjects;
+            RegisterDiscarded(store, 0, capacity);
             BlackboxTestDoubles.ForceFullCollection();
-            var owner = OwnerInBucket(31, 32);
+            var owner = OwnerInBucket(capacity - 1, capacity);
             using var ready = new ManualResetEventSlim();
             using var proceed = new ManualResetEventSlim();
             Cursor.SetValue(store, 0);
@@ -130,16 +131,16 @@ namespace BlackThunder.BlackboxSystem.Tests
             try
             {
                 Assert.That(ready.Wait(10000), Is.True);
-                if (reset) BlackboxHandle.ForceReset(); else session.Dispose();
-                var current = BlackboxSession.CurrentState.Subjects;
+                if (restartDefault) BlackboxHandle.RestartDefaultSession(); else session.Dispose();
+                var current = BlackboxSessionRegistry.Current.Subjects;
                 var currentBox = current.GetOrAdd(owner);
-                currentBox.Write("new generation", "Test");
+                currentBox.Write("new session", "Test");
                 proceed.Set();
                 var oldBox = await sweeping;
-                Assert.That(oldBox.State, Is.SameAs(oldState));
+                Assert.That(oldBox.State, Is.SameAs(oldSession.State));
                 Assert.That(current.GetOrAdd(owner), Is.SameAs(currentBox));
                 Assert.That(current.Count(), Is.EqualTo(1));
-                Assert.That(currentBox.GetLogs().Single().Message, Is.EqualTo("new generation"));
+                Assert.That(currentBox.GetLogs().Single().Message, Is.EqualTo("new session"));
             }
             finally { proceed.Set(); await sweeping; }
             GC.KeepAlive(owner);

@@ -5,8 +5,13 @@ namespace BlackThunder.BlackboxSystem
     public enum LogLevel { Normal, Warning }
     internal static class Infrastructure
     {
-        private static SessionSettings Settings => BlackboxSession.CurrentState.Settings;
-        private static void Update(Action<SessionSettings> change) => BlackboxSession.CurrentState.UpdateSettings(change);
+        private static SessionSettings Settings => BlackboxSessionRegistry.Current.State.Settings;
+        internal static void Update(Action<SessionSettings> change)
+        {
+            var state = BlackboxSessionRegistry.Current.State;
+            // A disposed session keeps its settings; the rejected change is reported once.
+            if (!state.TryUpdateSettings(change)) state.CheckWrite();
+        }
         public static string LogDirectory { get => Settings.LogDirectory; set => Update(s => s.LogDirectory = value); }
         public static Action<string> NormalLogger { get => Settings.NormalLogger; set => Update(s => s.NormalLogger = value); }
         public static Action<string> WarningLogger { get => Settings.WarningLogger; set => Update(s => s.WarningLogger = value); }

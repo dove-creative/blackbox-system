@@ -26,7 +26,7 @@ namespace BlackThunder.BlackboxSystem.Tests
             var blackbox = BlackboxTestDoubles.Blackbox("owner");
 
             // Table 4-2 / Ready x WriteScope
-            var handle = blackbox.WriteScope("scope", "Run");
+            var handle = BlackboxTestDoubles.Scope(blackbox, "scope", "Run");
 
             var log = BlackboxTestDoubles.Logs(blackbox).Single();
             Assert.That(handle.IsAlive, Is.True);
@@ -80,7 +80,7 @@ namespace BlackThunder.BlackboxSystem.Tests
             var target = BlackboxTestDoubles.Blackbox("target");
 
             // Table 4-2 / Ready x Exert.OtherPeer
-            var handle = source.Exert(target, "call", "Run");
+            var handle = BlackboxTestDoubles.Exert(source, target, "call", "Run");
 
             Assert.That(handle.IsAlive, Is.True);
             Assert.That(BlackboxTestDoubles.Logs(source).Single().InteractionId, Is.GreaterThanOrEqualTo(0));
@@ -92,19 +92,19 @@ namespace BlackThunder.BlackboxSystem.Tests
         {
             var blackbox = BlackboxTestDoubles.Blackbox("owner");
             blackbox.Write("before", "Run");
-            Assert.That(BlackboxSession.CurrentState.TryFreeze(new CrashInfo("test", string.Empty)), Is.True);
+            Assert.That(BlackboxSessionRegistry.Current.State.TryFreeze(new CrashInfo("test", string.Empty)), Is.True);
 
             // Table 4-2 / Printed x Write
             var message = blackbox.Write("after", "Run").With();
 
             // Table 4-2 / Printed x WriteScope
-            var scope = blackbox.WriteScope("scope", "Run");
+            var scope = BlackboxTestDoubles.Scope(blackbox, "scope", "Run");
 
             // Table 4-2 / Printed x ExertMessage.OtherSelf
             var exertMessage = blackbox.ExertMessage(blackbox, "call", "Run");
 
             // Table 4-2 / Printed x Exert.OtherSelf
-            var exert = blackbox.Exert(blackbox, "call", "Run");
+            var exert = BlackboxTestDoubles.Exert(blackbox, blackbox, "call", "Run");
 
             Assert.That(message, Is.EqualTo("after"));
             Assert.That(scope.IsDisposed, Is.True);

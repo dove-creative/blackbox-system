@@ -23,7 +23,7 @@ namespace BlackThunder.BlackboxSystem.Tests
         [Test]
         public void RecordingTaggingConstructingAndExportingNeverCallSubjectToString()
         {
-            using var session = BlackboxSession.Begin();
+            using var session = BlackboxHandle.BeginSession();
             BlackboxHandle.LogDirectory = BlackboxTestDoubles.CreateTempDirectory();
             var owner = new ExplosiveOwner();
             var target = new ExplosiveOwner();
@@ -43,7 +43,7 @@ namespace BlackThunder.BlackboxSystem.Tests
         [Test]
         public void LabelsAreSetOnceAndInvalidHandlesCannotSetThem()
         {
-            using var session = BlackboxSession.Begin();
+            using var session = BlackboxHandle.BeginSession();
             var warnings = new ConcurrentQueue<string>();
             BlackboxHandle.WarningLogger = warnings.Enqueue;
             var owner = new object();
@@ -72,7 +72,7 @@ namespace BlackThunder.BlackboxSystem.Tests
             Action closure = () => GC.KeepAlive(capture);
             var generated = closure.Target.GetType();
             Assert.That(TypeDisplayName.Format(generated), Does.EndWith(generated.Name));
-            using var session = BlackboxSession.Begin();
+            using var session = BlackboxHandle.BeginSession();
             BlackboxHandle.LogDirectory = BlackboxTestDoubles.CreateTempDirectory();
             var handle = BlackboxHandle.Of(closure.Target).Label("<script>&\"");
             handle.Write("hello");
@@ -85,9 +85,9 @@ namespace BlackThunder.BlackboxSystem.Tests
         [Test]
         public void ExportIdentitySnapshotDoesNotChangeWhenLabelIsAssignedLater()
         {
-            using var session = BlackboxSession.Begin();
-            var source = BlackboxRegistry.GetBlackbox(new object());
-            var target = BlackboxRegistry.GetBlackbox(new object());
+            using var session = BlackboxHandle.BeginSession();
+            var source = BlackboxSessionRegistry.GetBlackbox(new object());
+            var target = BlackboxSessionRegistry.GetBlackbox(new object());
             source.ExertMessage(target, "call", "Run");
             var graph = Tools.BuildExportGraph(source, 3, true);
             target.SetLabel("late label");
@@ -98,7 +98,7 @@ namespace BlackThunder.BlackboxSystem.Tests
         [Test]
         public void WeakSubjectCanBeCollectedWhileHandleAndLabelRemain()
         {
-            using var session = BlackboxSession.Begin();
+            using var session = BlackboxHandle.BeginSession();
             var value = MakeWeakHandle();
             BlackboxTestDoubles.ForceFullCollection();
             Assert.That(value.Weak.IsAlive, Is.False);
@@ -111,7 +111,7 @@ namespace BlackThunder.BlackboxSystem.Tests
         [Test]
         public void StringLabelDoesNotRetainItsWeakStringSubject()
         {
-            using var session = BlackboxSession.Begin();
+            using var session = BlackboxHandle.BeginSession();
             var value = MakeStringSubject();
             BlackboxTestDoubles.ForceFullCollection();
             Assert.That(value.Weak.IsAlive, Is.False);
@@ -121,7 +121,7 @@ namespace BlackThunder.BlackboxSystem.Tests
         [Test]
         public void StrongSubjectRemainsWhileItsDisposedHandleIsRetained()
         {
-            var session = BlackboxSession.Begin();
+            var session = BlackboxHandle.BeginSession();
             BlackboxHandle.StrongReference = true;
             var value = MakeWeakHandle();
             session.Dispose();
@@ -144,18 +144,18 @@ namespace BlackThunder.BlackboxSystem.Tests
         [Test]
         public void CleanupPreservesLivingEntriesAndRetirementReclaimsCollectedContextSlots()
         {
-            using var session = BlackboxSession.BeginForTests(1);
-            var state = BlackboxSession.CurrentState;
+            using var session = BlackboxSessionRegistry.Begin(1);
+            var recordingSession = BlackboxSessionRegistry.Current;
             int before = HandleManager<ScopeHandle>.LiveCountForTests;
             var living = new object();
-            var canonical = state.Subjects.GetOrAdd(living);
-            var deadContext = MakeAbandonedContext(state);
+            var canonical = recordingSession.Subjects.GetOrAdd(living);
+            var deadContext = MakeAbandonedContext(recordingSession);
             BlackboxTestDoubles.ForceFullCollection();
-            state.Subjects.Cleanup();
+            recordingSession.Subjects.Cleanup();
             BlackboxTestDoubles.ForceFullCollection();
             Assert.That(deadContext.IsAlive, Is.False);
-            Assert.That(state.Subjects.GetOrAdd(living), Is.SameAs(canonical));
-            Assert.That(state.Subjects.Count(), Is.EqualTo(1));
+            Assert.That(recordingSession.Subjects.GetOrAdd(living), Is.SameAs(canonical));
+            Assert.That(recordingSession.Subjects.Count(), Is.EqualTo(1));
             Assert.That(HandleManager<ScopeHandle>.LiveCountForTests, Is.EqualTo(before + 1));
             session.Dispose();
             Assert.That(HandleManager<ScopeHandle>.LiveCountForTests, Is.EqualTo(before));
@@ -165,9 +165,9 @@ namespace BlackThunder.BlackboxSystem.Tests
         [Test]
         public void ConcurrentTagUpdatesAndReadersDoNotMutatePublishedArrays()
         {
-            using var session = BlackboxSession.Begin();
+            using var session = BlackboxHandle.BeginSession();
             var owner = new object();
-            var box = BlackboxRegistry.GetBlackbox(owner);
+            var box = BlackboxSessionRegistry.GetBlackbox(owner);
             var tag = BlackboxHandle.Of(owner).Write("uses %0");
             var targets = Enumerable.Range(0, 8).Select(_ => new object()).ToArray();
             Parallel.For(0, 200, i =>
@@ -183,12 +183,12 @@ namespace BlackThunder.BlackboxSystem.Tests
         [Test]
         public void CrossSessionExertDoesNotMergeIntoAnotherSessionsScope()
         {
-            using var a = BlackboxSession.Begin();
+            using var a = BlackboxHandle.BeginSession();
             var source = BlackboxHandle.Of(new object());
             var target = new object();
-            using var b = BlackboxSession.Begin();
+            using var b = BlackboxHandle.BeginSession();
             var targetHandle = BlackboxHandle.Of(target);
-            var targetBox = BlackboxRegistry.GetBlackbox(target);
+            var targetBox = BlackboxSessionRegistry.GetBlackbox(target);
             using (source.Exert(target, "from a"))
             using (targetHandle.Scope("in b")) { }
             Assert.That(targetBox.GetLogs().All(log => log.InteractionId == -1), Is.True);
@@ -209,15 +209,15 @@ namespace BlackThunder.BlackboxSystem.Tests
         [MethodImpl(MethodImplOptions.NoInlining)]
         private static WeakReference MakeDisposedSession(object subject)
         {
-            using var session = BlackboxSession.Begin();
+            using var session = BlackboxHandle.BeginSession();
             BlackboxHandle.Of(subject).Write("log");
             return new WeakReference(session);
         }
         [MethodImpl(MethodImplOptions.NoInlining)]
-        private static WeakReference MakeAbandonedContext(SessionState state)
+        private static WeakReference MakeAbandonedContext(BlackboxSession recordingSession)
         {
-            var box = state.Subjects.GetOrAdd(new object());
-            box.WriteScope("abandoned", "Run");
+            var box = recordingSession.Subjects.GetOrAdd(new object());
+            BlackboxTestDoubles.Scope(box, "abandoned", "Run");
             return new WeakReference(box.LogContexts.Single());
         }
     }

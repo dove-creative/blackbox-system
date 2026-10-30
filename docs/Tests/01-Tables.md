@@ -1,5 +1,7 @@
 # Blackbox 테스트 상태-동작 표
 
+> 세션 수명 기준: RestartDefaultSession은 BlackboxHandle의 공개 API이며 공유 기본 세션만 교체한다. Runtime/Registry/HandleManager의 Reset API는 제공하지 않는다. 기본 설정은 유지하고 키·기록 상태를 새로 시작하며, 명시적 세션은 Dispose 후 Begin으로 교체한다. 일반 Export는 반복 가능하고 CrashExport만 소속 세션을 동결한다. 아래 Printed 상태는 크래시 동결 상태를 뜻하며 일반 출력 완료로 진입하지 않는다. 자세한 계약은 [세션 문서](../Wiki/05-Sessions.md)를 따른다.
+
 이 문서는 Blackbox 프레임워크의 새 테스트를 작성하기 전에, 객체별 상태와 동작을 정리하는 표이다.
 
 Blackbox는 기록 대상 객체, 로그 문맥, disposable handle, export 도구가 함께 작동하는 프레임워크이다. 따라서 테스트 표도 하나의 큰 기능 묶음이 아니라, 낮은 단위의 값/handle 객체에서 시작해 외부 진입점인 `BlackboxHandle`과 export 흐름으로 올라가는 순서로 작성한다.
@@ -92,35 +94,35 @@ Blackbox는 기록 대상 객체, 로그 문맥, disposable handle, export 도�
 
 ## 3. runtime 저장 단위
 
-### 3-1. `BlackboxRuntime`
+### 3-1. 세션 카운터 (`BlackboxSession`)
 
-`BlackboxRuntime`은 전역 id, interaction id, sequence를 발급한다.
+`BlackboxSession`은 세션마다 id, interaction id, sequence를 발급한다. 표는 현재 세션(`BlackboxSessionRegistry.Current`)의 카운터를 대상으로 한다.
 
-| BlackboxRuntime | -   | GetNextBlackboxId | GetNextInteractionId     | GetNextSequence | Reset     |
+| SessionCounters | -   | NextBoxId         | NextInteractionId        | NextSequence    | BlackboxHandle.RestartDefaultSession |
 | --------------- | --- | ----------------- | ------------------------ | --------------- | --------- |
 |                 | -   |                   |                          |                 |           |
 |                 | -   |                   |                          |                 |           |
 | Ready           | -   | `[id 증가]`       | `[interaction id 증가]`   | `[sequence 증가]` | **Ready** |
 
-### 3-2. `BlackboxRegistry`
+### 3-2. `BlackboxSessionRegistry`
 
-`BlackboxRegistry`는 대상 객체와 `Blackbox`를 연결한다.
+`BlackboxSessionRegistry`는 현재 세션을 찾고, 그 세션에서 대상 객체와 `Blackbox`를 연결한다.
 
-| BlackboxRegistry | -   | GetBlackbox            | <                      | <                 | <               | Contains | <                      | Count     | ForceReset              |
+| BlackboxSessionRegistry | -   | GetBlackbox            | <                      | <                 | <               | Contains | <                      | Count     | BlackboxHandle.RestartDefaultSession              |
 | ---------------- | --- | ---------------------- | ---------------------- | ----------------- | --------------- | -------- | ---------------------- | --------- | ----------------------- |
 |                  | -   | ValidSubject           | NullSubject            | StrongReferenceOn | StrongReferenceOff | ValidSubject | NullSubject        |           |                         |
 |                  | -   |                        |                        |                   |                 |          |                        |           |                         |
 | Empty            | -   | **Registered**         | _ArgumentNullException_ | **Registered**    | **Registered**  | `[false]` | _ArgumentNullException_ | `[0]`     | -                       |
 | Registered       | -   | `[same owner 재사용]`   | _ArgumentNullException_ | `[strong owner]`  | `[weak owner]`  | `[true]` | _ArgumentNullException_ | `[count]` | **Empty**               |
-| Any              | -   | ^                      | ^                      | ^                 | ^               | ^        | ^                      | X         | `<runtime/handle reset>` |
+| Any              | -   | ^                      | ^                      | ^                 | ^               | ^        | ^                      | X         | `[새 기본 세션 / 이전 세션 핸들 종료]` |
 
 ### 3-3. `Infrastructure`
 
-`Infrastructure`는 Blackbox의 전역 설정과 export 완료 상태를 보관한다.
+`Infrastructure`는 현재 세션의 설정에 접근한다. 크래시 동결은 BlackboxSession가 소유한다.
 
 설정값에는 `LogDirectory`, logger, `MaxLogCount`, `StrongReference`, `DefaultRecursionDepth`, `ExportFormat`, `FullExportOption`, `OpenLogOption`, `ExceptionHandlingOption`, `TagTargetTypes`가 포함된다. `BasedOnSettings` 값은 기존 설정을 덮지 않고, resolve 시점에 현재 설정값으로 해석되어야 한다.
 
-| Infrastructure | -   | Configure/Set       | Resolve                     | Log           | TryMarkPrinted | ForceResetRuntimeState |
+| Infrastructure | -   | Configure/Set       | Resolve                     | Log           | BlackboxSession.TryFreeze | BlackboxHandle.RestartDefaultSession |
 | -------------- | --- | ------------------- | --------------------------- | ------------- | -------------- | ---------------------- |
 |                | -   |                     |                             |               |                |                        |
 |                | -   |                     |                             |               |                |                        |
@@ -171,13 +173,13 @@ Blackbox는 기록 대상 객체, 로그 문맥, disposable handle, export 도�
 | ConditionalSkipped | -  | X                   | X                      | -                         | X                 | -       | -                | `[message 반환]` | -              | `[message 반환]`        | `[message 반환]`       | -               | -                     |
 | Printed           | -   | `[handle 생성 가능]` | _ArgumentNullException_ | -                         | `[condition 반영]` | ^       | -                | `[message 반환]` | -              | `[message 반환]`        | `[message 반환]`       | -               | -                     |
 
-| BlackboxHandle    | -   | WriteError        | <                  | <                            | CrashExport                       | Export       | <               | ForceReset              |
+| BlackboxHandle    | -   | WriteError        | <                  | <                            | CrashExport                       | Export       | <               | RestartDefaultSession              |
 | ----------------- | --- | ----------------- | ------------------ | ---------------------------- | --------------------------------- | ------------ | --------------- | ----------------------- |
 |                   | -   | ErrorTargetsEmpty | ErrorTargetsPresent | ExceptionHandlingCrashExport |                                   | FirstExport   | DuplicateExport |                         |
 |                   | -   |                   |                    |                              |                                   |              |                 |                         |
-| Default/Invalid   | -   | `[message 반환]`   | `[message 반환]`    | `[message 반환]`              | `[message 반환 + warning 가능]`     | `[warning]`  | `[warning]`     | `<Registry.ForceReset>` |
-| Valid             | -   | `[error log]`     | `[error log + tag]` | `<CrashExport>`              | `[error log + stack trace + export]` | **Printed** | -               | `<Registry.ForceReset>` |
-| Printed           | -   | `[message 반환]`   | `[message 반환]`    | `[message 반환]`              | `[duplicate export 제한]`           | -            | -               | **Default reset state** |
+| Default/Invalid   | -   | `[message 반환]`   | `[message 반환]`    | `[message 반환]`              | `[message 반환 + warning 가능]`     | `[warning]`  | `[warning]`     | `<BlackboxHandle.RestartDefaultSession>` |
+| Valid             | -   | `[error log]`     | `[error log + tag]` | `<CrashExport>`              | `[error log + stack trace + export]` | [export / 기록 유지] | [반복 export] | `<BlackboxHandle.RestartDefaultSession>` |
+| Printed           | -   | `[message 반환]`   | `[message 반환]`    | `[message 반환]`              | `[duplicate export 제한]`           | [보관 로그 export] | [반복 export] | [새 기본 세션 / 명시적 세션 유지] |
 
 ## 6. export 단위
 
@@ -219,5 +221,5 @@ export tools는 원본 로그를 출력용 그래프로 정리한다.
 | TwoOwnerInteraction | -  | `[Exert -> target Scope -> Export 연결 확인]` |
 | TagTargetFlow      | -   | `[Write.With / Scope.With -> source/target 표시 확인]` |
 | ErrorFlow          | -   | `[WriteError / CrashExport -> error log + export 확인]` |
-| ResetAndRerun      | -   | `[Export -> ForceReset -> 새 실행]`       |
+| RestartDefaultAndRerun      | -   | `[Export -> RestartDefaultSession -> 새 실행]`       |
 | RingBufferLimit    | -   | `[MaxLogCount 초과 시 최근 로그 유지]`     |

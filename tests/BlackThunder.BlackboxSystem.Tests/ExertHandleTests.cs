@@ -12,7 +12,7 @@ namespace BlackThunder.BlackboxSystem.Tests
             // Table 2-3 / Default x Dispose.MergeTargetExists
             default(ExertHandle).Dispose();
 
-            Assert.That(BlackboxRegistry.Count(), Is.EqualTo(0));
+            Assert.That(BlackboxSessionRegistry.Count(), Is.EqualTo(0));
             Assert.That(BlackboxTestDoubles.WarningLogs, Is.Empty);
         }
 
@@ -21,8 +21,8 @@ namespace BlackThunder.BlackboxSystem.Tests
         {
             var source = BlackboxTestDoubles.Blackbox("source");
             var target = BlackboxTestDoubles.Blackbox("target");
-            var handle = source.Exert(target, "call", "Send");
-            target.WriteScope("scope", "Receive");
+            var handle = BlackboxTestDoubles.Exert(source, target, "call", "Send");
+            BlackboxTestDoubles.Scope(target, "scope", "Receive");
 
             // Table 2-3 / Alive x Dispose.MergeTargetExists
             handle.Dispose();
@@ -40,7 +40,7 @@ namespace BlackThunder.BlackboxSystem.Tests
         {
             var source = BlackboxTestDoubles.Blackbox("source");
             var target = BlackboxTestDoubles.Blackbox("target");
-            var handle = source.Exert(target, "call", "Send");
+            var handle = BlackboxTestDoubles.Exert(source, target, "call", "Send");
 
             // Table 2-3 / Alive x Dispose.MergeTargetMissing
             handle.Dispose();
@@ -57,8 +57,8 @@ namespace BlackThunder.BlackboxSystem.Tests
         {
             var source = BlackboxTestDoubles.Blackbox("source");
             var target = BlackboxTestDoubles.Blackbox("target");
-            var handle = source.Exert(target, "call", "Send");
-            target.WriteScope("scope", "Receive");
+            var handle = BlackboxTestDoubles.Exert(source, target, "call", "Send");
+            BlackboxTestDoubles.Scope(target, "scope", "Receive");
             handle.Dispose();
             var countAfterFirstDispose = BlackboxTestDoubles.Logs(target).Count;
 
@@ -73,7 +73,7 @@ namespace BlackThunder.BlackboxSystem.Tests
         {
             var source = BlackboxTestDoubles.Blackbox("source");
             var target = BlackboxTestDoubles.Blackbox("target");
-            var handle = source.Exert(target, "call", "Send");
+            var handle = BlackboxTestDoubles.Exert(source, target, "call", "Send");
 
             // Table 2-3 / Alive x Dispose.DifferentThread
             var thread = new Thread(handle.Dispose);
@@ -89,9 +89,9 @@ namespace BlackThunder.BlackboxSystem.Tests
         {
             var source = BlackboxTestDoubles.Blackbox("source");
             var target = BlackboxTestDoubles.Blackbox("target");
-            var handle = source.Exert(target, "call", "Send");
-            target.WriteScope("scope", "Receive");
-            Assert.That(BlackboxSession.CurrentState.TryFreeze(new CrashInfo("test", string.Empty)), Is.True);
+            var handle = BlackboxTestDoubles.Exert(source, target, "call", "Send");
+            BlackboxTestDoubles.Scope(target, "scope", "Receive");
+            Assert.That(BlackboxSessionRegistry.Current.State.TryFreeze(new CrashInfo("test", string.Empty)), Is.True);
 
             // Table 2-3 / Alive x Dispose.Printed
             handle.Dispose();

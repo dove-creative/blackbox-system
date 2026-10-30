@@ -6,15 +6,15 @@ namespace BlackThunder.BlackboxSystem
         private readonly LogContext _context;
         private readonly long _scopeId;
         private readonly TagHandle _tagHandle;
-        public bool IsAlive => _context != null && _context.State.IsCurrent && HandleManager<ScopeHandle>.IsAlive(_lease.Id);
+        public bool IsAlive => _context != null && _context.State.IsActive && HandleManager<ScopeHandle>.IsAlive(_lease.Id);
         public bool IsDisposed => !IsAlive;
         public long ScopeId => IsAlive ? _scopeId : -1;
-        internal ScopeHandle(LogContext context, long scopeId, TagHandle tagHandle)
+        internal ScopeHandle(LogContext context, long scopeId, TagHandle tagHandle, HandleLease<ScopeHandle> lease)
         {
             _context = context;
             _scopeId = scopeId;
             _tagHandle = tagHandle;
-            _lease = context.ScopeHandles.Register(context.State);
+            _lease = lease;
         }
         public ScopeHandle With(params object[] tags) { _tagHandle.With(tags); return this; }
         public void Dispose()

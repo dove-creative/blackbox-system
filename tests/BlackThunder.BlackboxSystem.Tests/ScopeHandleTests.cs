@@ -17,7 +17,7 @@ namespace BlackThunder.BlackboxSystem.Tests
 
             Assert.That(withResult.IsDisposed, Is.True);
             Assert.That(withResult.ScopeId, Is.EqualTo(-1));
-            Assert.That(BlackboxRegistry.Count(), Is.EqualTo(0));
+            Assert.That(BlackboxSessionRegistry.Count(), Is.EqualTo(0));
             Assert.That(BlackboxTestDoubles.WarningLogs, Is.Empty);
         }
 
@@ -25,7 +25,7 @@ namespace BlackThunder.BlackboxSystem.Tests
         public void AliveDisposeClosesScope()
         {
             var blackbox = BlackboxTestDoubles.Blackbox("owner");
-            var handle = blackbox.WriteScope("scope", "Run");
+            var handle = BlackboxTestDoubles.Scope(blackbox, "scope", "Run");
 
             Assert.That(handle.IsAlive, Is.True);
 
@@ -43,7 +43,7 @@ namespace BlackThunder.BlackboxSystem.Tests
         public void DisposedDisposeDoesNotAddLogAgain()
         {
             var blackbox = BlackboxTestDoubles.Blackbox("owner");
-            var handle = blackbox.WriteScope("scope", "Run");
+            var handle = BlackboxTestDoubles.Scope(blackbox, "scope", "Run");
             handle.Dispose();
             var countAfterFirstDispose = BlackboxTestDoubles.Logs(blackbox).Count;
 
@@ -61,7 +61,7 @@ namespace BlackThunder.BlackboxSystem.Tests
             var target = BlackboxTestDoubles.BlackboxFor(targetOwner);
 
             // Table 2-2 / Alive x With.ValidTarget
-            var handle = blackbox.WriteScope("scope %0", "Run").With(targetOwner, TargetTypes.Full);
+            var handle = BlackboxTestDoubles.Scope(blackbox, "scope %0", "Run").With(targetOwner, TargetTypes.Full);
 
             Assert.That(handle.IsAlive, Is.True);
             Assert.That(BlackboxTestDoubles.Lines(blackbox).Single(), Does.Contain("target"));
@@ -72,7 +72,7 @@ namespace BlackThunder.BlackboxSystem.Tests
         public void DifferentThreadDisposeWarns()
         {
             var blackbox = BlackboxTestDoubles.Blackbox("owner");
-            var handle = blackbox.WriteScope("scope", "Run");
+            var handle = BlackboxTestDoubles.Scope(blackbox, "scope", "Run");
 
             // Table 2-2 / Alive x Dispose.DifferentThread
             var thread = new Thread(handle.Dispose);
@@ -88,8 +88,8 @@ namespace BlackThunder.BlackboxSystem.Tests
         public void PrintedDisposeDoesNotCloseScope()
         {
             var blackbox = BlackboxTestDoubles.Blackbox("owner");
-            var handle = blackbox.WriteScope("scope", "Run");
-            Assert.That(BlackboxSession.CurrentState.TryFreeze(new CrashInfo("test", string.Empty)), Is.True);
+            var handle = BlackboxTestDoubles.Scope(blackbox, "scope", "Run");
+            Assert.That(BlackboxSessionRegistry.Current.State.TryFreeze(new CrashInfo("test", string.Empty)), Is.True);
 
             // Table 2-2 / Alive x Dispose.Printed
             handle.Dispose();

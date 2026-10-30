@@ -28,31 +28,58 @@ Thank you for using Blackbox.
 ## Test sessions
 
 ```csharp
-using var session = BlackboxSession.Begin();
+using var session = BlackboxHandle.BeginSession();
 BlackboxHandle.Configure(logDirectory, Console.WriteLine,
     openLogOption: OpenLogOption.Never);
 var system = new SystemUnderTest();
 await system.RunAsync();
 ```
 
-Create the objects inside their test session and await/join all child work before disposing it. `Begin()` is synchronous; ordinary Task/Thread execution-context flow inherits the session. Open sessions in test bodies rather than relying on NUnit SetUp to propagate AsyncLocal values. A session copies its parent's settings and isolates its storage, crash state and resets.
+Create the objects inside their test session and await/join all child work before disposing it. `BeginSession()` is synchronous; ordinary Task/Thread execution-context flow inherits the session. Open sessions in test bodies rather than relying on NUnit SetUp to propagate AsyncLocal values. A session copies its parent's settings and isolates its storage and crash state. Each session has one recording lifetime; dispose it and call BeginSession() again to start another explicit session.
 
-Handles remain bound to the session and generation in which they were acquired, including handles cached by constructors. Using such an object in another session does not move its handle. Without `Begin()`, callers use the shared default session; tests that reset or configure that default must run serially.
+Handles remain bound to the session in which they were acquired, including handles cached by constructors. Using such an object in another session does not move its handle. Without `BeginSession()`, callers use the shared default session; tests that restart or configure that default must run serially.
 
-Use `BlackboxSession.CurrentKey` and `BlackboxSession.DefaultKey` to inspect the current/default session identity. If an object's constructor cached `_bb` before `Begin()`, its valid handle still reports the default key inside the new session. Diagnose that situation with:
+**Undisposed explicit sessions are not released.** A process-wide list holds strong references until `Dispose()` or `BlackboxHandle.DisposeActiveSessions()` is called. Dropping references and running GC does not release a session or its outstanding Scope/Exert handle IDs; without cleanup they remain until process exit. `ActiveSessionCount` counts these sessions, and `GetActiveSessionKeys()` returns an independent `Guid[]` snapshot in start order. The default session and restart candidates are excluded.
+
+Check for missed disposal before cleanup in NUnit TearDown:
 
 ```csharp
-if (_bb.SessionKey != BlackboxSession.CurrentKey)
+[NonParallelizable]
+public abstract class BlackboxTestBase
+{
+    [TearDown]
+    public void CheckSessions()
+    {
+        try
+        {
+            Assert.That(BlackboxHandle.ActiveSessionCount, Is.Zero,
+                "Undisposed Blackbox sessions: " +
+                string.Join(", ", BlackboxHandle.GetActiveSessionKeys()));
+        }
+        finally
+        {
+            BlackboxHandle.DisposeActiveSessions();
+        }
+    }
+}
+```
+
+The list is global: parallel tests see each other's sessions, and bulk cleanup can dispose another test's sessions. Use this check with serial tests after all child work finishes. Bulk cleanup snapshots under a lock and disposes outside it in reverse start order, restoring nested bindings in the calling flow. Other flows keep their disposed bindings and reject recording until they call `Dispose()` themselves. Sessions started after the snapshot are not included. Only the first `Dispose()` ends a session and removes it from the list; every call restores the previous binding in the calling flow when that flow is still bound to the session.
+
+Use `BlackboxHandle.CurrentSessionKey` and `BlackboxHandle.DefaultSessionKey` to inspect the current/default session identity. If an object's constructor cached `_bb` before `BeginSession()`, its valid handle still reports the default key inside the new session. Diagnose that situation with:
+
+```csharp
+if (_bb.SessionKey != BlackboxHandle.CurrentSessionKey)
 {
     // This object was created in another session.
 }
 ```
 
-These read-only `Guid` properties expose no session object and perform no locking or allocation. An invalid handle (`IsValid == false`) returns `Guid.Empty`; check validity before interpreting a mismatch. Keys identify sessions, not reset generations.
+These read-only `Guid` properties expose no session object and perform no locking or allocation. An invalid handle (`IsValid == false`) returns `Guid.Empty`; check validity before interpreting a mismatch. Keys identify session lifetimes; restarting the default session changes DefaultSessionKey.
 
-`Export()` can be repeated while recording continues. `CrashExport()` freezes only its own generation and exports once; a failed crash export can be retried with ordinary `Export()`. Live exports are approximate snapshots. After all work has completed, exports contain the stable records still retained by the ring buffers. Files have a short session key and export ordinal and never overwrite an earlier export; retention is the caller's responsibility.
+`Export()` can be repeated while recording continues. `CrashExport()` freezes only its own session and exports once; a failed crash export can be retried with ordinary `Export()`. Live exports are approximate snapshots. After all work has completed, exports contain the stable records still retained by the ring buffers. Files have a short session key and export ordinal and never overwrite an earlier export; retention is the caller's responsibility.
 
-`ForceReset()` retires the current generation. Old handles stop recording. In an explicit session, existing child execution contexts also remain in the retired generation. Unbound default callers instead follow the shared current default generation. Retirement racing a writer does not reuse its buffers: an in-flight write may finish in the old generation, while later writes are rejected. Retained handles can still export old data.
+`BlackboxHandle.RestartDefaultSession()` replaces only the shared default session, inherits its settings and disposes it. The replacement gets a new key, storage, counters, export ordinal and crash/warning state. Explicit sessions and their child execution contexts are unchanged, even when called inside one. Unbound callers subsequently use the new default; old handles stay with the disposed session and stop recording. A write racing disposal may finish in the old session, whose buffers are never reused. Retained handles can still export old data. A child bound to a disposed explicit session remains there and cannot silently record into the default session.
 
 Subject `ToString()` is never called automatically. Assign an optional name once:
 
@@ -137,7 +164,9 @@ The sample runs with the default `UseBlackbox = true` setting. Logs are written 
 ## Main APIs
 
 - `BlackboxHandle.Of(subject)`: gets the recording entry point for the target object.
-- `BlackboxSession.Begin()`: begins an isolated test/debug session.
+- `BlackboxHandle.BeginSession()`: begins an isolated test/debug session.
+- `BlackboxHandle.ActiveSessionCount` / `GetActiveSessionKeys()`: observes undisposed explicit sessions across the process.
+- `BlackboxHandle.DisposeActiveSessions()`: disposes a snapshot of those sessions for cleanup.
 - `Label(name)`: assigns the first nonblank display label and returns the same handle.
 - `Write(message)`: records a one-line activity log.
 - `Write(message).With(targets)`: attaches related targets to an activity log.
@@ -148,11 +177,11 @@ The sample runs with the default `UseBlackbox = true` setting. Logs are written 
 - `WriteError(message)`: records an error message and returns the same string.
 - `Export(...)`: writes log files centered on the current object.
 - `CrashExport(...)`: records an error and creates export output in one call.
-- `ForceReset()`: replaces the current session's generation and invalidates its old recording handles.
+- `RestartDefaultSession()`: ends and replaces the shared default session while preserving its settings; explicit sessions are unaffected.
 
 ## Documentation
 
-See the [0.2.0 session and recording contract](docs/Wiki/05-Sessions.md) for lifecycle, default-session, lock-free recording and export details (Korean).
+See the [session and recording contract](docs/Wiki/05-Sessions.md) for lifecycle, default-session, lock-free recording and export details (Korean).
 
 ## Tests
 

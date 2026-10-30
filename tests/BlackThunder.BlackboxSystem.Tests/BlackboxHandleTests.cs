@@ -68,7 +68,7 @@ namespace BlackThunder.BlackboxSystem.Tests
             Assert.That(invalid.IsValid, Is.False);
             Assert.That(invalid.Owner, Is.Null);
             Assert.That(invalid.Id, Is.EqualTo(-1));
-            Assert.That(BlackboxRegistry.Count(), Is.EqualTo(0));
+            Assert.That(BlackboxSessionRegistry.Count(), Is.EqualTo(0));
         }
 
         [Test]
@@ -231,7 +231,7 @@ namespace BlackThunder.BlackboxSystem.Tests
             var html = File.ReadAllText(file);
             Assert.That(message, Is.EqualTo("boom"));
             Assert.That(html, Does.Contain("[STACK TRACE]"));
-            Assert.That((BlackboxSession.CurrentState.Crash != null), Is.True);
+            Assert.That((BlackboxSessionRegistry.Current.State.Crash != null), Is.True);
 
             // Table 5-1 / Printed x CrashExport
             handle.CrashExport("again", openLog: OpenLogOption.Never, methodName: "Run");
@@ -258,13 +258,13 @@ namespace BlackThunder.BlackboxSystem.Tests
             // Table 5-1 / Printed x Export.DuplicateExport
             handle.Export(format: ExportFormat.Txt, openLogOption: OpenLogOption.Never);
             Assert.That(BlackboxTestDoubles.GetFiles(directory, "*.txt").Length, Is.EqualTo(2));
-            Assert.That(BlackboxSession.CurrentState.Crash, Is.Null);
+            Assert.That(BlackboxSessionRegistry.Current.State.Crash, Is.Null);
             handle.Write("after export", "Run");
             Assert.That(handle.IsValid, Is.True);
         }
 
         [Test]
-        public void ForceResetRestoresDefaultRuntimeState()
+        public void RestartDefaultSessionRestoresDefaultRuntimeState()
         {
             var directory = BlackboxTestDoubles.CreateTempDirectory();
             BlackboxTestDoubles.Reset(logDirectory: directory);
@@ -273,11 +273,11 @@ namespace BlackThunder.BlackboxSystem.Tests
             handle.Write("before", "Run");
             handle.Export(format: ExportFormat.Txt, openLogOption: OpenLogOption.Never);
 
-            // Table 5-1 / Valid x ForceReset
-            BlackboxHandle.ForceReset();
+            // Table 5-1 / Valid x RestartDefaultSession
+            BlackboxHandle.RestartDefaultSession();
 
-            Assert.That((BlackboxSession.CurrentState.Crash != null), Is.False);
-            Assert.That(BlackboxRegistry.Count(), Is.EqualTo(0));
+            Assert.That((BlackboxSessionRegistry.Current.State.Crash != null), Is.False);
+            Assert.That(BlackboxSessionRegistry.Count(), Is.EqualTo(0));
             Assert.That(BlackboxTestDoubles.HandleFor(owner).Write("after", "Run").With(), Is.EqualTo("after"));
         }
 
@@ -333,7 +333,7 @@ namespace BlackThunder.BlackboxSystem.Tests
             // Table 1-3 / Skipped x AppendFormatted.Value
             Assert.That(invalid.Write($"value {FormatValue()}", "Run").With(), Is.EqualTo(string.Empty));
             Assert.That(formatCalls, Is.EqualTo(0));
-            Assert.That(BlackboxRegistry.Count(), Is.EqualTo(0));
+            Assert.That(BlackboxSessionRegistry.Count(), Is.EqualTo(0));
 
             string FormatValue()
             {

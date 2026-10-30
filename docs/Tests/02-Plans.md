@@ -1,5 +1,7 @@
 # Blackbox 테스트 계획
 
+> 세션 수명 기준: RestartDefaultSession은 BlackboxHandle의 공개 API이며 공유 기본 세션만 교체한다. Runtime/Registry/HandleManager의 Reset API는 제공하지 않는다. 기본 설정은 유지하고 키·기록 상태를 새로 시작하며, 명시적 세션은 Dispose 후 Begin으로 교체한다. 일반 Export는 반복 가능하고 CrashExport만 소속 세션을 동결한다. 자세한 계약은 [세션 문서](../Wiki/05-Sessions.md)를 따른다.
+
 Blackbox는 POCO 중심의 기록 프레임워크이므로, 테스트는 .NET에서 순수 NUnit 테스트로 실행한다.
 
 ## 1. 테스트 구성 원칙
@@ -53,7 +55,7 @@ Blackbox는 POCO 중심의 기록 프레임워크이므로, 테스트는 .NET에
 | 도구 | 역할 |
 | --- | --- |
 | `NamedOwner` | `ToString()`이 안정적인 owner object |
-| `Reset()` | `BlackboxHandle.ForceReset()`, logger, 설정값 초기화 |
+| `Reset()` | `BlackboxHandle.RestartDefaultSession()`, logger, 설정값 초기화 |
 | `Owner(name)` | 새 `NamedOwner` 생성 |
 | `Blackbox(name)` | owner에 대응되는 internal `Blackbox` 생성 |
 | `BlackboxFor(owner)` | 이미 만든 owner에 대응되는 internal `Blackbox` 생성 |
@@ -133,25 +135,25 @@ Blackbox는 POCO 중심의 기록 프레임워크이므로, 테스트는 .NET에
 | `DifferentThreadDisposeWarns` | 다른 thread dispose는 warning을 남긴다. |
 | `PrintedDisposeDoesNotMerge` | export 이후 dispose는 병합하지 않는다. |
 
-### 3-6. `BlackboxRuntimeTests.cs`
+### 3-6. `SessionCounterTests.cs`
 
-대응 표: `3-1. BlackboxRuntime`
+대응 표: `3-1. 세션 카운터 (BlackboxSession)`
 
 | 테스트 | 검증 내용 |
 | --- | --- |
 | `IdsIncreaseIndependently` | blackbox id, interaction id, sequence가 독립적으로 증가한다. |
-| `ResetRestartsCounters` | reset 후 각 counter가 초기값부터 다시 시작한다. |
+| `ResetRestartsCounters` | 기본 세션 재시작 후 각 counter가 초기값부터 다시 시작한다. |
 
-### 3-7. `BlackboxRegistryTests.cs`
+### 3-7. `BlackboxSessionRegistryTests.cs`
 
-대응 표: `3-2. BlackboxRegistry`
+대응 표: `3-2. BlackboxSessionRegistry`
 
 | 테스트 | 검증 내용 |
 | --- | --- |
 | `GetBlackboxRejectsNull` | null subject는 `ArgumentNullException`을 던진다. |
 | `GetBlackboxCreatesAndReusesOwner` | 같은 owner는 같은 `Blackbox`를 재사용한다. |
 | `ContainsAndCountTrackRegisteredOwners` | 등록 전/후 `Contains(...)`와 등록된 owner 수가 함께 달라진다. |
-| `ForceResetClearsRegistryRuntimeAndHandles` | reset이 registry, runtime, handle 상태를 초기화한다. |
+| `RestartDefaultSessionClearsRegistryRuntimeAndHandles` | 기본 세션을 교체해 저장소·카운터를 새로 시작하고 이전 기본 세션 핸들을 종료한다. 전역 핸들 풀은 유지한다. |
 | `StrongReferencePolicyKeepsOwnerReference` | strong reference 설정이 owner를 강하게 보관한다. |
 | `WeakReferencePolicyStoresWeakOwnerReference` | weak reference 설정에서는 owner가 사라질 수 있고 fallback owner string을 유지한다. |
 
@@ -164,7 +166,7 @@ Blackbox는 POCO 중심의 기록 프레임워크이므로, 테스트는 .NET에
 | `ConfigureStoresSettings` | `Configure(...)`가 logger와 export 설정을 저장한다. |
 | `ResolveUsesConfiguredDefaultsAndExplicitValues` | `BasedOnSettings` 값은 현재 설정값으로 해석되고, 명시 값은 설정값으로 덮이지 않는다. |
 | `LogDispatchesToMatchingLogger` | normal/warning logger가 분리 호출된다. |
-| `TryMarkPrintedSucceedsOnceAndResetAllowsPrintingAgain` | export 완료 상태는 한 번만 성공하고 reset 후 다시 출력 가능 상태가 된다. |
+| `TryMarkPrintedSucceedsOnceAndResetAllowsPrintingAgain` | 크래시 동결은 세션당 한 번만 성공하고 기본 세션 재시작 후 새 세션에서 다시 동결할 수 있다. |
 
 ### 3-9. `LogContextTests.cs`
 
@@ -219,7 +221,7 @@ Blackbox는 POCO 중심의 기록 프레임워크이므로, 테스트는 .NET에
 | `WriteErrorCanTriggerCrashExport` | 설정에 따라 `WriteError`가 crash export로 이어진다. |
 | `CrashExportWritesStackTraceAndExportsOnce` | stack trace 로그와 crash 파일을 만든다. |
 | `ExportWarnsForInvalidOrDuplicateExport` | invalid handle과 duplicate export warning을 검증한다. |
-| `ForceResetRestoresDefaultRuntimeState` | reset 후 새 실행이 가능한 상태가 된다. |
+| `RestartDefaultSessionRestoresDefaultRuntimeState` | 기본 세션 재시작 후 새 기록 수명을 시작할 수 있다. |
 | `WriteHandlerFormatsInterpolatedValuesForValidHandle` | 유효 handle에서 interpolated string literal, formatted value, null value가 message로 조립된다. |
 | `WriteHandlerSkipsFormattingForInvalidHandle` | invalid handle에서 handler가 skipped 상태가 되어 문자열 조립과 로그 저장을 생략한다. |
 | `UseBlackboxFalseDisablesNewAndExistingHandles` | `UseBlackbox=false` 상태에서 public API가 invalid/default handle과 원래 message를 반환하고 실제 기록을 만들지 않는다. |
@@ -264,5 +266,5 @@ Blackbox는 POCO 중심의 기록 프레임워크이므로, 테스트는 .NET에
 | `TwoOwnerInteractionExportsConnectedLogs` | source와 target 상호작용이 export에서 연결된다. |
 | `TagTargetFlowWritesSourceAndTargetReferences` | `.With(...)`가 source/target 양쪽 표시를 만든다. |
 | `ErrorFlowExportsErrorAndCrashContext` | error/crash 흐름이 오류 로그와 파일 출력으로 이어진다. |
-| `ResetAndRerunStartsClean` | export 후 reset하고 새 실행을 독립적으로 기록한다. |
+| `RestartDefaultAndRerunStartsClean` | export 후 reset하고 새 실행을 독립적으로 기록한다. |
 | `RingBufferLimitKeepsRecentLogsInPublicFlow` | public API 경로에서 buffer 제한이 최근 로그 유지로 나타난다. |

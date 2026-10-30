@@ -14,7 +14,7 @@ internal static class ScalabilityBenchmarks
         var workerCounts = Environment.ProcessorCount == 1 ? new[] { 1 } : new[] { 1, Environment.ProcessorCount };
         foreach (var workers in workerCounts)
         {
-            BlackboxHandle.ForceReset();
+            BlackboxHandle.RestartDefaultSession();
             var owner = new object();
             var handle = BlackboxHandle.Of(owner);
             const int count = 100_000;
@@ -48,7 +48,7 @@ internal static class ScalabilityBenchmarks
         // Warm runtime metadata and reflection separately from the retained-heap baseline.
         Churn(1_000);
         CountTrackers();
-        BlackboxHandle.ForceReset();
+        BlackboxHandle.RestartDefaultSession();
         var baseline = HeapAfterCollection();
         Console.WriteLine("phase,objects_created,trackers,live_subjects,heap_delta_bytes");
         PrintRetention("baseline", 0, baseline, baseline);
@@ -60,8 +60,8 @@ internal static class ScalabilityBenchmarks
             PrintRetention("after_gc", batch * 100_000, rawHeap, baseline);
             if (cleanupEachBatch)
             {
-                // Registry dead-node cleanup is distinct from tracker retirement: no ForceReset here.
-                BlackboxSession.CurrentState.Subjects.Cleanup();
+                // Registry dead-node cleanup is distinct from tracker retirement: no RestartDefaultSession here.
+                BlackboxSessionRegistry.Current.Subjects.Cleanup();
                 var cleanedHeap = HeapAfterCollection();
                 PrintRetention("after_subject_cleanup", batch * 100_000, cleanedHeap, baseline);
             }
@@ -72,10 +72,10 @@ internal static class ScalabilityBenchmarks
             PrintRetention("after_idle_gc", batches * 100_000, HeapAfterCollection(), baseline);
             // Model a long-lived default session with neither exports nor explicit maintenance.
             // Observe all six batches first; only then separate registry retention from tracker retention.
-            BlackboxSession.CurrentState.Subjects.Cleanup();
+            BlackboxSessionRegistry.Current.Subjects.Cleanup();
             PrintRetention("after_subject_cleanup", batches * 100_000, HeapAfterCollection(), baseline);
         }
-        BlackboxHandle.ForceReset();
+        BlackboxHandle.RestartDefaultSession();
         PrintRetention("after_reset", batches * 100_000, HeapAfterCollection(), baseline);
     }
 
@@ -101,27 +101,27 @@ internal static class ScalabilityBenchmarks
     }
 
     private static void PrintRetention(string phase, int count, long heap, long baseline) =>
-        Console.WriteLine(FormattableString.Invariant($"{phase},{count},{CountTrackers()},{BlackboxRegistry.Count()},{heap - baseline}"));
+        Console.WriteLine(FormattableString.Invariant($"{phase},{count},{CountTrackers()},{BlackboxSessionRegistry.Count()},{heap - baseline}"));
 
-    // Read both the 0.2.0 per-context tracker list and the fixed shared tracker arrays.
-    // Reflection is used only outside timed/heap measurements and also works in the baseline copy.
+    // Read tracker ownership outside timed/heap measurements.
+    // Historical source copies use their corresponding state owner for reflection.
     private static int CountTrackers()
     {
-        var state = BlackboxSession.CurrentState;
-        var fields = typeof(SessionState).GetFields(BindingFlags.Instance | BindingFlags.NonPublic);
+        var session = BlackboxSessionRegistry.Current;
+        var fields = typeof(BlackboxSession).GetFields(BindingFlags.Instance | BindingFlags.NonPublic);
         var count = 0;
         foreach (var field in fields)
         {
             if (field.Name == "_trackers")
             {
-                var node = field.GetValue(state);
+                var node = field.GetValue(session);
                 if (node == null) continue;
                 var next = node.GetType().GetField("Next", BindingFlags.Instance | BindingFlags.NonPublic);
                 for (; node != null; node = next.GetValue(node)) count++;
             }
             else if (field.FieldType.IsArray && field.FieldType.GetElementType().IsGenericType &&
                 field.FieldType.GetElementType().GetGenericTypeDefinition() == typeof(HandleTracker<>))
-                count += ((Array)field.GetValue(state)).Length;
+                count += ((Array)field.GetValue(session)).Length;
         }
         return count;
     }

@@ -21,7 +21,7 @@ Console.WriteLine("operation,threads,operations,elapsed_ms,ns_per_operation,allo
 foreach (var workers in new[] { 1, Environment.ProcessorCount })
 foreach (var operation in new[] { "register", "lookup", "write", "scope", "exert" })
 {
-    BlackboxHandle.ForceReset();
+    BlackboxHandle.RestartDefaultSession();
     BlackboxHandle.MaxLogCount = 100;
     var owner = new object();
     var target = new object();
@@ -41,8 +41,8 @@ foreach (var operation in new[] { "register", "lookup", "write", "scope", "exert
             {
                 switch (operation)
                 {
-                    case "register": BlackboxRegistry.GetBlackbox(new object()); break;
-                    case "lookup": BlackboxRegistry.GetBlackbox(owner); break;
+                    case "register": BlackboxSessionRegistry.GetBlackbox(new object()); break;
+                    case "lookup": BlackboxSessionRegistry.GetBlackbox(owner); break;
                     case "write": handle.Write("message"); break;
                     case "scope": handle.Scope("scope").Dispose(); break;
                     case "exert": handle.Exert(target, "exert").Dispose(); break;

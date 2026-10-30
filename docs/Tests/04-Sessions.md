@@ -1,5 +1,7 @@
 # 0.2.0 세션 구현 검증
 
+이전 절은 각 구현 단계 당시의 검증 기록이다. 현재 세션 수명 계약과 활성 세션 추적 검증은 마지막의 2026-10-30 절을 참고한다.
+
 검증 환경: Windows x64, .NET SDK 9.0.320, net9.0 NUnit 테스트, netstandard2.1 라이브러리. 기존 테스트 159개를 세션별 동결·반복 출력·명시적 Label 계약에 맞게 이관하고 동시성/수명 테스트 35개를 추가했다.
 
 ## 검증 범위
@@ -73,3 +75,120 @@ Release 전체 **231/231**, 잠금 핸들 풀 비교 구성 전체 **231/231**, 
 벤치마크는 같은 하네스와 수정 전후 런타임을 별도 프로세스에서 비교했다. 60만 객체를 한 번씩 기록한 뒤 GC한 힙 증가량은 MaxLogCount 100에서 **86.82→10.41MiB**, 1000에서 **537.87→23.09MiB**로 줄었다. 신규 등록을 멈춘 상태에서 GC만 반복하면 이 값은 유지됐고, 전체 Subject 정리 뒤에는 모두 1,400바이트가 남았다. 등록이 중단된 경우의 즉시 회수나 고정 메모리 상한은 보장하지 않는다.
 
 조회는 계속 무할당이며 이번 비교에서 처리량은 비슷했다. 반면 살아 있는 객체 40만 개에서 단일 스레드 신규 등록은 **1.03→6.29µs**로 늘었다. 24스레드 등록 측정은 변동이 커 일정한 비율의 개선·악화로 일반화하지 않는다. 메모리 감소와 신규 등록 비용을 함께 [벤치마크 보고서](../../benchmarks/README.md)에 기록했다. 트래커·조회·회전 정리 수정 이력은 배포 전 0.2.0 CHANGELOG 항목으로 합쳤다.
+
+## 2026-10-30 기본 세션 재시작 리팩터링
+
+현재 소스는 BlackboxHandle.RestartDefaultSession()만 공개하며 ForceReset 호환 별칭을 제공하지 않는다. 세션 내부 세대를 제거하고 세션마다 하나의 고정 SessionState를 보관한다. 기본 세션은 설정 스냅샷을 상속한 새 인스턴스로 CAS 교체한 뒤 이전 인스턴스를 종료한다. 기본 키·저장소·카운터·출력 일련번호·동결·경고 상태는 새로 시작한다. 명시적 세션과 자식 문맥은 그대로 유지되며, 새 명시적 세션은 Dispose 후 Begin으로 시작한다. 슬롯 재사용 보호용 HandleManager 세대는 유지한다.
+
+검증 범위:
+
+- 기본 키 변경, 설정 및 비활성화 설정 유지, 저장소·카운터·크래시·경고 상태 분리.
+- 종료된 기본 핸들의 기록 거부와 이전 로그의 텍스트·HTML 반복 출력, 파일 덮어쓰기 방지.
+- 중첩 명시적 세션 안에서 기본 세션을 재시작해도 설정·Scope/Exert·자식 작업을 유지하고 종료 후 최신 기본 세션으로 복귀.
+- 이미 종료된 명시적 바인딩에서 재시작해도 그 문맥이 되살아나거나 기본 세션으로 이동하지 않는 동작.
+- CAS 직전 두 재시작을 정지시켜 발생시킨 경합에서 실패 후보와 교체된 세션의 종료, 최종 기본 세션의 생존.
+- 기본 세션 재시작 및 명시적 세션 종료와 경합하는 핸들 등록·로그 게시·Subject 정리, 오래된 ID의 반환 및 다른 세션의 슬롯 보호.
+- 기존 조회 무할당, 트래커 수량·회수 및 전체 NUnit/UniTest 회귀 검사.
+
+Windows x64, .NET SDK 9.0.320에서 확인한 결과:
+
+| 검증 | 결과 |
+| --- | --- |
+| 세션·트래커·Subject 관련 집중 테스트 | 73/73 통과 |
+| Release 전체 테스트, 기본 핸들 풀 | 239/239 통과, 건너뜀 0 |
+| Release 전체 테스트, BlackboxLockHandles=true | 239/239 통과, 건너뜀 0 |
+| Release 솔루션 빌드 | 경고 0, 오류 0 |
+| Release 벤치마크 빌드 | 경고 0, 오류 0 |
+| 수정 문서의 로컬 링크와 Draw.io XML 참조 | 통과 |
+
+샌드박스에서는 VSTest와 testhost 연결이 90초 뒤 시간 초과되어 집중 테스트가 중단되었다. 같은 테스트와 두 전체 구성을 샌드박스 밖에서 실행한 결과만 통과로 집계했다. 솔루션 빌드 역시 샌드박스에서 진단 없이 실패한 뒤 샌드박스 밖에서 성공을 확인했다. TRX 결과는 무시되는 TestResults/restart-default-release.trx 및 TestResults/restart-default-lock-handles.trx에 저장했다. 과거 성능 측정값을 갱신하지 않았으며 새 성능 향상은 주장하지 않는다.
+
+## 2026-10-30 SessionState 통합
+
+세션 내부 세대 제거에 이어 SessionState를 BlackboxSession에 통합했다. 설정·SubjectStore·기록 카운터·크래시·경고·핸들 트래커를 세션이 직접 소유하며 Blackbox와 LogContext의 Session 참조도 해당 세션을 직접 가리킨다. 내부 CurrentState 접근은 Current로 바꿨다. SessionSettings는 복사 후 원자적 교체를 위해 유지하며 공개 API를 늘리지 않았다.
+
+기존 기본 세션 재시작, 명시적 세션 격리, 중첩·자식 문맥 복원, 종료 후 Export, 경합 중 핸들 회수 및 조회 무할당 검증을 그대로 통과했다. 벤치마크의 트래커 관찰도 통합된 세션을 조회하도록 이전했다. 새로운 성능 측정은 수행하지 않았다.
+
+- Release 전체 테스트: 기본 핸들 풀 239/239, 잠금 핸들 풀 비교 구성 239/239 통과, 건너뜀 0.
+- 솔루션 및 벤치마크 Release 빌드: 각각 경고 0, 오류 0.
+- 소스·테스트·벤치마크에 SessionState/CurrentState 참조 없음. 수정 문서의 로컬 링크 및 diff 공백 검사 통과.
+- 같은 로컬 testhost 연결 환경에서 실행했으며 TRX는 TestResults/merged-session-release.trx와 TestResults/merged-session-lock-handles.trx에 저장했다.
+
+## 2026-10-30 세션 레지스트리 분리
+
+BlackboxSession의 static 개념(실행 흐름 바인딩, 기본 세션 자리, 현재 세션 조회, 기본 세션 재시작)을 내부 `BlackboxSessionRegistry`로 옮겼다. BlackboxSession은 세션 인스턴스 상태만 소유하며 `Begin()`, `CurrentKey`, `DefaultKey`는 공개 입구로 남아 레지스트리에 위임한다. 기존 `BlackboxRegistry`의 조회 메서드는 새 레지스트리로 합쳤고, SubjectStore는 별도 파일로 분리했다. 현재 흐름의 카운터를 노출하던 `BlackboxRuntime`은 제거했다. 동작과 공개 API는 바뀌지 않았다.
+
+테스트 파일 `BlackboxRuntimeTests.cs`는 `SessionCounterTests.cs`로, `BlackboxRegistryTests.cs`는 `BlackboxSessionRegistryTests.cs`로 바꿨고 UniTest 표 이름도 `SessionCounters`, `BlackboxSessionRegistry`로 맞췄다.
+
+- Release 전체 테스트: 기본 핸들 풀 239/239, 잠금 핸들 풀 비교 구성 239/239 통과, 건너뜀 0.
+- 솔루션(벤치마크 포함) Release 빌드: 경고 0, 오류 0.
+- 소스·테스트·벤치마크·문서에 BlackboxRuntime/BlackboxRegistry 참조 없음(이 기록 제외).
+
+## 2026-10-30 세션 static 통합
+
+세션 관련 static을 모두 `BlackboxSessionRegistry`에 모았다. `BlackboxSession.Begin()`, `CurrentKey`, `DefaultKey`를 제거해 `BlackboxSession`에는 static 멤버가 없다. 공개 진입점은 `BlackboxHandle`로 일원화해 `BeginSession()`, `CurrentSessionKey`, `DefaultSessionKey`, `RestartDefaultSession()`이 레지스트리에 위임한다. 테스트 전용 `BeginForTests(buckets)`는 `BlackboxSessionRegistry.Begin(buckets)`로 대체했다.
+
+`SessionKeyTests`의 공개 표면 검사는 진단 키가 `BlackboxHandle`의 읽기 전용 Guid static 속성인지, `BlackboxHandle`의 static 속성이 세션 객체를 반환하지 않는지, `BlackboxSession`에 공개 static 멤버가 없는지 확인한다.
+
+- Release 전체 테스트: 기본 핸들 풀 239/239, 잠금 핸들 풀 비교 구성 239/239 통과, 건너뜀 0.
+- 솔루션(벤치마크·샘플 포함) Release 빌드: 경고 0, 오류 0.
+
+## 2026-10-30 활성 세션 추적과 Dispose 누락 진단
+
+`BlackboxSessionRegistry`에 잠금으로 보호하는 강한 참조 목록을 추가했다. Begin은 목록에 추가한 뒤 실행 흐름에 바인딩하고, 최초 Dispose는 핸들 ID 회수·목록 제거·호출 흐름의 바인딩 복원을 수행한다. 중복 Dispose는 바인딩도 바꾸지 않는다. 기본 세션과 재시작 경쟁 후보는 목록에 넣지 않는다. 공개 진입점은 `BlackboxHandle.ActiveSessionCount`, `GetActiveSessionKeys()`, `DisposeActiveSessions()`이며 `BlackboxSession`에는 공개 static 멤버를 추가하지 않았다.
+
+`ActiveSessionTests`의 새 검증 12개는 다음을 포함한다.
+
+- 세션 밖 0 → Begin 후 1 → Dispose 후 0, 중첩 시작 순서와 해당 키 제거, 중복 Dispose 및 동시 중복 Dispose.
+- 키 스냅샷의 호출자 수정과 이후 Begin/Dispose가 서로 영향을 주지 않는지 확인.
+- 기본 세션과 재시작 후 기본 세션 제외, 빈 목록 일괄 정리 후 기본 세션 유지.
+- NoInlining 헬퍼가 별도 ExecutionContext에서 시작한 세션과 미종료 Scope/Exert를 버린 뒤 GC해도 세션·키·전역 핸들 슬롯이 유지됨. 일괄 Dispose 후 목록과 슬롯이 비워지고 세션의 약한 참조도 수집됨.
+- Task와 Thread에서 Dispose한 세션의 목록 제거, 호출자에게 남은 종료된 바인딩과 중복 호출의 무효 동작.
+- 8개 스레드가 각각 100회 중첩 Begin/Dispose와 키 스냅샷 조회를 반복한 뒤 예외 없이 활성 세션 0.
+- 일괄 종료 후 BlackboxHandle 무효화와 Scope/Exert ID 회수, 호출 흐름의 중첩 바인딩 복원, 다른 흐름의 종료된 바인딩 유지 및 기록 거부.
+- 다른 흐름에서 시작한 세션도 전역 일괄 정리 대상에 포함되며, 공개 API는 키·개수만 노출함.
+
+기존 `CompetingRestartsDisposeReplacedSessionsAndUnpublishedCandidates`에 교체 전 후보 생성 시점·경합 대기 중·교체 완료 후 활성 목록이 비어 있다는 검사를 추가했다. 다른 async 메서드에서 Dispose한 뒤 호출자가 다시 Dispose하면 바인딩을 복원하던 기존 기대값은 중복 호출이 아무것도 하지 않는 계약에 맞췄다.
+
+`BlackboxTestBase.TearDown`은 활성 개수가 0인지 먼저 검사하고 실패 메시지에 남은 키를 넣는다. 검사 실패 시에도 `finally`에서 일괄 종료한 뒤 임시 파일과 기본 세션을 정리한다. 전체 테스트에서 추가로 발견된 Dispose 누락은 없었다. 목록 검사는 전역이므로 테스트 기반 클래스의 `[NonParallelizable]`을 유지한다.
+
+Windows x64, .NET SDK 9.0.320에서 확인한 결과:
+
+| 검증 | 결과 |
+| --- | --- |
+| 활성 세션·기본 재시작·세션 동시성 집중 테스트 | 44/44 통과 |
+| Release 전체 테스트, 기본 핸들 풀 | 251/251 통과, 건너뜀 0 |
+| Release 전체 테스트, `BlackboxLockHandles=true` | 251/251 통과, 건너뜀 0 |
+| Release 솔루션 빌드(라이브러리·테스트·샘플) | 경고 0, 오류 0 |
+| Release 벤치마크 프로젝트 별도 빌드 | 경고 0, 오류 0 |
+| 수정 문서 7개의 로컬 링크 대상 검사 | 통과 |
+
+```powershell
+dotnet test tests/BlackThunder.BlackboxSystem.Tests/BlackThunder.BlackboxSystem.Tests.csproj -c Release --no-restore -m:1 -p:UseSharedCompilation=false --logger "trx;LogFileName=active-sessions-release.trx"
+dotnet test tests/BlackThunder.BlackboxSystem.Tests/BlackThunder.BlackboxSystem.Tests.csproj -c Release --no-restore -m:1 -p:UseSharedCompilation=false -p:BlackboxLockHandles=true --logger "trx;LogFileName=active-sessions-lock-handles.trx"
+dotnet build BlackThunder.BlackboxSystem.sln -c Release --no-restore -m:1 -p:UseSharedCompilation=false
+dotnet build benchmarks/Blackbox.Benchmarks/Blackbox.Benchmarks.csproj -c Release --no-restore -m:1 -p:UseSharedCompilation=false
+```
+
+샌드박스의 첫 집중 테스트는 컴파일 후 VSTest/testhost 연결 시간 초과로 중단되었다. 통과 수치는 샌드박스 밖에서 실행한 결과이며 TRX는 무시되는 `tests/BlackThunder.BlackboxSystem.Tests/TestResults/active-sessions-*.trx`에 저장했다. 벤치마크는 현재 솔루션에 포함되지 않아 별도로 빌드했다.
+
+기존 등록된 Subject 조회·준비된 추적 슬롯 재사용·세션 키 조회의 무할당 검증도 두 전체 구성에서 통과했다. 기록·등록 경로는 변경하지 않았으며 추가 잠금은 세션 시작·종료·활성 목록 조회에만 있다. 잠금 핸들 풀 비교 구성에는 기존대로 무잠금 보장이 적용되지 않는다. 성능 벤치마크를 새로 측정하지 않았으며 `.drawio` 파일은 수정하지 않았다.
+
+## 2026-10-30 Dispose 바인딩 복원 수정
+
+직전 절의 "중복 Dispose는 바인딩도 바꾸지 않는다" 규칙을 바꿨다. 이 규칙에서는 다른 흐름(Task, Thread, 다른 async 메서드, 일괄 정리)이 먼저 세션을 종료하면, 세션을 연 흐름이 `using`을 벗어난 뒤에도 종료된 세션에 계속 묶여 기록이 모두 거부됐다. 이제 세션 종료와 활성 목록 제거는 최초 Dispose에서만 수행하고, 바인딩 복원은 호출한 흐름이 그 세션에 묶여 있으면 매 Dispose에서 수행한다.
+
+- `ActiveSessionTests.DisposalFromAnotherFlowLeavesCallerBoundUntilCallerDisposes`(Thread/Task), `SessionConcurrencyTests.DisposeInAnotherAsyncMethodDoesNotRestoreCallersBinding`: 다른 흐름이 종료한 뒤에도 호출자의 바인딩은 남아 있고, 호출자 자신의 Dispose 후에는 기본 세션으로 돌아오며 활성 목록은 0을 유지한다.
+- `ActiveSessionTests.BulkDisposalInvalidatesHandlesAndRestoresOnlyCallingFlow`: 일괄 정리 뒤 자식 Task가 안쪽 세션을 직접 Dispose하면 자식의 바인딩은 바깥 세션(역시 종료됨)으로 돌아가고 기록은 계속 거부된다.
+- Release 전체 테스트: 기본 핸들 풀 251/251, 잠금 핸들 풀 비교 구성 251/251 통과. 솔루션 Release 빌드 경고 0, 오류 0.
+
+## 2026-10-30 SessionState 데이터 객체 분리
+
+기록 코드(Blackbox, LogContext)가 BlackboxSession 전체를 참조하던 구조를 바꿨다. 세션이 소유한 저장소와 핸들 추적기에 기록 코드가 접근하지 않도록 계층을 나눴다.
+
+- `SessionState`(Core): 설정·크래시·종료 여부·경고 표시·기록 카운터와 원자적 접근자만 가진 데이터 객체. 세션·저장소·추적기·레지스트리를 참조하지 않는다. 기록 가능 판정과 경고 출력은 `SessionStateGuard` 확장 메서드가 맡는다.
+- `BlackboxSession`(Front): SessionState·SubjectStore·핸들 추적기·수명을 소유한다. Scope/Exert 핸들 등록은 `OpenScope`/`Exert`로 세션 쪽에서 수행한다.
+- `Blackbox`는 생성자로 SessionState만 주입받는다. `WriteScope`/`Exert`는 기록만 하고 핸들을 만들지 않는다. 레지스트리를 쓰던 공개 생성자와 `GetCurrentSequence()`는 제거했다.
+- `BlackboxHandle`은 Blackbox와 소유 세션을 함께 보관한다. Exert·CrashExport 대상 조회, 출력 전 정리, 출력 파일명은 이 세션을 쓴다. `TagHandle`은 BlackboxHandle이 묶어 준 세션의 저장소에서 대상을 찾는다.
+- 테스트는 기록 코드를 직접 부를 때 `BlackboxTestDoubles.Scope/Exert/Bind`로 현재 세션을 거치도록 바꿨다. `SessionLayeringTests`가 Core 타입에 세션·저장소·추적기 필드가 없음을 확인한다.
+- Release 전체 테스트: 기본 핸들 풀 256/256, 잠금 핸들 풀 비교 구성 256/256 통과. 솔루션(벤치마크·샘플 포함) Release 빌드 경고 0, 오류 0.

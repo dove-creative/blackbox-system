@@ -10,20 +10,22 @@ The format follows Keep a Changelog, and version numbers follow Semantic Version
 
 ### Added
 
-- Added synchronous `BlackboxSession.Begin()` with ambient session/generation binding, copied settings, nested restoration and isolated crash/reset state.
+- Added synchronous `BlackboxHandle.BeginSession()` with ambient session binding, copied settings, nested restoration and isolated crash state. Each session has one recording lifetime; start another with Dispose followed by BeginSession.
 - Added `BlackboxHandle.Label(string)` for an explicit, set-once display name without invoking Subject code.
-- Added read-only `BlackboxSession.CurrentKey`, `BlackboxSession.DefaultKey` and `BlackboxHandle.SessionKey` diagnostics without exposing session objects or allocating during reads.
+- Added read-only `BlackboxHandle.CurrentSessionKey`, `BlackboxHandle.DefaultSessionKey` and `BlackboxHandle.SessionKey` diagnostics without exposing session objects or allocating during reads.
+- Added `BlackboxHandle.ActiveSessionCount`, `GetActiveSessionKeys()` and `DisposeActiveSessions()` to detect and clean up undisposed explicit sessions. A locked, process-wide list strongly retains them until disposal; the default session and restart candidates are excluded. Keys are returned as a snapshot in start order. Bulk disposal runs outside the list lock and leaves other execution flows bound to their disposed sessions. Recording and registration remain lock-free.
 - Added deterministic retirement/publication race tests, weak-reference lifetime checks and a reproducible recording benchmark.
 
 ### Changed
 
-- Ordinary exports are repeatable and keep recording active. Crash export freezes only its own generation, with crash metadata retained separately from the ring buffers.
-- Handles stay bound to their original generation. Reset invalidates all old recording handles without resetting the global slot pools. Retained handles can still export their old records.
+- Replaced `BlackboxHandle.ForceReset()` with `BlackboxHandle.RestartDefaultSession()`. Restart disposes and replaces only the shared default session, preserves its settings and assigns a new session key. Explicit sessions and their execution-context bindings are unaffected.
+- Ordinary exports are repeatable and keep recording active. Crash export freezes only its own session, with crash metadata retained separately from the ring buffers.
+- Handles stay bound to the session in which they were acquired. After that session is disposed or the default session restarts, old handles stop recording without resetting the global slot pools. Retained handles can still export their old records.
 - Replaced ConditionalWeakTable/ThreadLocal registration with CAS-published identity buckets and context lists. Published ring entries are immutable, and updates replace entries atomically.
 - Removed automatic Subject `ToString()` calls. Object references now render as `Type #Id` or `Label (Type #Id)`; `OwnerString` returns the label or type name.
 - Strong-reference mode now retains Subjects while their Blackboxes remain reachable; it no longer has ConditionalWeakTable ephemeron semantics.
 - Export files include session keys and ordinals and use exclusive creation. Files accumulate until the caller removes them.
-- Warnings are emitted once per generation and cause, including cross-thread scope/exert disposal.
+- Warnings are emitted once per session and cause, including cross-thread scope/exert disposal.
 
 ### Fixed
 
@@ -31,7 +33,7 @@ The format follows Keep a Changelog, and version numbers follow Semantic Version
 - Prevented stale ring slots and delayed publications from being mistaken for the current logical record.
 - Reclaimed abandoned handle slots during session retirement, including registration racing retirement and contexts collected before their session.
 - Failed ordinary exports no longer disable recording; failed crash exports can be retried with ordinary export.
-- Bounded handle tracker ownership to 16 shared stripes per handle type in each session generation, preventing write-only object churn from retaining a tracker pair per collected context. Registration/retirement still uses full IDs and lock-free CAS.
+- Bounded handle tracker ownership to 16 shared stripes per handle type in each session, preventing write-only object churn from retaining a tracker pair per collected context. Registration/retirement still uses full IDs and lock-free CAS.
 - Expanded the default session's subject table to 65,536 buckets (explicit sessions remain at 256). Registered lookups check hashes before dereferencing owners and do not perform cleanup.
 - Added a rotating, lock-free dead-entry sweep of up to 16 buckets after each successful new Subject registration. This reduces retained log buffers during object churn without adding work to registered lookups; it does not promise immediate collection when registrations stop or a fixed heap limit.
 
