@@ -22,20 +22,20 @@ jobs:
     steps:
       - name: Check app credentials
         env:
-          APP_ID: ${{ vars.CONVENTIONS_APP_ID }}
+          CLIENT_ID: ${{ vars.CONVENTIONS_APP_CLIENT_ID }}
           PRIVATE_KEY: ${{ secrets.CONVENTIONS_APP_PRIVATE_KEY }}
         run: |
-          if [ -z "$APP_ID" ] || [ -z "$PRIVATE_KEY" ]; then
-            echo "::error::Set the CONVENTIONS_APP_ID variable and the CONVENTIONS_APP_PRIVATE_KEY secret."
+          if [ -z "$CLIENT_ID" ] || [ -z "$PRIVATE_KEY" ]; then
+            echo "::error::Set the CONVENTIONS_APP_CLIENT_ID variable and the CONVENTIONS_APP_PRIVATE_KEY secret."
             exit 1
           fi
 
       # An app token lets the pull request trigger the repository's own workflows.
       - name: Create app token
         id: token
-        uses: actions/create-github-app-token@v2
+        uses: actions/create-github-app-token@v3
         with:
-          app-id: ${{ vars.CONVENTIONS_APP_ID }}
+          client-id: ${{ vars.CONVENTIONS_APP_CLIENT_ID }}
           private-key: ${{ secrets.CONVENTIONS_APP_PRIVATE_KEY }}
 
       - name: Check out source

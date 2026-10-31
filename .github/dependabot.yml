@@ -5,3 +5,6 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
+    # Propose commits a day after they land instead of waiting for the default cooldown.
+    cooldown:
+      default-days: 1
