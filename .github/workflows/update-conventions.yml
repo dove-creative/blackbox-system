@@ -1,0 +1,94 @@
+name: Update conventions
+
+on:
+  repository_dispatch:
+    types: [conventions-updated]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: update-conventions
+  cancel-in-progress: false
+
+jobs:
+  update:
+    name: Update conventions submodule
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      BRANCH: chore/conventions-update
+    steps:
+      - name: Check app credentials
+        env:
+          APP_ID: ${{ vars.CONVENTIONS_APP_ID }}
+          PRIVATE_KEY: ${{ secrets.CONVENTIONS_APP_PRIVATE_KEY }}
+        run: |
+          if [ -z "$APP_ID" ] || [ -z "$PRIVATE_KEY" ]; then
+            echo "::error::Set the CONVENTIONS_APP_ID variable and the CONVENTIONS_APP_PRIVATE_KEY secret."
+            exit 1
+          fi
+
+      # An app token lets the pull request trigger the repository's own workflows.
+      - name: Create app token
+        id: token
+        uses: actions/create-github-app-token@v2
+        with:
+          app-id: ${{ vars.CONVENTIONS_APP_ID }}
+          private-key: ${{ secrets.CONVENTIONS_APP_PRIVATE_KEY }}
+
+      - name: Check out source
+        uses: actions/checkout@v7
+        with:
+          token: ${{ steps.token.outputs.token }}
+
+      - name: Update submodule and pull request
+        env:
+          GH_TOKEN: ${{ steps.token.outputs.token }}
+          BASE: ${{ github.event.repository.default_branch }}
+        run: |
+          name=$(git config -f .gitmodules --get-regexp '^submodule\..*\.url$' \
+            | awk '$2 ~ /\/blackthunder-conventions(\.git)?$/ { print $1; exit }')
+          if [ -z "$name" ]; then
+            echo "::error::No blackthunder-conventions submodule is registered in .gitmodules."
+            exit 1
+          fi
+          name=${name#submodule.}
+          name=${name%.url}
+          path=$(git config -f .gitmodules "submodule.$name.path")
+
+          # Continue an open pull request so commits added to it are kept; otherwise start from the base branch.
+          pr=$(gh pr list --head "$BRANCH" --state open --json number --jq '.[0].number')
+          if [ -n "$pr" ]; then
+            git fetch origin "$BRANCH"
+            git switch -c "$BRANCH" FETCH_HEAD
+          else
+            git switch -c "$BRANCH"
+          fi
+
+          git submodule update --init --remote "$path"
+          if git diff --quiet -- "$path"; then
+            echo "The conventions submodule is already up to date."
+            exit 0
+          fi
+
+          sha=$(git -C "$path" rev-parse HEAD)
+          short=${sha:0:7}
+          title="Update BlackThunder Conventions to $short"
+          body="Updates \`$path\` to [\`$short\`](https://github.com/dove-creative/blackthunder-conventions/commit/$sha), the latest \`main\` of BlackThunder Conventions.
+
+          Review the changed conventions and apply any code or document changes they require before merging. Commits added to this branch are kept when later updates arrive."
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add "$path"
+          git commit -m "$title"
+
+          if [ -n "$pr" ]; then
+            git push origin "$BRANCH"
+            gh pr edit "$pr" --title "$title" --body "$body"
+          else
+            git push --force origin "$BRANCH"
+            gh pr create --base "$BASE" --head "$BRANCH" --title "$title" --body "$body"
+          fi
