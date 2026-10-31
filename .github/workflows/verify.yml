@@ -1,0 +1,50 @@
+name: Verify
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  csharp:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - run: dotnet build csharp/BlackThunder.BlackboxSystem.sln --configuration Release
+      - run: dotnet test csharp/tests/BlackThunder.BlackboxSystem.Tests/BlackThunder.BlackboxSystem.Tests.csproj --configuration Release --no-build
+      - run: dotnet test csharp/tests/BlackThunder.BlackboxSystem.Tests.CSharp10/BlackThunder.BlackboxSystem.Tests.CSharp10.csproj --configuration Release --no-build
+      - run: dotnet pack csharp/src/BlackThunder.BlackboxSystem/BlackThunder.BlackboxSystem.csproj --configuration Release --no-build --output artifacts/packages
+      - run: dotnet test csharp/tests/BlackThunder.BlackboxSystem.Tests/BlackThunder.BlackboxSystem.Tests.csproj --configuration Release -p:BlackboxLockHandles=true --no-restore
+
+  typescript:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        node: [22, 24]
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        working-directory: typescript
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+          cache-dependency-path: typescript/package-lock.json
+      - run: npm ci --ignore-scripts
+      - run: npm test
+      - run: npm run test:package
+      - run: npm run sample -- all
+      - if: matrix.os == 'ubuntu-latest' && matrix.node == 24
+        run: npx playwright install --with-deps chromium firefox webkit
+      - if: matrix.os == 'ubuntu-latest' && matrix.node == 24
+        run: npm run test:browser

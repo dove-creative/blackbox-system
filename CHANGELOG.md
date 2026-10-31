@@ -20,16 +20,25 @@ The format follows Keep a Changelog, and version numbers follow Semantic Version
 - Moved the shared `Nullable` and `ImplicitUsings` settings into `Directory.Build.props`.
 - The benchmark project now references the library project instead of compiling runtime sources, so measurements use the `netstandard2.1` build. It is included in the solution, and `InternalsVisibleTo` now names only the benchmark assembly.
 - Grouped runtime members under the shared `Front`, `Internal`, and `Content` regions, with named subgroups where a region has several.
+- Split the TypeScript recording engine into session, context, handle, object-store, settings, and runtime modules. Package exports and generated output are unchanged.
+- Documented that TypeScript `runScope()/runExert()` callbacks run in a branch of the handle's session; in Node.js, a handle bound to another session also switches the ambient session for the callback.
 - Replaced `BlackboxHandle.Of(subject).Label(name)` with `BlackboxHandle.Of(subject, label: name)` and removed the public `Label` method. The optional label keeps the first-nonblank-name policy within each session; omitted or blank labels preserve the existing name, and conflicting names keep the first value and warn. Existing source calls to `Of(subject)` remain valid; consumers must rebuild against the updated signature.
 
 ### Added
 
 - Added UniTest session transition chains, missing public-contract edge cases, and C# 10 interpolation checks for every recording overload across active, default, disabled, disposed, and frozen handles.
+- Added the initial `@blackthunder/blackbox-system` TypeScript implementation for Node.js and browsers, with object records, scopes, interactions, tags, isolated sessions, TXT/HTML export, and crash diagnostics. Node.js propagates async contexts; browser callers pass a context only when isolating parallel work.
+- Added TypeScript samples, package-consumer and real-browser checks, and separate C# and TypeScript CI jobs. npm publication remains a separate release step.
 - Added `tests/BlackThunder.BlackboxSystem.Tests.CSharp10`, which compiles with C# 10 and verifies that callers compiled with C# 10 or later bind interpolated messages to `WriteHandler` and skip formatted expressions while recording is disabled.
 
 ### Fixed
 
 - Ignore `ScopeHandle.With(...)` after the scope has been disposed, preventing stale scopes from tagging old records or registering new targets.
+- Apply the same disposed-scope guard to TypeScript `ScopeHandle.with(...)`, including automatically closed inner scopes, with shared Node/browser regressions.
+- Stop reporting successful TypeScript `openLog` launches on Windows as failures. `explorer.exe` returns exit code 1 after opening a file, so Windows reports only launch errors.
+- Reject TypeScript `maxLogCount` values above the JavaScript array limit of 2^32 - 1 during configuration instead of failing at the first object lookup.
+- Embed the TypeScript HTML report script as a build-time string literal so consumer bundler or coverage transforms cannot break exported reports.
+- Accept TypeScript `TargetTypes` only as the final `with(...)` argument in declarations, and reject other positions at runtime with a descriptive TypeError.
 
 ## [0.2.0] - 2026-10-29
 

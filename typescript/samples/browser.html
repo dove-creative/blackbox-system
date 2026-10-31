@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Blackbox browser sample</title>
+    <style>
+        :root { color-scheme: light dark; font-family: system-ui, sans-serif; }
+        body { max-width: 760px; margin: 4rem auto; padding: 0 1.5rem; line-height: 1.65; }
+        h1 { line-height: 1.2; }
+        p { max-width: 65ch; }
+        .controls { display: flex; gap: .75rem; flex-wrap: wrap; margin: 2rem 0; }
+        button, select { font: inherit; padding: .6rem .9rem; border: 1px solid #888; border-radius: .4rem; }
+        button { cursor: pointer; }
+        button:disabled { cursor: wait; }
+        #status { white-space: pre-wrap; overflow-wrap: anywhere; }
+        #downloads { display: grid; gap: .75rem; margin: 1.5rem 0; }
+        #downloads button { text-align: left; overflow-wrap: anywhere; }
+        code { font-size: .95em; }
+    </style>
+</head>
+<body>
+    <h1>Blackbox in the browser</h1>
+    <p>Record object activity, scopes, tags, and interactions. Run a scenario, then download its HTML report.</p>
+    <div class="controls">
+        <label for="scenario">Scenario</label>
+        <select id="scenario">
+            <option value="write">Object activity</option>
+            <option value="exert">Object interaction</option>
+            <option value="tag">Related-object tags</option>
+            <option value="exception">Expected failure</option>
+            <option value="async">Parallel async sessions</option>
+        </select>
+        <button id="run" type="button">Run scenario</button>
+    </div>
+    <p id="status" role="status">Ready. Output is generated locally and downloaded only when requested.</p>
+    <div id="downloads"></div>
+    <p>Ordinary calls use <code>BlackboxHandle.of(subject)</code>. The parallel example uses
+        the supplied <code>context.of(subject)</code> to isolate browser async work.</p>
+    <script type="module">
+        import { BlackboxHandle, TargetTypes, downloadExport } from "../dist/browser.js";
+
+        const selector = document.querySelector("#scenario");
+        const runButton = document.querySelector("#run");
+        const status = document.querySelector("#status");
+        const downloads = document.querySelector("#downloads");
+        const warnings = [];
+        let exportCount = 0;
+
+        function captureExport(artifact) {
+            exportCount++;
+            const button = document.createElement("button");
+            button.type = "button";
+            button.textContent = "Download " + artifact.fileName;
+            button.addEventListener("click", () => downloadExport(artifact));
+            downloads.append(button);
+        }
+
+        const scenarios = {
+            write() {
+                const loader = {};
+                const trace = BlackboxHandle.of(loader, { label: "Loader" });
+                const scope = trace.scope("Load", { methodName: "load" });
+                try {
+                    BlackboxHandle.of(loader).write("Preparing data");
+                    BlackboxHandle.of(loader).write("Data loaded");
+                } finally {
+                    scope.dispose();
+                }
+                trace.export();
+            },
+            exert() {
+                const loader = {};
+                const worker = {};
+                const trace = BlackboxHandle.of(loader, { label: "Loader" });
+                const target = BlackboxHandle.of(worker, { label: "Worker" });
+                const exert = trace.exert(worker, "Worker.process");
+                try {
+                    const scope = target.scope("Process", { methodName: "process" });
+                    try { target.write("Processing finished"); }
+                    finally { scope.dispose(); }
+                } finally {
+                    exert.dispose();
+                }
+                trace.export();
+            },
+            tag() {
+                const order = {};
+                const customer = {};
+                const trace = BlackboxHandle.of(order, { label: "Order" });
+                BlackboxHandle.of(customer, { label: "Customer" });
+                trace.write("Prepare %0; optional owner: %1").with(customer, null, TargetTypes.Full);
+                trace.exertMessage(customer, "Notify customer");
+                trace.export();
+            },
+            exception() {
+                const trace = BlackboxHandle.of({}, { label: "Loader" });
+                trace.write("About to run the deliberate failure");
+                try {
+                    throw new Error("The sample operation failed deliberately.");
+                } catch (error) {
+                    trace.writeError(error, { exceptionHandling: "crashExport" });
+                }
+            },
+            async async() {
+                const sharedSubject = {};
+                const keys = await Promise.all(["left", "right"].map(label =>
+                    BlackboxHandle.runSession(async context => {
+                        const trace = context.of(sharedSubject, { label });
+                        await trace.runScope("Independent operation", async scopeContext => {
+                            await new Promise(resolve => setTimeout(resolve, label === "left" ? 10 : 5));
+                            scopeContext.of(sharedSubject).write("Finished " + label);
+                        });
+                        trace.export();
+                        return trace.sessionKey;
+                    }),
+                ));
+                if (keys[0] === keys[1]) throw new Error("Parallel sample sessions were not isolated.");
+            },
+        };
+
+        runButton.addEventListener("click", async () => {
+            runButton.disabled = true;
+            downloads.replaceChildren();
+            warnings.length = 0;
+            exportCount = 0;
+            status.textContent = "Running...";
+            try {
+                BlackboxHandle.restartDefaultSession();
+                BlackboxHandle.configure({
+                    onExport: captureExport,
+                    warningLogger: message => warnings.push(message),
+                    openLog: false,
+                });
+                await scenarios[selector.value]();
+                status.textContent = "Completed: " + selector.value + ". Reports ready: " + exportCount
+                    + (warnings.length ? "\n" + warnings.join("\n") : "");
+            } catch (error) {
+                status.textContent = "Sample failed: " + (error instanceof Error ? error.message : String(error));
+            } finally {
+                runButton.disabled = false;
+            }
+        });
+    </script>
+</body>
+</html>

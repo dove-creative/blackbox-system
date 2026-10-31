@@ -6,3 +6,10 @@ obj/
 *.user
 TestResults/
 artifacts/
+node_modules/
+dist/
+.test-build/
+playwright-report/
+**/playwright/.cache/
+test-results/
+typescript/samples/output/

@@ -1,0 +1,38 @@
+{
+  "name": "@blackthunder/blackbox-system",
+  "version": "0.1.0",
+  "description": "Object activity, execution scope, and interaction tracing for Node.js and browsers.",
+  "type": "module",
+  "license": "MIT",
+  "engines": { "node": ">=22" },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/dove-creative/blackbox-system.git",
+    "directory": "typescript"
+  },
+  "exports": {
+    ".": {
+      "node": { "types": "./dist/node.d.ts", "default": "./dist/node.js" },
+      "default": { "types": "./dist/browser.d.ts", "default": "./dist/browser.js" }
+    },
+    "./node": { "types": "./dist/node.d.ts", "default": "./dist/node.js" },
+    "./browser": { "types": "./dist/browser.d.ts", "default": "./dist/browser.js" }
+  },
+  "types": "./dist/browser.d.ts",
+  "files": ["dist", "README.md", "README.ko.md"],
+  "publishConfig": { "access": "public" },
+  "scripts": {
+    "build": "node scripts/prepare-build.mjs && tsc -p tsconfig.json && node scripts/embed-report-script.mjs && node scripts/copy-license.mjs",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "npm run build && node --expose-gc --test tests/*.test.mjs",
+    "test:browser": "npm run build && node tests/browser.mjs",
+    "test:package": "node tests/package.mjs",
+    "sample": "npm run build && node samples/node.mjs",
+    "prepack": "npm run build"
+  },
+  "devDependencies": {
+    "@types/node": "22.20.5",
+    "playwright": "1.64.1",
+    "typescript": "7.0.2"
+  }
+}
