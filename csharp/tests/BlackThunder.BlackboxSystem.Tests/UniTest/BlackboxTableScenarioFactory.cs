@@ -363,6 +363,8 @@ namespace BlackThunder.BlackboxSystem.Tests
                     var target = m.NewOwner("unused target");
                     var scope = BlackboxTestDoubles.HandleFor(owner).Scope("open %0", "Scope");
                     scope.Dispose();
+                    // Owners from earlier steps are weakly held, so collect them before taking the baseline.
+                    ForceFullCollection();
                     var count = BlackboxSessionRegistry.Count();
                     var sequence = BlackboxSessionRegistry.Current.State.CurrentSequence;
 
@@ -372,6 +374,7 @@ namespace BlackThunder.BlackboxSystem.Tests
                     Assert.That(BlackboxSessionRegistry.Contains(target), Is.False);
                     Assert.That(BlackboxSessionRegistry.Count(), Is.EqualTo(count));
                     Assert.That(BlackboxSessionRegistry.Current.State.CurrentSequence, Is.EqualTo(sequence));
+                    GC.KeepAlive(owner);
                 }, NotPrinted),
                 Scenario("Alive_DisposeDifferentThread", m =>
                 {
@@ -549,6 +552,8 @@ namespace BlackThunder.BlackboxSystem.Tests
                 }),
                 Scenario("Registered_ContainsCount", m =>
                 {
+                    // Owners from earlier steps are weakly held, so collect them before taking the baseline.
+                    ForceFullCollection();
                     var before = BlackboxSessionRegistry.Count();
                     var owner = m.NewOwner("registry");
                     BlackboxTestDoubles.BlackboxFor(owner);
@@ -556,6 +561,7 @@ namespace BlackThunder.BlackboxSystem.Tests
                     Assert.That(BlackboxSessionRegistry.Contains(owner), Is.True, "Table 3-2 / Registered x Contains");
                     Assert.That(BlackboxSessionRegistry.Count(), Is.EqualTo(before + 1), "Table 3-2 / Registered x Count");
                     Assert.Throws<ArgumentNullException>(() => BlackboxSessionRegistry.Contains(null));
+                    GC.KeepAlive(owner);
                 }),
                 Scenario("Any_RestartDefaultSession", m =>
                 {
