@@ -2,9 +2,9 @@
 
 [한국어](README.ko.md)
 
-Blackbox is a .NET tracing framework for recording object activity, execution scopes, and object-to-object interactions, then reading them later as connected logs.
+Blackbox is a tracing framework for recording object activity, execution scopes, and object-to-object interactions, then reading them as connected logs.
 
-Where a normal log focuses on a message at one moment, Blackbox records both 'what process this object went through' and 'which objects were connected during that process'.
+It records what an object went through and which objects were connected during that process. This repository provides the same recording concepts in C# and TypeScript, with independent builds, tests, and packages for each implementation.
 
 <img src="docs/Images/blackbox-html-export.png" alt="Blackbox HTML export preview" width="900">
 
@@ -16,125 +16,39 @@ If you find a problem or have a suggestion, please open a [Discussion](https://g
 
 ## Features
 
-- Per-object log storage: creates a `Blackbox` for each target object and accumulates logs during execution.
-- Scope records: records the start and end of processing ranges with `Scope(...)` and `using`.
-- Interaction records: records object-to-object call relationships on both sides with `Exert(...)` and `ExertMessage(...)`.
-- Tag links: attaches related targets to the source log with `Write(...).With(...)` or `Scope(...).With(...)`.
-- Export: writes recorded logs to text or HTML files.
-- Runtime switch: set `BlackboxHandle.UseBlackbox` to control whether recording handles are created and logs are written.
+- Per-object records: retains each object's activity and state changes as its own history.
+- Scope records: connects the start and end of processing ranges to show execution flow.
+- Interactions and tags: links object-to-object calls and related targets to the records.
+- Sessions and runtime switch: separates recording lifetimes and disables recording when needed.
+- TXT and HTML export: turns connected records and error context into readable output.
 
-## Requirements and Installation
+## Language Guides
 
-Consumers reference a pinned stable release of `BlackThunder.BlackboxSystem`. Register the directory containing the released `.nupkg` as a NuGet feed before restoring it.
+| Implementation | Runtime | Package | Getting started |
+| --- | --- | --- | --- |
+| C# | .NET Standard 2.1 compatible runtimes | `BlackThunder.BlackboxSystem` | [Installation and usage](csharp/README.md) |
+| TypeScript | Node.js and browsers | `@blackthunder/blackbox-system` | [Installation and usage](typescript/README.md) |
 
-```powershell
-dotnet add package BlackThunder.BlackboxSystem --version "[0.2.0]"
+Each implementation's guide covers installation, a minimal example, samples, and test commands. Async context and output behavior follow the contract of the selected implementation.
+
+## Repository Layout
+
+```text
+csharp/        C# source, tests, samples, benchmarks, and NuGet settings
+typescript/    TypeScript source, tests, samples, and npm settings
+docs/          C# implementation docs, diagrams, and existing validation records
+guidelines/    Shared code and documentation guidelines
 ```
 
-You can also add the reference directly to the project file.
-
-```xml
-<ItemGroup>
-  <PackageReference Include="BlackThunder.BlackboxSystem" Version="[0.2.0]" />
-</ItemGroup>
-```
-
-Samples in the Blackbox development repository use a `ProjectReference` to the current library project. The runtime library has no dependency on UniTest.
-
-Building this repository and running its tests, samples, or benchmarks requires a .NET 10 SDK. The library targets `netstandard2.1`, executable projects target `net10.0`, and the language version is C# 9. See the [contribution guide](CONTRIBUTING.md) for shared-guideline submodule initialization and development rules.
-
-Configure the log output location and logger early in execution.
-
-```csharp
-BlackboxHandle.Configure(
-    logDirectory: Path.Combine(AppContext.BaseDirectory, "BlackboxLogs"),
-    logger: Console.WriteLine);
-```
-
-Recording starts enabled by default. To temporarily stop recording, set `BlackboxHandle.UseBlackbox = false` or pass `useBlackbox: UseBlackboxOption.DoNotUse` to `Configure(...)`. When this switch is off, `BlackboxHandle.Of(subject)` returns an invalid handle and recording calls fall back to no-op/default behavior.
-
-C# 9 callers use string overloads for interpolated messages, so expressions inside the string are evaluated first even when recording is disabled. Automatic short-circuiting through `WriteHandler` is supported for callers compiled with C# 10 or later.
-
-## Quick Start
-
-### Basic Usage Code
-
-```csharp
-using BlackThunder.BlackboxSystem;
-
-public class Loader
-{
-    public Loader()
-    {
-        using var scope = BlackboxHandle.Of(this, label: "Loader").Construct();
-    }
-
-    public void Load(Worker worker)
-    {
-        using var _ = BlackboxHandle.Of(this).Scope("Load");
-
-        BlackboxHandle.Of(this).Write("Prepare %0").With(worker);
-
-        using (BlackboxHandle.Of(this).Exert(worker, "Worker.Load"))
-        worker.Load();
-    }
-
-    public void ExportLogs() => BlackboxHandle.Of(this).Export();
-}
-```
-
-This example records the following information.
-
-- The `Load` scope of the `Loader` object
-- The scope-start log
-- Bidirectional interaction records for the `worker.Load()` call
-- Connected log output centered on `Loader` when `ExportLogs()` is called
-
-### C# Sample
-
-Use the [console sample in samples](samples/README.md) to exercise the recording flows.
-
-```powershell
-dotnet run --project samples/BlackThunder.BlackboxSystem.Samples.csproj
-dotnet run --project samples/BlackThunder.BlackboxSystem.Samples.csproj -- write
-```
-
-The first command opens the `sample>` prompt for repeated runs of `write`, `exert`, `tag`, or `exception`. The second command runs the `write` scenario once and exits without opening a browser.
-
-Logs are written to scenario-specific folders under the executable output directory. The `write` scenario uses `SampleOutput/Write`. See the [sample documentation](samples/README.md) for command usage, exit codes, and export-opening behavior (Korean).
-
-## Main APIs
-
-- `BlackboxHandle.Of(subject, label: name)`: gets the recording entry point for the target object in the current session, with an optional label.
-- `Write(message)` / `WriteError(message)`: records activity or errors.
-- `Scope(message)`: records the execution scope of a `using` block.
-- `Exert(other, message)` / `ExertMessage(other, message)`: records object-to-object interactions in both objects' logs.
-- `With(targets)`: attaches related targets to an activity log or scope-start log.
-- `Export(...)` / `CrashExport(...)`: exports connected logs, optionally recording an error as part of the export.
-- `BlackboxHandle.BeginSession()`: begins a test/debug session with its own lifetime.
-- `BlackboxHandle.RestartDefaultSession()`: ends and replaces the shared default session while preserving its settings.
-
-See [Usage](docs/Wiki/04-Usage.md) for calling guidelines and the [session and recording contract](docs/Wiki/05-Sessions.md) for disposal and leak diagnostics (Korean).
+C# and TypeScript packages are versioned and released independently. See the [contribution guide](CONTRIBUTING.md) for shared-guideline initialization, development, and verification.
 
 ## Documentation
 
-- [Overview](docs/Wiki/01-Overview.md): purpose and main recording structures (Korean)
-- [Usage](docs/Wiki/04-Usage.md): configuration and representative workflows (Korean)
-- [Implementation](docs/Wiki/02-Implementations.md): component responsibilities and recording pipelines (Korean)
-- [Session and recording contract](docs/Wiki/05-Sessions.md): lifecycle, default sessions, lock-free recording, and exports (Korean)
-
-## Tests
-
-Run both NUnit test projects with a .NET 10 SDK. The main project covers recording, handles, exports, and samples. The C# 10 project checks that interpolated messages bind to `WriteHandler` and skip formatted expressions when recording is disabled.
-
-The root `NuGet.config` restores `BlackThunder.UniTest` `0.4.0` from the checked-in `packages/` local feed and third-party dependencies from nuget.org.
-
-```powershell
-dotnet test tests/BlackThunder.BlackboxSystem.Tests/BlackThunder.BlackboxSystem.Tests.csproj
-dotnet test tests/BlackThunder.BlackboxSystem.Tests.CSharp10/BlackThunder.BlackboxSystem.Tests.CSharp10.csproj
-```
-
-See the [contribution guide](CONTRIBUTING.md) for verification scope and development settings, along with the [session validation report](docs/Tests/04-Sessions.md) and [recording benchmark](benchmarks/README.md).
+- [C# overview](docs/Wiki/01-Overview.md): purpose and main recording structures
+- [C# usage](docs/Wiki/04-Usage.md): configuration and representative workflows
+- [C# session and recording contract](docs/Wiki/05-Sessions.md): lifetimes, async context, and exports
+- [C# validation records](docs/Tests/03-Results.md): results from existing implementation stages
+- [TypeScript guide](typescript/README.md): Node.js and browser usage and verification
 
 ## License
 

@@ -8,6 +8,8 @@ The format follows Keep a Changelog, and version numbers follow Semantic Version
 
 ### Changed
 
+- Execute C# regression assertions through UniTest while retaining NUnit discovery, parameterized cases, and fixture lifetime. Table checks now require every registered scenario to complete, with public API and test-integration guards to detect omissions.
+- Split the repository into `csharp/` and `typescript/` implementation roots and pinned this repository to the .NET 10 SDK through `global.json`. The C# library continues to target `netstandard2.1` with C# 9.
 - Adopted the pinned BlackThunder Conventions submodule and its C# platform guidelines: repository-wide C# 9, `netstandard2.1` for the library, and `net10.0` for tests, samples, and benchmarks. C# 9 callers use string-overload interpolation; automatic `WriteHandler` short-circuiting remains available to C# 10 or later callers.
 - Applied the shared C# and documentation conventions across runtime, tests, samples, and benchmarks, including private-field names, member grouping, formatting, document titles, and relative links.
 - Declared `BlackboxHandle` as a `readonly` struct. Its references to the recording object and session remain fixed; the nested `WriteHandler` remains a mutable `ref struct` for message construction.
@@ -22,7 +24,12 @@ The format follows Keep a Changelog, and version numbers follow Semantic Version
 
 ### Added
 
+- Added UniTest session transition chains, missing public-contract edge cases, and C# 10 interpolation checks for every recording overload across active, default, disabled, disposed, and frozen handles.
 - Added `tests/BlackThunder.BlackboxSystem.Tests.CSharp10`, which compiles with C# 10 and verifies that callers compiled with C# 10 or later bind interpolated messages to `WriteHandler` and skip formatted expressions while recording is disabled.
+
+### Fixed
+
+- Ignore `ScopeHandle.With(...)` after the scope has been disposed, preventing stale scopes from tagging old records or registering new targets.
 
 ## [0.2.0] - 2026-10-29
 

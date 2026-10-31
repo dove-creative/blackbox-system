@@ -1,0 +1,372 @@
+using System;
+using System.IO;
+using System.Linq;
+using NUnit.Framework;
+
+namespace BlackThunder.BlackboxSystem.Tests
+{
+    internal sealed class BlackboxHandleTests : BlackboxTestBase
+    {
+        [Test]
+        [RunWithUniTest]
+        public void OfCreatesValidHandleAndRejectsNull()
+        {
+            var owner = BlackboxTestDoubles.Owner("owner");
+
+            // Table 5-1 / Valid x Of.ValidSubject
+            var handle = BlackboxTestDoubles.HandleFor(owner);
+
+            Assert.That(handle.IsValid, Is.True);
+            Assert.That(handle.Owner, Is.SameAs(owner));
+            Assert.That(handle.OwnerString, Is.EqualTo("owner"));
+            Assert.That(handle.Id, Is.EqualTo(0));
+
+            // Table 5-1 / Valid x Of.NullSubject
+            Assert.That(() => BlackboxTestDoubles.HandleFor<object>(null), Throws.TypeOf<ArgumentNullException>());
+        }
+
+        [Test]
+        [RunWithUniTest]
+        public void UseBlackboxFalseDisablesNewAndExistingHandles()
+        {
+            var owner = BlackboxTestDoubles.Owner("owner");
+            var handle = BlackboxTestDoubles.HandleFor(owner);
+            Assert.That(handle.IsValid, Is.True);
+
+            var blackbox = BlackboxTestDoubles.BlackboxFor(owner);
+
+            BlackboxHandle.UseBlackbox = false;
+
+            Assert.That(BlackboxHandle.UseBlackbox, Is.False);
+            Assert.That(handle.IsValid, Is.False);
+            Assert.That(BlackboxTestDoubles.HandleFor(owner).IsValid, Is.False);
+            Assert.DoesNotThrow(() => BlackboxTestDoubles.HandleFor<object>(null));
+
+            handle.Write("skipped", "Run").With();
+            Assert.That(BlackboxTestDoubles.Logs(blackbox), Is.Empty);
+        }
+
+        [Test]
+        [RunWithUniTest]
+        public void InvalidHandleReturnsFallbacks()
+        {
+            var invalid = default(BlackboxHandle);
+            var other = BlackboxTestDoubles.Owner("other");
+
+            // Table 5-1 / Default.Invalid x Write
+            Assert.That(invalid.Write("message").With(), Is.EqualTo("message"));
+
+            // Table 5-1 / Default.Invalid x WriteScope
+            Assert.That(invalid.Scope("scope").IsDisposed, Is.True);
+
+            // Table 5-1 / Default.Invalid x ExertMessage.OtherPeer
+            Assert.That(invalid.ExertMessage(other, "call"), Is.EqualTo("call"));
+
+            // Table 5-1 / Default.Invalid x Exert.OtherPeer
+            Assert.That(invalid.Exert(other, "call").IsDisposed, Is.True);
+
+            // Table 5-1 / Default.Invalid x WriteError.ErrorTargetsEmpty
+            Assert.That(invalid.WriteError("error"), Is.EqualTo("error"));
+
+            Assert.That(invalid.IsValid, Is.False);
+            Assert.That(invalid.Owner, Is.Null);
+            Assert.That(invalid.Id, Is.EqualTo(-1));
+            Assert.That(BlackboxSessionRegistry.Count(), Is.EqualTo(0));
+        }
+
+        [Test]
+        [RunWithUniTest]
+        public void ConstructWritesCtorScopeAndCachesHandle()
+        {
+            var owner = BlackboxTestDoubles.Owner("owner");
+            var handle = BlackboxTestDoubles.HandleFor(owner);
+
+            // Table 5-1 / Valid x Construct
+            var scope = handle.Construct("created", out var cachedHandle, "Ctor");
+
+            var logs = BlackboxTestDoubles.Logs(BlackboxTestDoubles.BlackboxFor(owner));
+            Assert.That(scope.IsAlive, Is.True);
+            Assert.That(cachedHandle.IsValid, Is.True);
+            Assert.That(cachedHandle.Id, Is.EqualTo(handle.Id));
+            Assert.That(logs.Single().ScopeType, Is.EqualTo(ScopeType.Open));
+            Assert.That(logs.Single().Message, Does.Contain("[Ctor: owner (BlackboxTestDoubles.NamedOwner #0)]"));
+            Assert.That(logs.Single().Message, Does.Contain("created"));
+        }
+
+        [Test]
+        [RunWithUniTest]
+        public void WhenReturnsValidOrSkippedHandle()
+        {
+            var handle = BlackboxTestDoubles.HandleFor(BlackboxTestDoubles.Owner("owner"));
+
+            // Table 5-1 / Valid x When.True
+            Assert.That(handle.When(true).IsValid, Is.True);
+            Assert.That(handle.When(() => true).IsValid, Is.True);
+
+            // Table 5-1 / Valid x When.False
+            Assert.That(handle.When(false).IsValid, Is.False);
+            Assert.That(handle.When(() => false).IsValid, Is.False);
+
+            Assert.That(() => handle.When(null), Throws.TypeOf<ArgumentNullException>());
+        }
+
+        [Test]
+        [RunWithUniTest]
+        public void DisposeWritesDisposedLog()
+        {
+            var owner = BlackboxTestDoubles.Owner("owner");
+            var handle = BlackboxTestDoubles.HandleFor(owner);
+
+            // Table 5-1 / Valid x Dispose
+            var next = handle.Dispose("done", "DisposeCall");
+
+            var log = BlackboxTestDoubles.Logs(BlackboxTestDoubles.BlackboxFor(owner)).Single();
+            Assert.That(next.IsValid, Is.True);
+            Assert.That(log.Message, Does.Contain("[Disposed: owner (BlackboxTestDoubles.NamedOwner #0)]"));
+            Assert.That(log.Message, Does.Contain("done"));
+        }
+
+        [Test]
+        [RunWithUniTest]
+        public void WriteReturnsMessageAndStoresLog()
+        {
+            var owner = BlackboxTestDoubles.Owner("owner");
+            var handle = BlackboxTestDoubles.HandleFor(owner);
+
+            // Table 5-1 / Valid x Write
+            var message = handle.Write("hello", "Run").With();
+
+            var log = BlackboxTestDoubles.Logs(BlackboxTestDoubles.BlackboxFor(owner)).Single();
+            Assert.That(message, Is.EqualTo("hello"));
+            Assert.That(log.Message, Is.EqualTo("hello"));
+        }
+
+        [Test]
+        [RunWithUniTest]
+        public void WriteScopeReturnsAliveScopeHandle()
+        {
+            var owner = BlackboxTestDoubles.Owner("owner");
+            var handle = BlackboxTestDoubles.HandleFor(owner);
+
+            // Table 5-1 / Valid x WriteScope
+            var scope = handle.Scope("scope", "Run");
+
+            var log = BlackboxTestDoubles.Logs(BlackboxTestDoubles.BlackboxFor(owner)).Single();
+            Assert.That(scope.IsAlive, Is.True);
+            Assert.That(log.ScopeType, Is.EqualTo(ScopeType.Open));
+        }
+
+        [Test]
+        [RunWithUniTest]
+        public void ExertMessageRejectsNullAndStoresPeerInteraction()
+        {
+            var sourceOwner = BlackboxTestDoubles.Owner("source");
+            var targetOwner = BlackboxTestDoubles.Owner("target");
+            var handle = BlackboxTestDoubles.HandleFor(sourceOwner);
+
+            // Table 5-1 / Valid x ExertMessage.OtherNull
+            Assert.That(() => handle.ExertMessage<object>(null, "call"), Throws.TypeOf<ArgumentNullException>());
+
+            // Table 5-1 / Valid x ExertMessage.OtherPeer
+            Assert.That(handle.ExertMessage(targetOwner, "call", "Run"), Is.EqualTo("call"));
+
+            Assert.That(BlackboxTestDoubles.Logs(BlackboxTestDoubles.BlackboxFor(sourceOwner)).Single().ExertingTo.Owner, Is.SameAs(targetOwner));
+            Assert.That(BlackboxTestDoubles.Logs(BlackboxTestDoubles.BlackboxFor(targetOwner)).Single().ExertedBy.Owner, Is.SameAs(sourceOwner));
+        }
+
+        [Test]
+        [RunWithUniTest]
+        public void ExertRejectsNullAndReturnsHandleForPeer()
+        {
+            var sourceOwner = BlackboxTestDoubles.Owner("source");
+            var targetOwner = BlackboxTestDoubles.Owner("target");
+            var handle = BlackboxTestDoubles.HandleFor(sourceOwner);
+
+            // Table 5-1 / Valid x Exert.OtherNull
+            Assert.That(() => handle.Exert<object>(null, "call"), Throws.TypeOf<ArgumentNullException>());
+
+            // Table 5-1 / Valid x Exert.OtherPeer
+            var exert = handle.Exert(targetOwner, "call", "Run");
+
+            Assert.That(exert.IsAlive, Is.True);
+            Assert.That(BlackboxTestDoubles.Logs(BlackboxTestDoubles.BlackboxFor(targetOwner)).Single().ExertedBy.Owner, Is.SameAs(sourceOwner));
+        }
+
+        [Test]
+        [RunWithUniTest]
+        public void WriteErrorRecordsErrorAndTargets()
+        {
+            var owner = BlackboxTestDoubles.Owner("owner");
+            var targetOwner = BlackboxTestDoubles.Owner("target");
+            var handle = BlackboxTestDoubles.HandleFor(owner);
+
+            // Table 5-1 / Valid x WriteError.ErrorTargetsEmpty
+            Assert.That(handle.WriteError("empty", methodName: "Run"), Is.EqualTo("empty"));
+
+            // Table 5-1 / Valid x WriteError.ErrorTargetsPresent
+            Assert.That(handle.WriteError("targeted", new BlackboxHandle.ErrorContainer(("target", targetOwner)), methodName: "Run"), Is.EqualTo("targeted"));
+
+            var ownerLines = BlackboxTestDoubles.Lines(BlackboxTestDoubles.BlackboxFor(owner));
+            var targetLines = BlackboxTestDoubles.Lines(BlackboxTestDoubles.BlackboxFor(targetOwner));
+            Assert.That(ownerLines.Any(line => line.Contains("[Error] empty")), Is.True);
+            Assert.That(ownerLines.Any(line => line.Contains("target:")), Is.True);
+            Assert.That(targetLines.Single(), Does.Contain("tagged by"));
+        }
+
+        [Test]
+        [RunWithUniTest]
+        public void WriteErrorCanTriggerCrashExport()
+        {
+            var directory = BlackboxTestDoubles.CreateTempDirectory();
+            BlackboxTestDoubles.Reset(logDirectory: directory);
+            var handle = BlackboxTestDoubles.HandleFor(BlackboxTestDoubles.Owner("owner"));
+
+            // Table 5-1 / Valid x WriteError.ExceptionHandlingCrashExport
+            var message = handle.WriteError("boom", exceptionHandlingOption: ExceptionHandlingOption.CrashExport, methodName: "Run");
+
+            Assert.That(message, Is.EqualTo("boom"));
+            Assert.That(BlackboxTestDoubles.WarningLogs.Single(), Does.Contain("[Blackbox] CRASH: boom"));
+            Assert.That(BlackboxTestDoubles.GetFiles(directory, "[CRASH]*.html").Length, Is.EqualTo(1));
+        }
+
+        [Test]
+        [RunWithUniTest]
+        public void CrashExportWritesStackTraceAndExportsOnce()
+        {
+            var directory = BlackboxTestDoubles.CreateTempDirectory();
+            BlackboxTestDoubles.Reset(logDirectory: directory);
+            var handle = BlackboxTestDoubles.HandleFor(BlackboxTestDoubles.Owner("owner"));
+
+            // Table 5-1 / Valid x CrashExport
+            var message = handle.CrashExport("boom", openLog: OpenLogOption.Never, methodName: "Run");
+
+            var file = BlackboxTestDoubles.GetFiles(directory, "[CRASH]*.html").Single();
+            var html = File.ReadAllText(file);
+            Assert.That(message, Is.EqualTo("boom"));
+            Assert.That(html, Does.Contain("[STACK TRACE]"));
+            Assert.That((BlackboxSessionRegistry.Current.State.Crash != null), Is.True);
+
+            // Table 5-1 / Printed x CrashExport
+            handle.CrashExport("again", openLog: OpenLogOption.Never, methodName: "Run");
+            Assert.That(BlackboxTestDoubles.GetFiles(directory, "[CRASH]*.html").Length, Is.EqualTo(1));
+        }
+
+        [Test]
+        [RunWithUniTest]
+        public void ExportWarnsForInvalidAndAllowsRepeatedExports()
+        {
+            var directory = BlackboxTestDoubles.CreateTempDirectory();
+            BlackboxTestDoubles.Reset(logDirectory: directory);
+
+            // Table 5-1 / Default.Invalid x Export.FirstExport
+            default(BlackboxHandle).Export(openLogOption: OpenLogOption.Never);
+            Assert.That(BlackboxTestDoubles.WarningLogs.Last(), Does.Contain("invalid"));
+
+            var handle = BlackboxTestDoubles.HandleFor(BlackboxTestDoubles.Owner("owner"));
+            handle.Write("hello", "Run");
+
+            // Table 5-1 / Valid x Export.FirstExport
+            handle.Export(format: ExportFormat.Txt, openLogOption: OpenLogOption.Never);
+            Assert.That(BlackboxTestDoubles.GetFiles(directory, "*.txt").Length, Is.EqualTo(1));
+
+            // Table 5-1 / Printed x Export.DuplicateExport
+            handle.Export(format: ExportFormat.Txt, openLogOption: OpenLogOption.Never);
+            Assert.That(BlackboxTestDoubles.GetFiles(directory, "*.txt").Length, Is.EqualTo(2));
+            Assert.That(BlackboxSessionRegistry.Current.State.Crash, Is.Null);
+            handle.Write("after export", "Run");
+            Assert.That(handle.IsValid, Is.True);
+        }
+
+        [Test]
+        [RunWithUniTest]
+        public void RestartDefaultSessionRestoresDefaultRuntimeState()
+        {
+            var directory = BlackboxTestDoubles.CreateTempDirectory();
+            BlackboxTestDoubles.Reset(logDirectory: directory);
+            var owner = BlackboxTestDoubles.Owner("owner");
+            var handle = BlackboxTestDoubles.HandleFor(owner);
+            handle.Write("before", "Run");
+            handle.Export(format: ExportFormat.Txt, openLogOption: OpenLogOption.Never);
+
+            // Table 5-1 / Valid x RestartDefaultSession
+            BlackboxHandle.RestartDefaultSession();
+
+            Assert.That((BlackboxSessionRegistry.Current.State.Crash != null), Is.False);
+            Assert.That(BlackboxSessionRegistry.Count(), Is.EqualTo(0));
+            Assert.That(BlackboxTestDoubles.HandleFor(owner).Write("after", "Run").With(), Is.EqualTo("after"));
+        }
+
+        [Test]
+        [RunWithUniTest]
+        public void WriteHandlerFormatsInterpolatedValuesForValidHandle()
+        {
+            var owner = BlackboxTestDoubles.Owner("owner");
+            var handle = BlackboxTestDoubles.HandleFor(owner);
+
+            // Table 1-3 / Active x Construct.ValidHandle
+            var handler = new BlackboxHandle.WriteHandler(8, 2, handle, out var shouldLog);
+
+            Assert.That(shouldLog, Is.True);
+            Assert.That(handler.ShouldLog, Is.True);
+
+            // Table 1-3 / Active x AppendLiteral.Literal
+            handler.AppendLiteral("value ");
+
+            // Table 1-3 / Active x AppendFormatted.Value
+            handler.AppendFormatted(7);
+            handler.AppendLiteral(" ");
+
+            // Table 1-3 / Active x AppendFormatted.NullValue
+            handler.AppendFormatted<object>(null);
+
+            // Table 1-3 / Active x GetTextAndClear
+            Assert.That(handler.GetTextAndClear(), Is.EqualTo("value 7 null"));
+            Assert.That(handler.GetTextAndClear(), Is.EqualTo(string.Empty));
+        }
+
+        [Test]
+        [RunWithUniTest]
+        public void WriteHandlerSkipsFormattingForInvalidHandle()
+        {
+            var invalid = default(BlackboxHandle);
+
+            // Table 1-3 / Skipped x Construct.InvalidHandle
+            var handler = new BlackboxHandle.WriteHandler(8, 1, invalid, out var shouldLog);
+
+            Assert.That(shouldLog, Is.False);
+            Assert.That(handler.ShouldLog, Is.False);
+
+            // Table 1-3 / Skipped x AppendLiteral.Literal
+            handler.AppendLiteral("value ");
+
+            // Table 1-3 / Skipped x AppendFormatted.Value
+            handler.AppendFormatted(7);
+
+            // Table 1-3 / Skipped x GetTextAndClear
+            Assert.That(handler.GetTextAndClear(), Is.EqualTo(string.Empty));
+            Assert.That(invalid.Write(ref handler, "Run").With(), Is.EqualTo(string.Empty));
+            Assert.That(BlackboxSessionRegistry.Count(), Is.EqualTo(0));
+        }
+
+        [Test]
+        [RunWithUniTest]
+        public void CSharp9InterpolationUsesStringFallbackWhenRecordingIsDisabled()
+        {
+            var owner = BlackboxTestDoubles.Owner("owner");
+            BlackboxHandle.UseBlackbox = false;
+            var handle = BlackboxTestDoubles.HandleFor(owner);
+            var formatCalls = 0;
+
+            // Table 5-1 / UseBlackboxOff x Write: C# 9 evaluates string arguments before the call.
+            Assert.That(handle.Write($"value {FormatValue()}", "Run").With(), Is.EqualTo("value formatted"));
+            Assert.That(formatCalls, Is.EqualTo(1));
+            Assert.That(BlackboxSessionRegistry.Count(), Is.EqualTo(0));
+
+            string FormatValue()
+            {
+                formatCalls++;
+                return "formatted";
+            }
+        }
+    }
+}

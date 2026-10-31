@@ -1,5 +1,7 @@
 # Blackbox 객체 다이어그램
 
+> 이 문서는 C# 구현을 설명한다. TypeScript 사용법과 런타임별 계약은 [TypeScript 안내](../../typescript/README.md)를 따른다.
+
 이 다이어그램은 Blackbox의 핵심 기록 경로에 참여하는 객체와 관계를 보여준다. 저장소와 기록 카운터는 세션마다 독립적이다. BlackboxHandle.RestartDefaultSession()은 공유 기본 세션만 교체하며, 명시적 세션은 Dispose 후 Begin으로 새로 시작한다.
 
 ```mermaid

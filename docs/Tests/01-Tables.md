@@ -1,5 +1,7 @@
 # Blackbox 테스트 상태-동작 표
 
+> 이 문서는 C# 구현의 검증 기준과 기록이다. TypeScript 사용법과 검증은 [TypeScript 안내](../../typescript/README.md)를 따른다.
+
 > 세션 수명 기준: RestartDefaultSession은 BlackboxHandle의 공개 API이며 공유 기본 세션만 교체한다. Runtime/Registry/HandleManager의 Reset API는 제공하지 않는다. 기본 설정은 유지하고 키·기록 상태를 새로 시작하며, 명시적 세션은 Dispose 후 Begin으로 교체한다. 일반 Export는 반복 가능하고 CrashExport만 소속 세션을 동결한다. 아래 Printed 상태는 크래시 동결 상태를 뜻하며 일반 출력 완료로 진입하지 않는다. 자세한 계약은 [세션 문서](../Wiki/05-Sessions.md)를 따른다.
 
 이 문서는 Blackbox 프레임워크의 새 테스트를 작성하기 전에, 객체별 상태와 동작을 정리하는 표이다.
@@ -163,11 +165,13 @@ Blackbox는 기록 대상 객체, 로그 문맥, disposable handle, export 도�
 
 이 표는 기본 기록 축과 `UseBlackbox`가 꺼진 fallback 검증 축을 함께 가진다. `UseBlackboxOff` 행은 런타임 설정이 꺼졌을 때 public API가 원래 메시지나 default handle을 반환하고 실제 기록을 만들지 않는지 확인한다.
 
+`When(Func<bool>)`는 기록 활성 여부와 관계없이 조건 함수를 한 번 평가하고 null 조건 함수를 거부한다. 아래 `When` 칸의 `-`는 기록이나 유효 핸들을 만들지 않는다는 뜻이며, 조건 함수의 평가를 생략한다는 뜻은 아니다. 비활성 기록에서 `Of(null)`은 subject를 검사하거나 등록하지 않고 default handle을 반환한다.
+
 | BlackboxHandle    | -   | Of                  | <                      | Construct                 | When              | <       | Dispose          | Write          | Scope       | ExertMessage           | <                     | Exert          | <                     |
 | ----------------- | --- | ------------------- | ---------------------- | ------------------------- | ----------------- | ------- | ---------------- | -------------- | ---------------- | ---------------------- | --------------------- | --------------- | --------------------- |
 |                   | -   | ValidSubject        | NullSubject            |                           | True              | False   |                  |                |                  | OtherNull              | OtherPeer             | OtherNull       | OtherPeer             |
 |                   | -   |                     |                        |                           |                   |         |                  |                |                  |                        |                       |                 |                       |
-| UseBlackboxOff    | -   | **Default/Invalid** | X                      | -                         | -                 | -       | -                | `[message 반환]` | -              | `[message 반환]`        | `[message 반환]`       | -               | -                     |
+| UseBlackboxOff    | -   | **Default/Invalid** | **Default/Invalid**    | -                         | -                 | -       | -                | `[message 반환]` | -              | `[message 반환]`        | `[message 반환]`       | -               | -                     |
 | Default/Invalid   | -   | X                   | X                      | -                         | -                 | -       | -                | `[message 반환]` | -              | `[message 반환]`        | `[message 반환]`       | -               | -                     |
 | Valid             | -   | `[same owner handle]` | _ArgumentNullException_ | `[ctor scope + cached handle]` | `[valid 유지]` | **ConditionalSkipped** | `[disposed log]` | `[self log]` | `[scope handle]` | _ArgumentNullException_ | `[two-sided interaction]` | _ArgumentNullException_ | `[exert handle]` |
 | ConditionalSkipped | -  | X                   | X                      | -                         | X                 | -       | -                | `[message 반환]` | -              | `[message 반환]`        | `[message 반환]`       | -               | -                     |

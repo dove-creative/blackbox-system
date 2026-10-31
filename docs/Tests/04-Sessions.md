@@ -1,8 +1,10 @@
 # 0.2.0 세션 구현 검증
 
+> 이 문서는 C# 구현의 검증 기준과 기록이다. TypeScript 사용법과 검증은 [TypeScript 안내](../../typescript/README.md)를 따른다.
+
 각 절은 해당 구현 단계 당시의 검증 기록이다. 당시 실행한 경로·명령·SDK·결과를 그대로 보관하므로, 아래의 옛 샘플·벤치마크 경로를 현재 명령으로 해석하지 않는다. 현재 세션 수명 계약은 [세션과 기록 계약](../Wiki/05-Sessions.md)을, 최신 플랫폼 검증은 [테스트 결과](03-Results.md)를 참고한다.
 
-현재 샘플 프로젝트는 `samples/BlackThunder.BlackboxSystem.Samples.csproj`, 벤치마크 프로젝트는 `benchmarks/BlackThunder.BlackboxSystem.Benchmarks/BlackThunder.BlackboxSystem.Benchmarks.csproj`이다.
+현재 샘플 프로젝트는 `csharp/samples/BlackThunder.BlackboxSystem.Samples.csproj`, 벤치마크 프로젝트는 `csharp/benchmarks/BlackThunder.BlackboxSystem.Benchmarks/BlackThunder.BlackboxSystem.Benchmarks.csproj`이다. 아래 날짜별 명령은 이동 전 경로를 보존한다.
 
 검증 환경: Windows x64, .NET SDK 9.0.320, net9.0 NUnit 테스트, netstandard2.1 라이브러리. 기존 테스트 159개를 세션별 동결·반복 출력·명시적 Label 계약에 맞게 이관하고 동시성/수명 테스트 35개를 추가했다.
 
@@ -34,7 +36,7 @@ dotnet test tests/BlackThunder.BlackboxSystem.Tests -c Release -p:BlackboxLockHa
 
 초기 샌드박스 실행은 testhost 연결 시간 초과로 중단되었다. 샌드박스 밖의 기존 코드 실행은 159개 중 158개 통과, 약한 소유자의 자동 이름 변경에 의존하던 테이블 테스트 1개 실패였다. 변경 후에는 해당 검증을 명시적 이름 계약으로 이관했다. 결과 TRX는 무시되는 `tests/BlackThunder.BlackboxSystem.Tests/TestResults/`에 저장한다.
 
-측정 가능한 처리량·할당 비용은 [벤치마크 보고서](../../benchmarks/README.md)를 참고한다. 실행 중 출력은 근사 스냅샷이므로, 모든 동시 기록의 포함이나 여러 컨텍스트를 한 순간에 읽는 원자성을 테스트 계약으로 삼지 않는다.
+측정 가능한 처리량·할당 비용은 [벤치마크 보고서](../../csharp/benchmarks/README.md)를 참고한다. 실행 중 출력은 근사 스냅샷이므로, 모든 동시 기록의 포함이나 여러 컨텍스트를 한 순간에 읽는 원자성을 테스트 계약으로 삼지 않는다.
 
 ## 후속 세션 키 진단 단계
 
@@ -56,7 +58,7 @@ dotnet test tests/BlackThunder.BlackboxSystem.Tests -c Release -p:BlackboxLockHa
 
 Release 전체 **218/218**, 잠금 핸들 풀 비교 구성 전체 **218/218**, Debug의 새 회귀 테스트 **9/9**가 통과했다. 힙 테스트는 NoInlining 헬퍼와 GC → Subject 정리 → GC로 저장소 잔류와 트래커 누적을 구분하며, 2만/4만/6만 객체 시점의 기준 대비 증가량은 각각 0바이트였다. 솔루션(샘플 포함) Release 빌드는 `-m:1 -p:UseSharedCompilation=false`에서 경고·오류 0개로 통과했다.
 
-별도 프로세스 벤치마크는 변경 전후를 번갈아 실행했다. 30만 객체 후 트래커는 60만 개에서 32개로 줄었고, Subject 정리 후 힙 증가량은 220,804,472바이트에서 1,400바이트로 줄었다. GC만 수행한 수치와 스코프 처리량은 [벤치마크 보고서](../../benchmarks/README.md)에 함께 기록했다.
+별도 프로세스 벤치마크는 변경 전후를 번갈아 실행했다. 30만 객체 후 트래커는 60만 개에서 32개로 줄었고, Subject 정리 후 힙 증가량은 220,804,472바이트에서 1,400바이트로 줄었다. GC만 수행한 수치와 스코프 처리량은 [벤치마크 보고서](../../csharp/benchmarks/README.md)에 함께 기록했다.
 
 ## 2026-10-30: Subject 조회 확장성 수정
 
@@ -76,7 +78,7 @@ Release 전체 **231/231**, 잠금 핸들 풀 비교 구성 전체 **231/231**, 
 
 벤치마크는 같은 하네스와 수정 전후 런타임을 별도 프로세스에서 비교했다. 60만 객체를 한 번씩 기록한 뒤 GC한 힙 증가량은 MaxLogCount 100에서 **86.82→10.41MiB**, 1000에서 **537.87→23.09MiB**로 줄었다. 신규 등록을 멈춘 상태에서 GC만 반복하면 이 값은 유지됐고, 전체 Subject 정리 뒤에는 모두 1,400바이트가 남았다. 등록이 중단된 경우의 즉시 회수나 고정 메모리 상한은 보장하지 않는다.
 
-조회는 계속 무할당이며 이번 비교에서 처리량은 비슷했다. 반면 살아 있는 객체 40만 개에서 단일 스레드 신규 등록은 **1.03→6.29µs**로 늘었다. 24스레드 등록 측정은 변동이 커 일정한 비율의 개선·악화로 일반화하지 않는다. 메모리 감소와 신규 등록 비용을 함께 [벤치마크 보고서](../../benchmarks/README.md)에 기록했다. 트래커·조회·회전 정리 수정 이력은 배포 전 0.2.0 CHANGELOG 항목으로 합쳤다.
+조회는 계속 무할당이며 이번 비교에서 처리량은 비슷했다. 반면 살아 있는 객체 40만 개에서 단일 스레드 신규 등록은 **1.03→6.29µs**로 늘었다. 24스레드 등록 측정은 변동이 커 일정한 비율의 개선·악화로 일반화하지 않는다. 메모리 감소와 신규 등록 비용을 함께 [벤치마크 보고서](../../csharp/benchmarks/README.md)에 기록했다. 트래커·조회·회전 정리 수정 이력은 배포 전 0.2.0 CHANGELOG 항목으로 합쳤다.
 
 ## 2026-10-30 기본 세션 재시작 리팩터링
 

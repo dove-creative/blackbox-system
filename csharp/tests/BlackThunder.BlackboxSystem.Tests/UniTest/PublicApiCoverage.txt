@@ -1,0 +1,91 @@
+# Reviewed public signatures and their UniTest-executed test families.
+# This is a change-review guard; it does not measure branch coverage.
+BlackThunder.BlackboxSystem.BlackboxHandle|Method|BlackThunder.BlackboxSystem.BlackboxHandle Dispose()|BlackboxHandleTests
+BlackThunder.BlackboxSystem.BlackboxHandle|Method|BlackThunder.BlackboxSystem.BlackboxHandle Dispose(System.String, System.String)|BlackboxHandleTests
+BlackThunder.BlackboxSystem.BlackboxHandle|Method|BlackThunder.BlackboxSystem.BlackboxHandle Dispose(WriteHandler ByRef, System.String)|BlackboxHandleTests
+BlackThunder.BlackboxSystem.BlackboxHandle|Method|BlackThunder.BlackboxSystem.BlackboxHandle Of[T](T, System.String)|IdentityLifetimeTests
+BlackThunder.BlackboxSystem.BlackboxHandle|Method|BlackThunder.BlackboxSystem.BlackboxHandle When(Boolean)|BlackboxHandleTests
+BlackThunder.BlackboxSystem.BlackboxHandle|Method|BlackThunder.BlackboxSystem.BlackboxHandle When(System.Func`1[System.Boolean])|BlackboxPublicContractUniTests
+BlackThunder.BlackboxSystem.BlackboxHandle|Method|BlackThunder.BlackboxSystem.BlackboxSession BeginSession()|BlackboxSessionUniTests
+BlackThunder.BlackboxSystem.BlackboxHandle|Method|BlackThunder.BlackboxSystem.ExertHandle Exert[T](T, System.String, System.String)|BlackboxHandleTests
+BlackThunder.BlackboxSystem.BlackboxHandle|Method|BlackThunder.BlackboxSystem.ExertHandle Exert[T](T, WriteHandler ByRef, System.String)|BlackboxHandleTests
+BlackThunder.BlackboxSystem.BlackboxHandle|Property|BlackThunder.BlackboxSystem.ExportFormat ExportFormat|InfrastructureTests
+BlackThunder.BlackboxSystem.BlackboxHandle|Property|BlackThunder.BlackboxSystem.FullExportOption FullExportOption|InfrastructureTests
+BlackThunder.BlackboxSystem.BlackboxHandle|Property|BlackThunder.BlackboxSystem.OpenLogOption OpenLogOption|InfrastructureTests
+BlackThunder.BlackboxSystem.BlackboxHandle|Method|BlackThunder.BlackboxSystem.ScopeHandle Construct(BlackThunder.BlackboxSystem.BlackboxHandle ByRef, System.String)|BlackboxHandleTests
+BlackThunder.BlackboxSystem.BlackboxHandle|Method|BlackThunder.BlackboxSystem.ScopeHandle Construct(System.String, BlackThunder.BlackboxSystem.BlackboxHandle ByRef, System.String)|BlackboxHandleTests
+BlackThunder.BlackboxSystem.BlackboxHandle|Method|BlackThunder.BlackboxSystem.ScopeHandle Construct(System.String, System.String)|BlackboxHandleTests
+BlackThunder.BlackboxSystem.BlackboxHandle|Method|BlackThunder.BlackboxSystem.ScopeHandle Construct(System.String)|BlackboxHandleTests
+BlackThunder.BlackboxSystem.BlackboxHandle|Method|BlackThunder.BlackboxSystem.ScopeHandle Construct(WriteHandler ByRef, BlackThunder.BlackboxSystem.BlackboxHandle ByRef, System.String)|BlackboxHandleTests
+BlackThunder.BlackboxSystem.BlackboxHandle|Method|BlackThunder.BlackboxSystem.ScopeHandle Construct(WriteHandler ByRef, System.String)|BlackboxHandleTests
+BlackThunder.BlackboxSystem.BlackboxHandle|Method|BlackThunder.BlackboxSystem.ScopeHandle Scope(System.String, System.String)|BlackboxHandleTests
+BlackThunder.BlackboxSystem.BlackboxHandle|Method|BlackThunder.BlackboxSystem.ScopeHandle Scope(WriteHandler ByRef, System.String)|BlackboxHandleTests
+BlackThunder.BlackboxSystem.BlackboxHandle|Method|BlackThunder.BlackboxSystem.TagHandle Write(System.String, System.String)|BlackboxHandleTests
+BlackThunder.BlackboxSystem.BlackboxHandle|Method|BlackThunder.BlackboxSystem.TagHandle Write(WriteHandler ByRef, System.String)|BlackboxHandleTests
+BlackThunder.BlackboxSystem.BlackboxHandle|Property|BlackThunder.BlackboxSystem.TargetTypes TagTargetTypes|InfrastructureTests
+BlackThunder.BlackboxSystem.BlackboxHandle|Property|Boolean IsValid|IdentityLifetimeTests
+BlackThunder.BlackboxSystem.BlackboxHandle|Property|Boolean StrongReference|InfrastructureTests
+BlackThunder.BlackboxSystem.BlackboxHandle|Property|Boolean UseBlackbox|InfrastructureTests
+BlackThunder.BlackboxSystem.BlackboxHandle|Property|Int32 ActiveSessionCount|ActiveSessionTests
+BlackThunder.BlackboxSystem.BlackboxHandle|Property|Int32 DefaultRecursionDepth|InfrastructureTests
+BlackThunder.BlackboxSystem.BlackboxHandle|Property|Int32 MaxLogCount|InfrastructureTests
+BlackThunder.BlackboxSystem.BlackboxHandle|Property|Int64 Id|IdentityLifetimeTests
+BlackThunder.BlackboxSystem.BlackboxHandle|Property|System.Action`1[System.String] NormalLogger|InfrastructureTests
+BlackThunder.BlackboxSystem.BlackboxHandle|Property|System.Action`1[System.String] WarningLogger|InfrastructureTests
+BlackThunder.BlackboxSystem.BlackboxHandle|Property|System.Guid CurrentSessionKey|SessionKeyTests
+BlackThunder.BlackboxSystem.BlackboxHandle|Property|System.Guid DefaultSessionKey|SessionKeyTests
+BlackThunder.BlackboxSystem.BlackboxHandle|Property|System.Guid SessionKey|SessionKeyTests
+BlackThunder.BlackboxSystem.BlackboxHandle|Method|System.Guid[] GetActiveSessionKeys()|ActiveSessionTests
+BlackThunder.BlackboxSystem.BlackboxHandle|Property|System.Object Owner|IdentityLifetimeTests
+BlackThunder.BlackboxSystem.BlackboxHandle|Method|System.String CrashExport(System.Object, System.Nullable`1[BlackThunder.BlackboxSystem.BlackboxHandle+ErrorContainer], System.Nullable`1[System.Int32], BlackThunder.BlackboxSystem.ExportFormat, BlackThunder.BlackboxSystem.FullExportOption, BlackThunder.BlackboxSystem.OpenLogOption, System.String)|BlackboxPublicContractUniTests
+BlackThunder.BlackboxSystem.BlackboxHandle|Method|System.String ExertMessage[T](T, System.String, System.String)|BlackboxHandleTests
+BlackThunder.BlackboxSystem.BlackboxHandle|Method|System.String ExertMessage[T](T, WriteHandler ByRef, System.String)|BlackboxHandleTests
+BlackThunder.BlackboxSystem.BlackboxHandle|Property|System.String LogDirectory|InfrastructureTests
+BlackThunder.BlackboxSystem.BlackboxHandle|Property|System.String OwnerString|IdentityLifetimeTests
+BlackThunder.BlackboxSystem.BlackboxHandle|Method|System.String WriteError(System.Object, System.Nullable`1[BlackThunder.BlackboxSystem.BlackboxHandle+ErrorContainer], BlackThunder.BlackboxSystem.ExceptionHandlingOption, System.String)|BlackboxPublicContractUniTests
+BlackThunder.BlackboxSystem.BlackboxHandle|Method|Void Configure(System.String, System.Action`1[System.String], Boolean, BlackThunder.BlackboxSystem.ExportFormat, BlackThunder.BlackboxSystem.FullExportOption, BlackThunder.BlackboxSystem.OpenLogOption, BlackThunder.BlackboxSystem.ExceptionHandlingOption, BlackThunder.BlackboxSystem.TargetTypes, BlackThunder.BlackboxSystem.UseBlackboxOption)|InfrastructureTests
+BlackThunder.BlackboxSystem.BlackboxHandle|Method|Void Configure(System.String, System.Action`1[System.String], System.Action`1[System.String], Boolean, BlackThunder.BlackboxSystem.ExportFormat, BlackThunder.BlackboxSystem.FullExportOption, BlackThunder.BlackboxSystem.OpenLogOption, BlackThunder.BlackboxSystem.ExceptionHandlingOption, BlackThunder.BlackboxSystem.TargetTypes, BlackThunder.BlackboxSystem.UseBlackboxOption)|InfrastructureTests
+BlackThunder.BlackboxSystem.BlackboxHandle|Method|Void DisposeActiveSessions()|ActiveSessionTests
+BlackThunder.BlackboxSystem.BlackboxHandle|Method|Void Export(System.Nullable`1[System.Int32], BlackThunder.BlackboxSystem.ExportFormat, BlackThunder.BlackboxSystem.FullExportOption, BlackThunder.BlackboxSystem.OpenLogOption)|BlackboxHandleTests
+BlackThunder.BlackboxSystem.BlackboxHandle|Method|Void RestartDefaultSession()|BlackboxSessionUniTests
+BlackThunder.BlackboxSystem.BlackboxHandle+ErrorContainer|Method|ErrorContainer op_Implicit(System.ValueTuple`2[System.String,System.Object])|BlackboxPublicContractUniTests
+BlackThunder.BlackboxSystem.BlackboxHandle+ErrorContainer|Constructor|Void .ctor(System.ValueTuple`2[System.String,System.Object][])|BlackboxPublicContractUniTests
+BlackThunder.BlackboxSystem.BlackboxHandle+WriteHandler|Property|Boolean ShouldLog|BlackboxHandleTests
+BlackThunder.BlackboxSystem.BlackboxHandle+WriteHandler|Constructor|Void .ctor(Int32, Int32, BlackThunder.BlackboxSystem.BlackboxHandle, Boolean ByRef)|BlackboxHandleTests
+BlackThunder.BlackboxSystem.BlackboxHandle+WriteHandler|Method|Void AppendFormatted[T](T)|BlackboxHandleTests
+BlackThunder.BlackboxSystem.BlackboxHandle+WriteHandler|Method|Void AppendLiteral(System.String)|BlackboxHandleTests
+BlackThunder.BlackboxSystem.BlackboxSession|Property|System.Guid SessionKey|BlackboxSessionUniTests
+BlackThunder.BlackboxSystem.BlackboxSession|Method|Void Dispose()|BlackboxSessionUniTests
+BlackThunder.BlackboxSystem.ExceptionHandlingOption|Field|BlackThunder.BlackboxSystem.ExceptionHandlingOption BasedOnSettings|InfrastructureTests
+BlackThunder.BlackboxSystem.ExceptionHandlingOption|Field|BlackThunder.BlackboxSystem.ExceptionHandlingOption CrashExport|InfrastructureTests
+BlackThunder.BlackboxSystem.ExceptionHandlingOption|Field|BlackThunder.BlackboxSystem.ExceptionHandlingOption None|InfrastructureTests
+BlackThunder.BlackboxSystem.ExertHandle|Property|Boolean IsAlive|ExertHandleTests
+BlackThunder.BlackboxSystem.ExertHandle|Property|Boolean IsDisposed|ExertHandleTests
+BlackThunder.BlackboxSystem.ExertHandle|Method|Void Dispose()|ExertHandleTests
+BlackThunder.BlackboxSystem.ExportFormat|Field|BlackThunder.BlackboxSystem.ExportFormat BasedOnSettings|InfrastructureTests
+BlackThunder.BlackboxSystem.ExportFormat|Field|BlackThunder.BlackboxSystem.ExportFormat Html|InfrastructureTests
+BlackThunder.BlackboxSystem.ExportFormat|Field|BlackThunder.BlackboxSystem.ExportFormat Txt|InfrastructureTests
+BlackThunder.BlackboxSystem.FullExportOption|Field|BlackThunder.BlackboxSystem.FullExportOption BasedOnSettings|InfrastructureTests
+BlackThunder.BlackboxSystem.FullExportOption|Field|BlackThunder.BlackboxSystem.FullExportOption Focused|InfrastructureTests
+BlackThunder.BlackboxSystem.FullExportOption|Field|BlackThunder.BlackboxSystem.FullExportOption Full|InfrastructureTests
+BlackThunder.BlackboxSystem.LogLevel|Field|BlackThunder.BlackboxSystem.LogLevel Normal|InfrastructureTests
+BlackThunder.BlackboxSystem.LogLevel|Field|BlackThunder.BlackboxSystem.LogLevel Warning|InfrastructureTests
+BlackThunder.BlackboxSystem.OpenLogOption|Field|BlackThunder.BlackboxSystem.OpenLogOption BasedOnSettings|InfrastructureTests
+BlackThunder.BlackboxSystem.OpenLogOption|Field|BlackThunder.BlackboxSystem.OpenLogOption Never|InfrastructureTests
+BlackThunder.BlackboxSystem.OpenLogOption|Field|BlackThunder.BlackboxSystem.OpenLogOption Open|InfrastructureTests
+BlackThunder.BlackboxSystem.ScopeHandle|Method|BlackThunder.BlackboxSystem.ScopeHandle With(System.Object[])|ScopeHandleTests
+BlackThunder.BlackboxSystem.ScopeHandle|Property|Boolean IsAlive|ScopeHandleTests
+BlackThunder.BlackboxSystem.ScopeHandle|Property|Boolean IsDisposed|ScopeHandleTests
+BlackThunder.BlackboxSystem.ScopeHandle|Property|Int64 ScopeId|ScopeHandleTests
+BlackThunder.BlackboxSystem.ScopeHandle|Method|Void Dispose()|ScopeHandleTests
+BlackThunder.BlackboxSystem.TagHandle|Method|System.String op_Implicit(BlackThunder.BlackboxSystem.TagHandle)|TagHandleTests
+BlackThunder.BlackboxSystem.TagHandle|Method|System.String With(System.Object[])|TagHandleTests
+BlackThunder.BlackboxSystem.TargetTypes|Field|BlackThunder.BlackboxSystem.TargetTypes BasedOnSettings|TagHandleTests
+BlackThunder.BlackboxSystem.TargetTypes|Field|BlackThunder.BlackboxSystem.TargetTypes Full|TagHandleTests
+BlackThunder.BlackboxSystem.TargetTypes|Field|BlackThunder.BlackboxSystem.TargetTypes InteractionId|TagHandleTests
+BlackThunder.BlackboxSystem.TargetTypes|Field|BlackThunder.BlackboxSystem.TargetTypes Message|TagHandleTests
+BlackThunder.BlackboxSystem.TargetTypes|Field|BlackThunder.BlackboxSystem.TargetTypes Name|TagHandleTests
+BlackThunder.BlackboxSystem.TargetTypes|Field|BlackThunder.BlackboxSystem.TargetTypes None|TagHandleTests
+BlackThunder.BlackboxSystem.UseBlackboxOption|Field|BlackThunder.BlackboxSystem.UseBlackboxOption BasedOnSettings|InfrastructureTests
+BlackThunder.BlackboxSystem.UseBlackboxOption|Field|BlackThunder.BlackboxSystem.UseBlackboxOption DoNotUse|InfrastructureTests
+BlackThunder.BlackboxSystem.UseBlackboxOption|Field|BlackThunder.BlackboxSystem.UseBlackboxOption Use|InfrastructureTests

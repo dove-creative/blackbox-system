@@ -1,19 +1,24 @@
 # Blackbox 테스트 계획
 
+> 이 문서는 C# 구현의 검증 기준과 기록이다. TypeScript 사용법과 검증은 [TypeScript 안내](../../typescript/README.md)를 따른다.
+
 > 세션 수명 기준: RestartDefaultSession은 BlackboxHandle의 공개 API이며 공유 기본 세션만 교체한다. Runtime/Registry/HandleManager의 Reset API는 제공하지 않는다. 기본 설정은 유지하고 키·기록 상태를 새로 시작하며, 명시적 세션은 Dispose 후 Begin으로 교체한다. 일반 Export는 반복 가능하고 CrashExport만 소속 세션을 동결한다. 자세한 계약은 [세션 문서](../Wiki/05-Sessions.md)를 따른다.
 
-Blackbox는 POCO 중심의 기록 프레임워크이므로, 테스트는 .NET에서 순수 NUnit 테스트로 실행한다.
+Blackbox는 POCO 중심의 기록 프레임워크이다. C# 테스트는 .NET에서 NUnit으로 발견·매개변수화하고, 검증 본문은 UniTest의 Lab으로 실행한다. 상태 전이를 검사하는 표·세션 시나리오는 별도 UniTest Project로 구성한다. 검증 대상과 실행 경로의 대응은 [UniTest 검증 범위](05-UniTest-Coverage.md)에 기록한다.
 
 ## 1. 테스트 구성 원칙
 
 ### 1-1. 실행 방식
 
-- 테스트 코드는 `tests/BlackThunder.BlackboxSystem.Tests`에 작성한다.
-- .NET 10 SDK와 저장소 공통 C# 9 설정을 사용한다. 기본 핸들 구성과 `-p:BlackboxLockHandles=true` 구성을 검증한다.
-- 저장소 루트에서 `dotnet test tests/BlackThunder.BlackboxSystem.Tests/BlackThunder.BlackboxSystem.Tests.csproj`를 실행한다.
+- 테스트 코드는 `csharp/tests/BlackThunder.BlackboxSystem.Tests`에 작성한다.
+- .NET 10 SDK와 C# 프로젝트 공통 C# 9 설정을 사용한다. 기본 핸들 구성과 `-p:BlackboxLockHandles=true` 구성을 검증한다.
+- 저장소 루트에서 `dotnet test csharp/tests/BlackThunder.BlackboxSystem.Tests/BlackThunder.BlackboxSystem.Tests.csproj`를 실행한다.
 - 테스트 프로젝트는 exporter hook을 위해 Blackbox 런타임 소스를 링크하고 `BLACKBOX_TESTS`로 컴파일하여 internal 타입도 검증한다.
 - UniTest는 `BlackThunder.UniTest` 안정 버전 `0.4.0` 패키지를 정확히 고정하여 참조한다. `BlackboxTableProject`는 `ExecutionMode.Inline`을 선택하여 전역 Blackbox 상태를 사용하는 기존 실행 방식을 유지한다.
 - NUnit 3.14.0을 이 프로젝트의 테스트 API 계약으로 사용한다.
+- 기존 단위·회귀 테스트의 assertion 본문은 `RunWithUniTest`를 통해 이름을 가진 단일 UniTest Lab에서 한 번 실행한다. NUnit의 fixture 준비·정리와 테스트 인자는 유지하고, assertion을 다른 파일에 복제하여 중복 실행하지 않는다.
+- 표 시나리오는 명시된 시나리오별 실행과 실행 완료 집합을 검증한다. 깊이 제한이나 난수 시드만으로 전체 시나리오가 실행되었다고 판단하지 않는다. 연속 실행은 추가 순서 검증으로 유지한다.
+- 테스트 실행 경로와 공개 API 대응 목록을 검사하여 새 테스트 또는 API가 검증 경로에서 빠지는 경우 실패하도록 한다. 이 목록은 해당 API의 모든 입력 조합을 자동으로 증명하는 지표가 아니다.
 - 기록 비활성 fallback 동작은 별도 빌드 축이 아니라 `UseBlackbox=false` 런타임 설정으로 확인한다.
 
 ### 1-2. 작성 규칙
@@ -24,7 +29,8 @@ Blackbox는 POCO 중심의 기록 프레임워크이므로, 테스트는 .NET에
 - `01-Tables.md`의 `X` 칸은 논리적으로 존재할 수 없는 조합이므로 테스트 대상에서 제외한다.
 - `X`를 제외한 모든 결과 칸은 테스트에 포함한다. `-`, `^`, 예외, 상태 변화, 고유 동작, 내부 동작 칸은 모두 테스트 함수 또는 한 테스트 안의 독립 assert 구간으로 대응시킨다.
 - public API 테스트는 `BlackboxHandle` 기준으로 작성하고, internal 구조 검증이 필요한 경우에만 `Blackbox`, `LogContext`, `LogData`, export tools를 직접 호출한다.
-- C# 9 테스트에서는 `BlackboxHandle.WriteHandler`를 직접 구성해 handler 상태와 ref 오버로드를 검증한다. 일반 interpolated string 호출은 식을 먼저 평가하고 string 오버로드로 전달하는 fallback 경로로 검증한다. 자동 handler 변환과 식 평가 생략은 C# 10으로 컴파일하는 `tests/BlackThunder.BlackboxSystem.Tests.CSharp10`에서 공개 API만으로 확인한다.
+- C# 9 테스트에서는 `BlackboxHandle.WriteHandler`를 직접 구성해 handler 상태와 ref 오버로드를 검증한다. 일반 interpolated string 호출은 식을 먼저 평가하고 string 오버로드로 전달하는 fallback 경로로 검증한다. 자동 handler 변환과 식 평가 생략은 C# 10으로 컴파일하는 `csharp/tests/BlackThunder.BlackboxSystem.Tests.CSharp10`에서 공개 API만으로 확인한다.
+- C# 10 호출자 검사도 UniTest 실행 경로에 포함한다. `Write`와 함께 `Construct`, `Dispose`, `Scope`, `ExertMessage`, `Exert`의 보간 오버로드를 활성·비활성 상태에서 확인한다.
 - 파일 출력 테스트는 임시 폴더를 사용한다. 일반 export 테스트에서는 자동 open을 `OpenLogOption.Never`로 끄고, `OpenLog` 전용 칸은 테스트 빌드 hook으로 외부 프로세스 실행 없이 실패 warning 경로를 검증한다.
 
 ### 1-3. 초기 예상 규모와 현재 검증
