@@ -23,7 +23,7 @@
 | Node.js 24 전체 TS 테스트 | 54/54 통과 |
 | Chromium·WebKit | 각 18개 공통 행위 검사, 다운로드 내용·파일명, HTML 접기·연결 이동, 브라우저 샘플 5종 통과 |
 | npm tarball 소비 | 별도 프로젝트 설치·실행, ES2022+DOM 소비 프로젝트의 타입 선언 검사 통과 |
-| GitHub Actions | 워크플로 작성 및 로컬 대응 명령 검증 완료, 원격 실행은 미확인 |
+| GitHub Actions | 워크플로 작성 및 로컬 대응 명령 검증 완료. 원격 실행은 이후 리뷰 수정 검증에서 확인하였다. |
 
 ## 확인한 경계 사례
 
@@ -49,7 +49,7 @@
 - AppData의 Local·Roaming·LocalLow 아래에 새로 만든 폴더는 모두 실패하였다. 가상화 대상이 아닌 Local\Temp, Local\Programs와 사용자 폴더는 성공하였다.
 - 실제 패키지 경로의 `firefox.exe --version`은 정상 실행되었다.
 
-실행 문제를 피하자 브라우저 테스트 서버의 버그가 드러났다. `/` 요청을 `resolve()`하면 끝 구분자가 사라져 폴더 범위 검사에 걸리고, 서버는 본문 없는 403을 반환하였다. Chromium·WebKit은 이 응답으로 페이지 이동을 마쳤지만 Firefox는 `page.goto`에서 시간 초과되었다. 서버가 `/`를 범위 검사보다 먼저 처리하도록 수정하였다. 이 버그는 실행 환경과 무관하므로 원격 CI의 Firefox 작업에서도 같은 시간 초과가 발생할 수 있었다.
+실행 문제를 피하자 브라우저 테스트 서버의 버그가 드러났다. `/` 요청을 `resolve()`하면 끝 구분자가 사라져 폴더 범위 검사에 걸리고, 서버는 본문 없는 403을 반환하였다. Chromium·WebKit은 이 응답으로 페이지 이동을 마쳤지만 Firefox는 `page.goto`에서 시간 초과되었다. 서버가 `/`를 범위 검사보다 먼저 처리하도록 수정하였다. 이 버그는 실행 환경과 무관하므로 원격 CI의 Firefox 작업에서도 같은 시간 초과가 발생할 수 있었다. 수정 후 원격 CI의 Ubuntu Firefox 검사는 통과하였다.
 
 패키지 앱 안의 셸에서 브라우저 테스트를 실행할 때는 일반 터미널을 사용하거나 `PLAYWRIGHT_BROWSERS_PATH`를 AppData 밖의 경로 또는 실제 패키지 경로로 지정한다. 기본 브라우저 테스트 명령은 세 엔진을 모두 실행하고 하나라도 실패하면 실패 상태를 반환한다.
 
@@ -85,5 +85,7 @@ Firefox의 기존 Windows 실행 제한은 위 절에 기록된 상태이며, �
 | npm tarball 소비 | 설치·실행과 `with()` 인자 순서 타입 검사 통과 |
 | Node 샘플 | `all` 실행 통과 |
 | 브라우저 진입점 | Node에서 ambient 문맥 없이 공통 시나리오 21개 통과 |
-| Node.js 22 | 미실행. 이 환경에는 Node.js 24만 설치되어 있다. |
+| Node.js 22 | 로컬 미실행. 이 환경에는 Node.js 24만 설치되어 있으며, 원격 CI에서 통과하였다. |
 | Chromium·Firefox·WebKit | 각 21개 공통 검사와 다운로드·HTML 조작·브라우저 샘플 검증 통과. `PLAYWRIGHT_BROWSERS_PATH`를 실제 패키지 경로로 지정하였다. |
+| GitHub Actions | 커밋 `6c81297`의 Verify 실행에서 6개 작업 통과. C#은 Ubuntu·Windows, TypeScript는 Ubuntu·Windows와 Node.js 22·24 조합이다. |
+| 원격 브라우저 검사 | Ubuntu·Node.js 24 작업에서 60/60 테스트, 패키지 소비 검사, Chromium·Firefox·WebKit 각 21개 공통 검사와 샘플 검증 통과 |
