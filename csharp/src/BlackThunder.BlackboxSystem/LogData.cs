@@ -12,32 +12,26 @@ namespace BlackThunder.BlackboxSystem
 
     internal struct LogData
     {
-        // Front --------------------
-        // Ownership
+        // Front
         public Blackbox Owner { get; }
         public bool IsValid { get; internal set; }
 
-        // Message
         public string Message { get; internal set; }
         public DateTime Time { get; }
         public int ScopeDepth { get; internal set; } // Set during output generation.
         public long Sequence { get; }
 
-        // Scope
         public string MethodName { get; }
         public ScopeType ScopeType { get; internal set; }
         public long ScopeId { get; }
 
-        // Thread
         public int ThreadId { get; }
         public string ThreadName { get; }
 
-        // Exertion
         public long InteractionId { get; internal set; }
         public Blackbox ExertingTo { get; internal set; }
         public Blackbox ExertedBy { get; internal set; }
 
-        // Interaction
         public Blackbox TaggedBy { get; internal set; }
         public readonly bool IsTagged => TaggedBy != null;
         public TargetTypes TagTargetTypes { get; internal set; }

@@ -15,8 +15,7 @@ namespace BlackThunder.BlackboxSystem.Tests.CSharp10
         private string _directory;
 
 
-        // Content --------------------
-        // Fixture
+        // Content
         [SetUp]
         public void SetUp()
         {

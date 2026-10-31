@@ -27,16 +27,13 @@ namespace BlackThunder.BlackboxSystem
         private long _boxId = -1, _interactionId = -1, _sequence = -1;
 
 
-        // Content --------------------
-        // Construction
+        // Content
         internal SessionState(SessionSettings settings) => _settings = settings;
 
-        // Sequence allocation
         internal long NextBoxId() => Interlocked.Increment(ref _boxId);
         internal long NextInteractionId() => Interlocked.Increment(ref _interactionId);
         internal long NextSequence() => Interlocked.Increment(ref _sequence);
 
-        // Configuration and warnings
         internal bool TryUpdateSettings(Action<SessionSettings> update)
         {
             if (!IsActive) return false;
@@ -61,7 +58,6 @@ namespace BlackThunder.BlackboxSystem
             }
         }
 
-        // Lifecycle transitions
         internal bool TryFreeze(CrashInfo crash) => IsActive && Interlocked.CompareExchange(ref _crash, crash, null) == null;
         // True only for the call that ended the session.
         internal bool TryDeactivate() => Interlocked.Exchange(ref _active, 0) != 0;

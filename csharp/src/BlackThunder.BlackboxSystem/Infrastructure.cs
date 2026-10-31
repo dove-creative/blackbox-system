@@ -98,8 +98,7 @@ namespace BlackThunder.BlackboxSystem
         private static SessionSettings Settings => BlackboxSessionRegistry.Current.State.Settings;
 
 
-        // Content --------------------
-        // Session configuration
+        // Content
         internal static void Update(Action<SessionSettings> change)
         {
             var state = BlackboxSessionRegistry.Current.State;
@@ -107,7 +106,6 @@ namespace BlackThunder.BlackboxSystem
             if (!state.TryUpdateSettings(change)) state.CheckWrite();
         }
 
-        // Logging and option resolution
         public static bool Log(string message, LogLevel level = LogLevel.Normal) => Settings.Log(message, level);
 
         public static UseBlackboxOption Resolve(this UseBlackboxOption option) =>

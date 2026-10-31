@@ -19,15 +19,13 @@ const emptyKey = "00000000-0000-0000-0000-000000000000";
 
 /** The ordinary object-oriented entry point, bound to the object's original session. */
 export class BlackboxHandle {
-    // Front --------------------
-    // Identity
+    // Front
     get owner(): Subject | undefined { return this._box?.owner; }
     get ownerString(): string { return this._box?.ownerString ?? "[BlackboxHandle] Invalid Handle"; }
     get id(): number { return this._box?.id ?? -1; }
     get isValid(): boolean { return this._box?.session.canWrite ?? false; }
     get sessionKey(): string { return this.isValid ? this._box!.session.sessionKey : emptyKey; }
 
-    // Configuration
     static get useBlackbox(): boolean { return currentContext().session.settings.useBlackbox; }
     static set useBlackbox(value: boolean) { this.configure({ useBlackbox: value }); }
     static get maxLogCount(): number { return currentContext().session.settings.maxLogCount; }
@@ -51,7 +49,6 @@ export class BlackboxHandle {
     static get warningLogger(): ((message: string) => void) | undefined { return currentContext().session.settings.warningLogger; }
     static set warningLogger(value: ((message: string) => void) | undefined) { this.configure({ warningLogger: value }); }
 
-    // Session diagnostics
     static get currentSessionKey(): string { return currentContext().session.sessionKey; }
     static get defaultSessionKey(): string { return defaultSession.sessionKey; }
     static get activeSessionCount(): number { return activeSessions.size; }
