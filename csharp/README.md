@@ -8,12 +8,6 @@ Where a normal log focuses on a message at one moment, Blackbox records both 'wh
 
 <img src="../docs/Images/blackbox-html-export.png" alt="Blackbox HTML export preview" width="900">
 
-## Before You Start
-
-Blackbox is a foundational tracing framework in the BlackThunder project family.
-
-If you find a problem or have a suggestion, please open a [Discussion](https://github.com/dove-creative/blackbox-system/discussions) or contact vkdl4062@gmail.com. Thank you for using Blackbox.
-
 ## Features
 
 - Per-object log storage: creates a `Blackbox` for each target object and accumulates logs during execution.

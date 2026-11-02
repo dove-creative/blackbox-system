@@ -8,12 +8,6 @@ Blackbox는 객체별 활동, 실행 스코프, 객체 간 상호작용을 기�
 
 <img src="docs/Images/blackbox-html-export.png" alt="Blackbox HTML export preview" width="900">
 
-## 시작하기 전에
-
-Blackbox는 BlackThunder 프로젝트군의 기반 추적 프레임워크이다.
-
-사용 중 불편한 점이나 개선할 부분은 [Discussions](https://github.com/dove-creative/blackbox-system/discussions) 또는 vkdl4062@gmail.com으로 알려 주세요. Blackbox를 사용해 주셔서 감사합니다.
-
 ## 주요 기능
 
 - 객체별 기록: 객체의 활동과 상태 변화 과정을 개별 기록으로 보관한다.

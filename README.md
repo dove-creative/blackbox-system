@@ -8,12 +8,6 @@ It records what an object went through and which objects were connected during t
 
 <img src="docs/Images/blackbox-html-export.png" alt="Blackbox HTML export preview" width="900">
 
-## Before You Start
-
-Blackbox is a foundational tracing framework in the BlackThunder project family.
-
-If you find a problem or have a suggestion, please open a [Discussion](https://github.com/dove-creative/blackbox-system/discussions) or contact vkdl4062@gmail.com. Thank you for using Blackbox.
-
 ## Features
 
 - Per-object records: retains each object's activity and state changes as its own history.
