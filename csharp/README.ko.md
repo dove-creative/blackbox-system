@@ -24,14 +24,14 @@ Blackbox는 객체별 활동, 실행 스코프, 객체 간 상호작용을 기�
 소비 프로젝트는 안정 배포본 `BlackThunder.BlackboxSystem`의 버전을 고정하여 참조한다. 배포된 `.nupkg`를 보관한 폴더를 NuGet 피드로 등록한 뒤 사용한다.
 
 ```powershell
-dotnet add package BlackThunder.BlackboxSystem --version "[0.2.0]"
+dotnet add package BlackThunder.BlackboxSystem --version "[0.2.1]"
 ```
 
 프로젝트 파일에 직접 추가할 수도 있다.
 
 ```xml
 <ItemGroup>
-  <PackageReference Include="BlackThunder.BlackboxSystem" Version="[0.2.0]" />
+  <PackageReference Include="BlackThunder.BlackboxSystem" Version="[0.2.1]" />
 </ItemGroup>
 ```
 

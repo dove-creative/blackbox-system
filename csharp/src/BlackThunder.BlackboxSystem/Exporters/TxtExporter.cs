@@ -73,9 +73,8 @@ namespace BlackThunder.BlackboxSystem.Exporters
                 var current = node.Blackbox;
                 var parent = node.ParentBlackbox;
                 var fromInfo = node.HasParent ? $" | From = {LogFormatter.ObjectRef(parent, node.Names)}" : "";
-                var header = $"========= {LogFormatter.ObjectRef(
-                    current,
-                    node.Names)} (Depth = {node.Depth}{fromInfo}) =========";
+                var objectRef = LogFormatter.ObjectRef(current, node.Names);
+                var header = $"========= {objectRef} (Depth = {node.Depth}{fromInfo}) =========";
 
                 sb.AppendLine(header);
                 sb.AppendLine(new string('-', 40));

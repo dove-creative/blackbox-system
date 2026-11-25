@@ -24,14 +24,14 @@ This guide covers the C# implementation. See the [repository overview](../README
 Consumers reference a pinned stable release of `BlackThunder.BlackboxSystem`. Register the directory containing the released `.nupkg` as a NuGet feed before restoring it.
 
 ```powershell
-dotnet add package BlackThunder.BlackboxSystem --version "[0.2.0]"
+dotnet add package BlackThunder.BlackboxSystem --version "[0.2.1]"
 ```
 
 You can also add the reference directly to the project file.
 
 ```xml
 <ItemGroup>
-  <PackageReference Include="BlackThunder.BlackboxSystem" Version="[0.2.0]" />
+  <PackageReference Include="BlackThunder.BlackboxSystem" Version="[0.2.1]" />
 </ItemGroup>
 ```
 

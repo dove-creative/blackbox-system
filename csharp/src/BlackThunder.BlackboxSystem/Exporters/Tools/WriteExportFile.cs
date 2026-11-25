@@ -26,8 +26,9 @@ namespace BlackThunder.BlackboxSystem.Exporters
 
             while (true)
             {
-                var name = $"{(crash ? "[CRASH] " : "")}Blackbox {type} ({box.Id})-{session.SessionKey.ToString(
-                    "N").Substring(0, 12)}-{session.NextExportOrdinal()}{extension}";
+                var sessionKey = session.SessionKey.ToString("N").Substring(0, 12);
+                var name = $"{(crash ? "[CRASH] " : "")}Blackbox {type} ({box.Id})-"
+                    + $"{sessionKey}-{session.NextExportOrdinal()}{extension}";
                 var path = Path.Combine(settings.LogDirectory, name);
                 FileStream stream;
 

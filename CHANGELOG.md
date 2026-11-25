@@ -8,6 +8,8 @@ The format follows Keep a Changelog, and version numbers follow Semantic Version
 
 ### Changed
 
+- Prepare C# 0.2.1 with UniTest 0.4.3 from the current main branch. Replace multiline interpolation expressions with equivalent C# 9-compatible expressions so the latest source builds with its declared language version.
+- Limit the 2026-11-25 dependency refresh to Release builds and static package checks as requested; no tests or public package publishing are performed.
 - Updated BlackThunder Conventions to `523bf8c`, selected the shared C-family rules for TypeScript, and standardized documentation names, links, and list formatting. Aligned C# and TypeScript control-flow spacing and C# argument and expression-body wrapping without changing syntax or runtime behavior.
 - Execute C# regression assertions through UniTest while retaining NUnit discovery, parameterized cases, and fixture lifetime. Table checks now require every registered scenario to complete, with public API and test-integration guards to detect omissions.
 - Split the repository into `csharp/` and `typescript/` implementation roots and pinned this repository to the .NET 10 SDK through `global.json`. The C# library continues to target `netstandard2.1` with C# 9.

@@ -75,9 +75,10 @@ namespace BlackThunder.BlackboxSystem.Exporters
                 var parent = node.ParentBlackbox;
                 sb.AppendLine($"<div class='box' id='b{current.Id}'>");
                 var parentInfo = node.HasParent ? $" <span style='color:#888'>&larr; Called by <a href='#b{parent.Id}' style='color:#888'>#{parent.Id}</a></span>" : "";
+                var objectRef = HtmlEncode(LogFormatter.ObjectRef(current, node.Names));
                 sb.AppendLine(
-                    $"<div class='header'><div><span class='id-badge'>#{current.Id}</span> {HtmlEncode(
-                        LogFormatter.ObjectRef(current, node.Names))}{parentInfo}</div></div>");
+                    $"<div class='header'><div><span class='id-badge'>#{current.Id}</span> "
+                    + $"{objectRef}{parentInfo}</div></div>");
                 sb.AppendLine("<div class='log-container'>");
 
                 foreach (var log in node.Logs)
