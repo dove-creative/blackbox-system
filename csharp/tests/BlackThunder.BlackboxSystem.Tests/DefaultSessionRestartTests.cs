@@ -15,9 +15,17 @@ namespace BlackThunder.BlackboxSystem.Tests
         [RunWithUniTest]
         public void RestartStartsANewLifetimeWithTheDefaultSettings()
         {
-            BlackboxHandle.Configure("retained-directory", _ => { }, _ => { }, true,
-                ExportFormat.Txt, FullExportOption.Focused, OpenLogOption.Never,
-                ExceptionHandlingOption.CrashExport, TargetTypes.Name, UseBlackboxOption.Use);
+            BlackboxHandle.Configure(
+                "retained-directory",
+                _ => { },
+                _ => { },
+                true,
+                ExportFormat.Txt,
+                FullExportOption.Focused,
+                OpenLogOption.Never,
+                ExceptionHandlingOption.CrashExport,
+                TargetTypes.Name,
+                UseBlackboxOption.Use);
             BlackboxHandle.MaxLogCount = 17;
             BlackboxHandle.DefaultRecursionDepth = 3;
             var old = BlackboxSessionRegistry.Current;
@@ -54,7 +62,9 @@ namespace BlackThunder.BlackboxSystem.Tests
             Assert.That(BlackboxHandle.FullExportOption, Is.EqualTo(FullExportOption.Focused));
             Assert.That(BlackboxHandle.OpenLogOption, Is.EqualTo(OpenLogOption.Never));
             Assert.That(BlackboxHandle.TagTargetTypes, Is.EqualTo(TargetTypes.Name));
-            Assert.That(current.State.Settings.ExceptionHandlingOption, Is.EqualTo(ExceptionHandlingOption.CrashExport));
+            Assert.That(
+                current.State.Settings.ExceptionHandlingOption,
+                Is.EqualTo(ExceptionHandlingOption.CrashExport));
 
             var fresh = BlackboxHandle.Of(owner);
             Assert.That(fresh.Id, Is.Zero);
@@ -112,8 +122,12 @@ namespace BlackThunder.BlackboxSystem.Tests
             Assert.That(files.Length, Is.EqualTo(3));
             var oldFiles = files.Where(f => Path.GetFileName(f).Contains(oldKey)).ToArray();
             Assert.That(oldFiles.Length, Is.EqualTo(2));
+
             foreach (var file in oldFiles)
-                Assert.That(File.ReadAllText(file), Does.Contain("OLD_ONLY").And.Not.Contain("NEW_ONLY").And.Not.Contain("REJECTED_RECORD"));
+                Assert.That(
+                    File.ReadAllText(file),
+                    Does.Contain("OLD_ONLY").And.Not.Contain("NEW_ONLY").And.Not.Contain("REJECTED_RECORD"));
+
             var newFile = files.Single(f => Path.GetFileName(f).Contains(newKey));
             Assert.That(Path.GetFileName(newFile), Does.EndWith("-1" + extension));
             Assert.That(File.ReadAllText(newFile), Does.Contain("NEW_ONLY").And.Not.Contain("OLD_ONLY"));
@@ -130,10 +144,12 @@ namespace BlackThunder.BlackboxSystem.Tests
             var defaultHandle = BlackboxHandle.Of(defaultOwner);
             var defaultScope = defaultHandle.Scope("default");
             Guid restartedKey;
+
             using (var outer = BlackboxHandle.BeginSession())
             {
                 BlackboxHandle.MaxLogCount = 7;
                 var outerHandle = BlackboxHandle.Of(new object());
+
                 using (var inner = BlackboxHandle.BeginSession())
                 {
                     BlackboxHandle.MaxLogCount = 5;
@@ -143,6 +159,7 @@ namespace BlackThunder.BlackboxSystem.Tests
                     using var exert = handle.Exert(owner, "inner exert");
                     using var ready = new ManualResetEventSlim();
                     using var go = new ManualResetEventSlim();
+
                     var child = Task.Run(() =>
                     {
                         ready.Set();
@@ -150,6 +167,7 @@ namespace BlackThunder.BlackboxSystem.Tests
                         handle.Write("child survives");
                         return (BlackboxHandle.CurrentSessionKey, BlackboxHandle.MaxLogCount);
                     });
+
                     try
                     {
                         Assert.That(ready.Wait(10000), Is.True);
@@ -163,14 +181,21 @@ namespace BlackThunder.BlackboxSystem.Tests
                         var result = await child;
                         Assert.That(result.Item1, Is.EqualTo(inner.SessionKey));
                         Assert.That(result.Item2, Is.EqualTo(5));
-                        Assert.That(BlackboxSessionRegistry.GetBlackbox(owner).GetLogs().Any(l => l.Message == "child survives"), Is.True);
+                        Assert.That(
+                            BlackboxSessionRegistry.GetBlackbox(
+                                owner).GetLogs().Any(
+                                l => l.Message == "child survives"),
+                            Is.True);
                     }
                     finally { go.Set(); await child; }
+
                     GC.KeepAlive(owner);
                 }
+
                 Assert.That(BlackboxHandle.CurrentSessionKey, Is.EqualTo(outer.SessionKey));
                 Assert.That(BlackboxHandle.MaxLogCount, Is.EqualTo(7));
             }
+
             Assert.That(BlackboxHandle.CurrentSessionKey, Is.EqualTo(restartedKey));
             Assert.That(restartedKey, Is.Not.EqualTo(oldDefault.SessionKey));
             Assert.That(BlackboxHandle.MaxLogCount, Is.EqualTo(23));
@@ -187,19 +212,24 @@ namespace BlackThunder.BlackboxSystem.Tests
             using var ready = new CountdownEvent(2);
             using var go = new ManualResetEventSlim();
             int attempts = 0;
+
             BlackboxSessionRegistry.BeforeDefaultSessionExchange = candidate =>
             {
                 Assert.That(BlackboxHandle.ActiveSessionCount, Is.Zero);
                 Assert.That(BlackboxHandle.GetActiveSessionKeys(), Is.Empty);
                 candidates.Add(candidate);
+
                 if (Interlocked.Increment(ref attempts) <= 2)
                 {
                     ready.Signal();
+
                     if (!go.Wait(10000)) throw new TimeoutException();
                 }
             };
+
             var first = Task.Run(BlackboxHandle.RestartDefaultSession);
             var second = Task.Run(BlackboxHandle.RestartDefaultSession);
+
             try
             {
                 Assert.That(ready.Wait(10000), Is.True);
@@ -211,9 +241,11 @@ namespace BlackThunder.BlackboxSystem.Tests
             finally
             {
                 go.Set();
+
                 try { await Task.WhenAll(first, second); }
                 finally { BlackboxSessionRegistry.BeforeDefaultSessionExchange = null; }
             }
+
             var current = BlackboxSessionRegistry.Current;
             Assert.That(candidates.Count, Is.EqualTo(3));
             Assert.That(candidates.Select(s => s.SessionKey).Distinct().Count(), Is.EqualTo(3));

@@ -46,6 +46,7 @@ namespace BlackThunder.BlackboxSystem.Tests
         {
             if (type.IsArray) return IsFrontSessionPart(type.GetElementType());
             if (type.IsGenericType && type.GetGenericTypeDefinition() == typeof(HandleTracker<>)) return true;
+
             return type == typeof(BlackboxSession) || type == typeof(SubjectStore);
         }
     }

@@ -8,6 +8,7 @@ The format follows Keep a Changelog, and version numbers follow Semantic Version
 
 ### Changed
 
+- Updated BlackThunder Conventions to `523bf8c`, selected the shared C-family rules for TypeScript, and standardized documentation names, links, and list formatting. Aligned C# and TypeScript control-flow spacing and C# argument and expression-body wrapping without changing syntax or runtime behavior.
 - Execute C# regression assertions through UniTest while retaining NUnit discovery, parameterized cases, and fixture lifetime. Table checks now require every registered scenario to complete, with public API and test-integration guards to detect omissions.
 - Split the repository into `csharp/` and `typescript/` implementation roots and pinned this repository to the .NET 10 SDK through `global.json`. The C# library continues to target `netstandard2.1` with C# 9.
 - Adopted the pinned BlackThunder Conventions submodule and its C# platform guidelines: repository-wide C# 9, `netstandard2.1` for the library, and `net10.0` for tests, samples, and benchmarks. C# 9 callers use string-overload interpolation; automatic `WriteHandler` short-circuiting remains available to C# 10 or later callers.

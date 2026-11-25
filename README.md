@@ -38,10 +38,10 @@ C# and TypeScript packages are versioned and released independently. See the [co
 
 ## Documentation
 
-- [C# overview](docs/Wiki/01-Overview.md): purpose and main recording structures
-- [C# usage](docs/Wiki/04-Usage.md): configuration and representative workflows
-- [C# session and recording contract](docs/Wiki/05-Sessions.md): lifetimes, async context, and exports
-- [C# validation records](docs/Tests/03-Results.md): results from existing implementation stages
+- [C# overview](docs/Wiki/01.%20Overview.md): purpose and main recording structures
+- [C# usage](docs/Wiki/04.%20Usage.md): configuration and representative workflows
+- [C# session and recording contract](docs/Wiki/05.%20Sessions.md): lifetimes, async context, and exports
+- [C# validation records](docs/Tests/03.%20Results.md): results from existing implementation stages
 - [TypeScript guide](typescript/README.md): Node.js and browser usage and verification
 
 ## License

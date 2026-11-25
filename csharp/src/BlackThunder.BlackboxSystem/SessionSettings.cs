@@ -24,7 +24,9 @@ namespace BlackThunder.BlackboxSystem
         internal bool Log(string message, LogLevel level = LogLevel.Normal)
         {
             var logger = level == LogLevel.Warning ? WarningLogger : NormalLogger;
+
             if (logger == null) return false;
+
             logger(message);
             return true;
         }

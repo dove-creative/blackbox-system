@@ -16,9 +16,14 @@ namespace BlackThunder.BlackboxSystem.Exporters
         // Content --------------------
         // Export pipeline
         public static void Export(
-            BlackboxSession session, Blackbox blackbox, int recursionDepth,
-            bool isCrash, bool fullExport, bool openLog,
-            long maxSequence = -1, SessionSettings settings = null)
+            BlackboxSession session,
+            Blackbox blackbox,
+            int recursionDepth,
+            bool isCrash,
+            bool fullExport,
+            bool openLog,
+            long maxSequence = -1,
+            SessionSettings settings = null)
         {
             settings ??= blackbox.State.Settings;
             var sb = new StringBuilder();
@@ -26,8 +31,10 @@ namespace BlackThunder.BlackboxSystem.Exporters
 
             AppendDocumentStart(sb);
             var crash = blackbox.State.Crash;
+
             if (crash != null)
                 sb.Append("<pre>" + HtmlEncode($"[Error] {crash.Message}\n[STACK TRACE]\n{crash.Stack}") + "</pre>");
+
             BuildHtml(nodes, sb);
             AppendDocumentEnd(sb);
 
@@ -59,6 +66,7 @@ namespace BlackThunder.BlackboxSystem.Exporters
         private static void BuildHtml(IReadOnlyList<ExportNode> nodes, StringBuilder sb)
         {
             var includedBlackboxes = new HashSet<Blackbox>();
+
             foreach (var node in nodes) includedBlackboxes.Add(node.Blackbox);
 
             foreach (var node in nodes)
@@ -67,7 +75,9 @@ namespace BlackThunder.BlackboxSystem.Exporters
                 var parent = node.ParentBlackbox;
                 sb.AppendLine($"<div class='box' id='b{current.Id}'>");
                 var parentInfo = node.HasParent ? $" <span style='color:#888'>&larr; Called by <a href='#b{parent.Id}' style='color:#888'>#{parent.Id}</a></span>" : "";
-                sb.AppendLine($"<div class='header'><div><span class='id-badge'>#{current.Id}</span> {HtmlEncode(LogFormatter.ObjectRef(current, node.Names))}{parentInfo}</div></div>");
+                sb.AppendLine(
+                    $"<div class='header'><div><span class='id-badge'>#{current.Id}</span> {HtmlEncode(
+                        LogFormatter.ObjectRef(current, node.Names))}{parentInfo}</div></div>");
                 sb.AppendLine("<div class='log-container'>");
 
                 foreach (var log in node.Logs)
@@ -75,19 +85,23 @@ namespace BlackThunder.BlackboxSystem.Exporters
                     var indentPx = log.ScopeDepth * 20;
                     var contentStyle = $"padding-left: {indentPx}px";
                     var sequence = log.Sequence >= 0 ? log.Sequence.ToString() : "?";
-                    var thread = string.IsNullOrEmpty(log.ThreadName) ? $"T{log.ThreadId}" : $"T{log.ThreadId}:{log.ThreadName}";
+                    var thread = string.IsNullOrEmpty(log.ThreadName)
+                        ? $"T{log.ThreadId}"
+                        : $"T{log.ThreadId}:{log.ThreadName}";
 
                     var scopeColor = _rainbowColors[log.ScopeDepth % _rainbowColors.Length];
                     var messageColor = _lightRainbowColors[(log.ScopeDepth + _rainbowColors.Length - 1) % _rainbowColors.Length];
 
                     var rowIdAttr = log.InteractionId >= 0 ? $"id='log_{current.Id}_{log.InteractionId}'" : "";
 
-                    sb.Append($"<div class='log-row' {rowIdAttr} data-depth='{log.ScopeDepth}' data-type='{log.ScopeType}'>");
+                    sb.Append(
+                        $"<div class='log-row' {rowIdAttr} data-depth='{log.ScopeDepth}' data-type='{log.ScopeType}'>");
                     sb.Append($"<div class='time'>#{sequence} {HtmlEncode(thread)} {log.Time:mm:ss.ffffff}</div>");
                     sb.Append($"<div class='content' style='{contentStyle}'>");
                     AppendTagAnchors(sb, current, log);
 
                     var methodLabel = LogFormatter.RenderMethodLabel(log);
+
                     if (!string.IsNullOrEmpty(methodLabel))
                     {
                         var methodColor = log.ScopeType == ScopeType.None ? messageColor : scopeColor;
@@ -119,7 +133,8 @@ namespace BlackThunder.BlackboxSystem.Exporters
             Blackbox peer,
             bool right,
             long interactionId,
-            HashSet<Blackbox> includedBlackboxes, IReadOnlyDictionary<Blackbox, string> names)
+            HashSet<Blackbox> includedBlackboxes,
+            IReadOnlyDictionary<Blackbox, string> names)
         {
             var peerId = peer.Id;
             var peerName = HtmlEncode(LogFormatter.ObjectRef(peer, names));
@@ -128,11 +143,13 @@ namespace BlackThunder.BlackboxSystem.Exporters
             if (includedBlackboxes.Contains(peer))
             {
                 var href = interactionId >= 0 ? $"#log_{peerId}_{interactionId}" : $"#b{peerId}";
-                sb.Append($"<a href='{href}' class='interaction' title='Interaction #{interactionId}'>{arrow} #{peerId}: {peerName}</a> ");
+                sb.Append(
+                    $"<a href='{href}' class='interaction' title='Interaction #{interactionId}'>{arrow} #{peerId}: {peerName}</a> ");
             }
             else
             {
-                sb.Append($"<span class='interaction disabled' title='Not included in this export'>{arrow} #{peerId}: {peerName}</span> ");
+                sb.Append(
+                    $"<span class='interaction disabled' title='Not included in this export'>{arrow} #{peerId}: {peerName}</span> ");
             }
         }
 
@@ -154,7 +171,8 @@ namespace BlackThunder.BlackboxSystem.Exporters
             StringBuilder sb,
             Blackbox current,
             LogData log,
-            HashSet<Blackbox> includedBlackboxes, IReadOnlyDictionary<Blackbox, string> names)
+            HashSet<Blackbox> includedBlackboxes,
+            IReadOnlyDictionary<Blackbox, string> names)
         {
             if (log.IsTagged && log.TaggedBy != null && log.InteractionId >= 0)
                 AppendTagInteraction(sb, log.TaggedBy, log.InteractionId, includedBlackboxes, names);
@@ -175,7 +193,8 @@ namespace BlackThunder.BlackboxSystem.Exporters
             StringBuilder sb,
             Blackbox peer,
             long interactionId,
-            HashSet<Blackbox> includedBlackboxes, IReadOnlyDictionary<Blackbox, string> names)
+            HashSet<Blackbox> includedBlackboxes,
+            IReadOnlyDictionary<Blackbox, string> names)
         {
             var peerId = peer.Id;
             var peerName = HtmlEncode(LogFormatter.ObjectRef(peer, names));
@@ -184,11 +203,13 @@ namespace BlackThunder.BlackboxSystem.Exporters
             if (includedBlackboxes.Contains(peer))
             {
                 var href = interactionId >= 0 ? $"#log_{peerId}_{interactionId}" : $"#b{peerId}";
-                sb.Append($"<a href='{href}' class='interaction tag-interaction' title='Tag #{interactionId}: #{peerId}: {peerName}'>{label}</a> ");
+                sb.Append(
+                    $"<a href='{href}' class='interaction tag-interaction' title='Tag #{interactionId}: #{peerId}: {peerName}'>{label}</a> ");
             }
             else
             {
-                sb.Append($"<span class='interaction tag-interaction disabled' title='Tag target not included in this export: #{peerId}: {peerName}'>{label}</span> ");
+                sb.Append(
+                    $"<span class='interaction tag-interaction disabled' title='Tag target not included in this export: #{peerId}: {peerName}'>{label}</span> ");
             }
         }
 

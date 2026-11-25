@@ -170,8 +170,12 @@ namespace BlackThunder.BlackboxSystem.Tests
             // Table 5-1 / Valid x ExertMessage.OtherPeer
             Assert.That(handle.ExertMessage(targetOwner, "call", "Run"), Is.EqualTo("call"));
 
-            Assert.That(BlackboxTestDoubles.Logs(BlackboxTestDoubles.BlackboxFor(sourceOwner)).Single().ExertingTo.Owner, Is.SameAs(targetOwner));
-            Assert.That(BlackboxTestDoubles.Logs(BlackboxTestDoubles.BlackboxFor(targetOwner)).Single().ExertedBy.Owner, Is.SameAs(sourceOwner));
+            Assert.That(
+                BlackboxTestDoubles.Logs(BlackboxTestDoubles.BlackboxFor(sourceOwner)).Single().ExertingTo.Owner,
+                Is.SameAs(targetOwner));
+            Assert.That(
+                BlackboxTestDoubles.Logs(BlackboxTestDoubles.BlackboxFor(targetOwner)).Single().ExertedBy.Owner,
+                Is.SameAs(sourceOwner));
         }
 
         [Test]
@@ -189,7 +193,9 @@ namespace BlackThunder.BlackboxSystem.Tests
             var exert = handle.Exert(targetOwner, "call", "Run");
 
             Assert.That(exert.IsAlive, Is.True);
-            Assert.That(BlackboxTestDoubles.Logs(BlackboxTestDoubles.BlackboxFor(targetOwner)).Single().ExertedBy.Owner, Is.SameAs(sourceOwner));
+            Assert.That(
+                BlackboxTestDoubles.Logs(BlackboxTestDoubles.BlackboxFor(targetOwner)).Single().ExertedBy.Owner,
+                Is.SameAs(sourceOwner));
         }
 
         [Test]
@@ -204,7 +210,12 @@ namespace BlackThunder.BlackboxSystem.Tests
             Assert.That(handle.WriteError("empty", methodName: "Run"), Is.EqualTo("empty"));
 
             // Table 5-1 / Valid x WriteError.ErrorTargetsPresent
-            Assert.That(handle.WriteError("targeted", new BlackboxHandle.ErrorContainer(("target", targetOwner)), methodName: "Run"), Is.EqualTo("targeted"));
+            Assert.That(
+                handle.WriteError(
+                    "targeted",
+                    new BlackboxHandle.ErrorContainer(("target", targetOwner)),
+                    methodName: "Run"),
+                Is.EqualTo("targeted"));
 
             var ownerLines = BlackboxTestDoubles.Lines(BlackboxTestDoubles.BlackboxFor(owner));
             var targetLines = BlackboxTestDoubles.Lines(BlackboxTestDoubles.BlackboxFor(targetOwner));
@@ -222,7 +233,10 @@ namespace BlackThunder.BlackboxSystem.Tests
             var handle = BlackboxTestDoubles.HandleFor(BlackboxTestDoubles.Owner("owner"));
 
             // Table 5-1 / Valid x WriteError.ExceptionHandlingCrashExport
-            var message = handle.WriteError("boom", exceptionHandlingOption: ExceptionHandlingOption.CrashExport, methodName: "Run");
+            var message = handle.WriteError(
+                "boom",
+                exceptionHandlingOption: ExceptionHandlingOption.CrashExport,
+                methodName: "Run");
 
             Assert.That(message, Is.EqualTo("boom"));
             Assert.That(BlackboxTestDoubles.WarningLogs.Single(), Does.Contain("[Blackbox] CRASH: boom"));

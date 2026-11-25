@@ -38,7 +38,9 @@ namespace BlackThunder.BlackboxSystem.Tests
 
         // Continuous cases still use seeded random paths, but the project picks one candidate per step
         // because Blackbox runtime/logger state is global.
-        [TestCaseSource(typeof(BlackboxTableScenarioFactory), nameof(BlackboxTableScenarioFactory.ContinuousTableProjectCases))]
+        [TestCaseSource(
+            typeof(BlackboxTableScenarioFactory),
+            nameof(BlackboxTableScenarioFactory.ContinuousTableProjectCases))]
         [RunWithUniTest]
         public async Task TableProjectsExecuteContinuously(string projectName, int seed)
         {
@@ -69,12 +71,14 @@ namespace BlackThunder.BlackboxSystem.Tests
                 model =>
                 {
                     Assert.That(BlackboxSessionRegistry.Current.State.CanWrite, Is.True);
+
                     if (index == 0)
                     {
                         BlackboxSessionRegistry.Current.State.TryFreeze(new CrashInfo("terminal", string.Empty));
                         model.Printed = true;
                     }
                 }, model => !model.Printed)).ToArray();
+
             var project = new BlackboxTableProject("CoverageRegression", false, 0, scenarios);
             Node<BlackboxTableModel> result = null;
 
@@ -95,7 +99,10 @@ namespace BlackThunder.BlackboxSystem.Tests
         public async Task RegisteredScenarioThatCannotRunFailsInsteadOfDisappearing()
         {
             // Table coverage / impossible prerequisites are a failed definition, not successful partial coverage.
-            var project = new BlackboxTableProject("BlockedCoverage", false, 0,
+            var project = new BlackboxTableProject(
+                "BlockedCoverage",
+                false,
+                0,
                 new[] { new TableScenario("Blocked", _ => Assert.Fail("A blocked action must not run."), _ => false) });
             Node<BlackboxTableModel> result = null;
 
@@ -118,14 +125,21 @@ namespace BlackThunder.BlackboxSystem.Tests
         {
             // Table coverage / duplicate IDs must not conceal a missing scenario in the execution ledger.
             var scenario = new TableScenario("duplicate", _ => { }, _ => true);
-            Assert.Throws<ArgumentException>(() => new BlackboxTableProject("Duplicates", false, 0,
+
+            Assert.Throws<ArgumentException>(() => new BlackboxTableProject(
+                "Duplicates",
+                false,
+                0,
                 new[] { scenario, scenario }));
         }
 
         private static void AssertProjectSucceeded(BlackboxTableProject project, Node<BlackboxTableModel> result)
         {
             bool cancelled;
-            Assert.That(result.AllSucceed(out cancelled), Is.True, project.Name + Environment.NewLine + result.GetFailedReports().ToJson());
+            Assert.That(
+                result.AllSucceed(out cancelled),
+                Is.True,
+                project.Name + Environment.NewLine + result.GetFailedReports().ToJson());
             Assert.That(cancelled, Is.False, project.Name);
         }
 
@@ -133,19 +147,24 @@ namespace BlackThunder.BlackboxSystem.Tests
         {
             var model = GetMostExecutedModel(result);
             Assert.That(model.ExecutionCount, Is.EqualTo(project.CompleteExecutionDepth), project.Name);
-            Assert.That(model.ExecutedScenarioIds, Is.EqualTo(project.ScenarioIds),
+            Assert.That(
+                model.ExecutedScenarioIds,
+                Is.EqualTo(project.ScenarioIds),
                 "Every registered scenario must complete once in declaration order: " + project.Name);
         }
 
         private static BlackboxTableModel GetMostExecutedModel(Node<BlackboxTableModel> node)
         {
             var model = node.Model;
+
             foreach (var after in node.Afters)
             {
                 var candidate = GetMostExecutedModel(after);
+
                 if (candidate.ExecutionCount > model.ExecutionCount)
                     model = candidate;
             }
+
             return model;
         }
 
@@ -165,6 +184,7 @@ namespace BlackThunder.BlackboxSystem.Tests
             {
                 if (result != null)
                     CleanupNode(result);
+
                 Assert.That(BlackboxHandle.ActiveSessionCount, Is.Zero, "A table project leaked an explicit session.");
             }
             finally
@@ -182,9 +202,11 @@ namespace BlackThunder.BlackboxSystem.Tests
                 {
                     var target = Path.GetFullPath(directory);
                     var parent = Path.GetFullPath(Path.GetTempPath()).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+
                     if (!string.Equals(Path.GetDirectoryName(target), parent, StringComparison.OrdinalIgnoreCase)
                         || !Path.GetFileName(target).StartsWith("BlackboxUniTest_", StringComparison.Ordinal))
                         throw new InvalidOperationException("Table cleanup escaped its owned temporary directory.");
+
                     if (Directory.Exists(target))
                         Directory.Delete(target, true);
                 }

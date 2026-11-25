@@ -40,8 +40,10 @@ namespace BlackThunder.BlackboxSystem
         private static HandleTracker<T>[] CreateTrackers<T>()
         {
             var trackers = new HandleTracker<T>[TrackerStripeCount];
+
             for (int i = 0; i < trackers.Length; i++)
                 trackers[i] = new HandleTracker<T>();
+
             return trackers;
         }
 
@@ -50,6 +52,7 @@ namespace BlackThunder.BlackboxSystem
         internal ScopeHandle OpenScope(Blackbox box, string message, string methodName)
         {
             if (!box.WriteScope(message, methodName, out var context, out var scopeId, out var tag)) return default;
+
             var lease = GetScopeTracker(ThreadToken.Current).Register(State);
             return new ScopeHandle(context, scopeId, tag.Bind(this), lease);
         }
@@ -57,7 +60,9 @@ namespace BlackThunder.BlackboxSystem
         internal ExertHandle Exert(Blackbox source, Blackbox target, string message, string methodName)
         {
             var interactionId = source.Exert(target, message, methodName, out var targetContext);
+
             if (targetContext == null) return default;
+
             var lease = GetExertTracker(ThreadToken.Current).Register(State);
             return new ExertHandle(targetContext, interactionId, lease);
         }
@@ -71,7 +76,9 @@ namespace BlackThunder.BlackboxSystem
         internal long NextExportOrdinal() => Interlocked.Increment(ref _exportOrdinal);
 
         // Retirement
-        /// <summary>Ends this recording lifetime, reclaims outstanding handle IDs and removes the active session.</summary>
+        /// <summary>
+        /// Ends this recording lifetime, reclaims outstanding handle IDs and removes the active session.
+        /// </summary>
         /// <remarks>
         /// Only the first call ends the session and removes it from the active list.
         /// Every call restores the previous binding in the calling flow if that flow is bound to this session,
@@ -85,12 +92,14 @@ namespace BlackThunder.BlackboxSystem
                 Retire();
                 BlackboxSessionRegistry.Remove(this);
             }
+
             BlackboxSessionRegistry.Restore(this, _previous);
         }
 
         private void Retire()
         {
             foreach (var tracker in _scopeTrackers) tracker.Close();
+
             foreach (var tracker in _exertTrackers) tracker.Close();
         }
     }

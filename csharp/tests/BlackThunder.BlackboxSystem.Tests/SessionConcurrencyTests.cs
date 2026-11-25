@@ -20,6 +20,7 @@ namespace BlackThunder.BlackboxSystem.Tests
             var owner = new object();
             using var ready = new CountdownEvent(2);
             using var go = new ManualResetEventSlim();
+
             async Task<Blackbox> Run(bool crash)
             {
                 return await Task.Run(() =>
@@ -29,16 +30,21 @@ namespace BlackThunder.BlackboxSystem.Tests
                     var box = BlackboxSessionRegistry.GetBlackbox(owner);
                     ready.Signal();
                     Assert.That(go.Wait(10000), Is.True);
+
                     if (crash) box.State.TryFreeze(new CrashInfo("boom", "stack"));
+
                     box.Write("after", "Run");
                     Assert.That(BlackboxHandle.MaxLogCount, Is.EqualTo(crash ? 2 : 5));
                     return box;
                 });
             }
+
             var a = Run(true);
             var b = Run(false);
+
             try { Assert.That(ready.Wait(10000), Is.True); }
             finally { go.Set(); }
+
             var boxes = await Task.WhenAll(a, b);
             Assert.That(boxes[0], Is.Not.SameAs(boxes[1]));
             Assert.That(boxes[0].GetLogs(), Is.Empty);
@@ -51,18 +57,26 @@ namespace BlackThunder.BlackboxSystem.Tests
         public async Task NestedTasksAndThreadsInheritStateAndNestedDisposeRestoresParent()
         {
             var before = BlackboxSessionRegistry.Current;
+
             using (var session = BlackboxHandle.BeginSession())
             {
                 var recordingSession = BlackboxSessionRegistry.Current;
-                Assert.That(await Task.Run(async () => await Task.Run(() => BlackboxSessionRegistry.Current)), Is.SameAs(recordingSession));
+                Assert.That(
+                    await Task.Run(async () => await Task.Run(() => BlackboxSessionRegistry.Current)),
+                    Is.SameAs(recordingSession));
                 BlackboxSession threadSession = null;
                 var thread = new Thread(() => threadSession = BlackboxSessionRegistry.Current);
                 thread.Start();
                 Assert.That(thread.Join(10000), Is.True);
                 Assert.That(threadSession, Is.SameAs(recordingSession));
-                using (BlackboxHandle.BeginSession()) Assert.That(BlackboxSessionRegistry.Current, Is.Not.SameAs(recordingSession));
+
+                using (BlackboxHandle.BeginSession()) Assert.That(
+                    BlackboxSessionRegistry.Current,
+                    Is.Not.SameAs(recordingSession));
+
                 Assert.That(BlackboxSessionRegistry.Current, Is.SameAs(recordingSession));
             }
+
             Assert.That(BlackboxSessionRegistry.Current, Is.SameAs(before));
         }
 
@@ -77,6 +91,7 @@ namespace BlackThunder.BlackboxSystem.Tests
             var box = old.Subjects.GetOrAdd(owner);
             using var ready = new ManualResetEventSlim();
             using var go = new ManualResetEventSlim();
+
             var task = Task.Run(() =>
             {
                 ready.Set();
@@ -85,6 +100,7 @@ namespace BlackThunder.BlackboxSystem.Tests
                 BlackboxHandle.Of(new object()).Write("new handle in old flow");
                 Assert.That(BlackboxSessionRegistry.Current, Is.SameAs(old));
             });
+
             try
             {
                 Assert.That(ready.Wait(10000), Is.True);
@@ -94,9 +110,12 @@ namespace BlackThunder.BlackboxSystem.Tests
                 go.Set();
                 await task;
                 Assert.That(BlackboxHandle.CurrentSessionKey, Is.EqualTo(next.SessionKey));
-                Assert.That(BlackboxSessionRegistry.GetBlackbox(owner).GetLogs().Single().Message, Is.EqualTo("new session"));
+                Assert.That(
+                    BlackboxSessionRegistry.GetBlackbox(owner).GetLogs().Single().Message,
+                    Is.EqualTo("new session"));
             }
             finally { go.Set(); }
+
             await task;
             Assert.That(box.GetLogs(), Is.Empty);
             Assert.That(BlackboxTestDoubles.WarningLogs.Count(s => s.Contains("disposed")), Is.EqualTo(1));
@@ -108,13 +127,16 @@ namespace BlackThunder.BlackboxSystem.Tests
         {
             var old = BlackboxSessionRegistry.Current;
             using var go = new ManualResetEventSlim();
+
             var task = Task.Run(() =>
             {
                 Assert.That(go.Wait(10000), Is.True);
                 return (BlackboxSessionRegistry.Current, BlackboxHandle.MaxLogCount);
             });
+
             try { BlackboxHandle.RestartDefaultSession(); BlackboxHandle.MaxLogCount = 7; }
             finally { go.Set(); }
+
             var result = await task;
             Assert.That(result.Item1, Is.SameAs(BlackboxSessionRegistry.Current).And.Not.SameAs(old));
             Assert.That(result.Item2, Is.EqualTo(7));
@@ -129,6 +151,7 @@ namespace BlackThunder.BlackboxSystem.Tests
             var inner = BlackboxHandle.BeginSession();
             outer.Dispose();
             inner.Dispose();
+
             try
             {
                 Assert.That(BlackboxSessionRegistry.Current, Is.SameAs(old));
@@ -145,6 +168,7 @@ namespace BlackThunder.BlackboxSystem.Tests
             var recordingSession = BlackboxSessionRegistry.Current;
             var owners = Enumerable.Range(0, 24).Select(_ => new object()).ToArray();
             var boxes = new ConcurrentBag<Blackbox>();
+
             RunThreads(8, () =>
             {
                 for (int i = 0; i < 200; i++)
@@ -153,9 +177,11 @@ namespace BlackThunder.BlackboxSystem.Tests
                     boxes.Add(box);
                     box.Write("record", "Run");
                     recordingSession.Subjects.GetOrAdd(owners[i % owners.Length]);
+
                     if (i % 13 == 0) recordingSession.Subjects.Cleanup();
                 }
             });
+
             Assert.That(boxes.Distinct().Count(), Is.EqualTo(1));
             Assert.That(boxes.First().LogContexts.Count, Is.EqualTo(8));
             Assert.That(recordingSession.Subjects.Count(), Is.EqualTo(owners.Length));
@@ -177,7 +203,11 @@ namespace BlackThunder.BlackboxSystem.Tests
             int exertBefore = HandleManager<ExertHandle>.LiveCountForTests;
             using var ready = new ManualResetEventSlim();
             using var go = new ManualResetEventSlim();
-            recordingSession.State.BeforeHandleRegistration = () => { ready.Set(); Assert.That(go.Wait(10000), Is.True); };
+
+            recordingSession.State.BeforeHandleRegistration = () => { ready.Set(); Assert.That(
+                go.Wait(10000),
+                Is.True); };
+
             var task = Task.Run(() =>
             {
                 if (exert)
@@ -193,12 +223,15 @@ namespace BlackThunder.BlackboxSystem.Tests
                     h.Dispose();
                 }
             });
+
             try
             {
                 Assert.That(ready.Wait(10000), Is.True);
+
                 if (restartDefault) BlackboxHandle.RestartDefaultSession(); else session.Dispose();
             }
             finally { go.Set(); }
+
             await task;
             Assert.That(HandleManager<ScopeHandle>.LiveCountForTests, Is.EqualTo(scopeBefore));
             Assert.That(HandleManager<ExertHandle>.LiveCountForTests, Is.EqualTo(exertBefore));
@@ -221,17 +254,23 @@ namespace BlackThunder.BlackboxSystem.Tests
             using var go = new ManualResetEventSlim();
             old.State.BeforeLogPublication = _ => { ready.Set(); Assert.That(go.Wait(10000), Is.True); };
             var task = Task.Run(() => old.Write("in flight", "Run"));
+
             try
             {
                 Assert.That(ready.Wait(10000), Is.True);
+
                 if (restartDefault) BlackboxHandle.RestartDefaultSession(); else session.Dispose();
+
                 BlackboxHandle.Of(owner).Write("new");
             }
             finally { go.Set(); }
+
             await task;
             old.Write("rejected", "Run");
             Assert.That(old.GetLogs().Select(l => l.Message), Is.EqualTo(new[] { "in flight" }));
-            Assert.That(BlackboxSessionRegistry.GetBlackbox(owner).GetLogs().Select(l => l.Message), Is.EqualTo(new[] { "new" }));
+            Assert.That(
+                BlackboxSessionRegistry.GetBlackbox(owner).GetLogs().Select(l => l.Message),
+                Is.EqualTo(new[] { "new" }));
         }
 
         [Test]
@@ -244,8 +283,13 @@ namespace BlackThunder.BlackboxSystem.Tests
             context.EnqueueLog("previous lap", 0, "Run");
             using var ready = new ManualResetEventSlim();
             using var go = new ManualResetEventSlim();
-            recordingSession.State.BeforeLogPublication = i => { if (i == 1) { ready.Set(); Assert.That(go.Wait(10000), Is.True); } };
+
+            recordingSession.State.BeforeLogPublication = i => { if (i == 1) { ready.Set(); Assert.That(
+                go.Wait(10000),
+                Is.True); } };
+
             var task = Task.Run(() => context.EnqueueLog("delayed", 1, "Run"));
+
             try
             {
                 Assert.That(ready.Wait(10000), Is.True);
@@ -253,6 +297,7 @@ namespace BlackThunder.BlackboxSystem.Tests
                 context.EnqueueLog("newest", 2, "Run");
             }
             finally { go.Set(); }
+
             await task;
             Assert.That(context.GetLogs().Single().Message, Is.EqualTo("newest"));
         }
@@ -278,6 +323,7 @@ namespace BlackThunder.BlackboxSystem.Tests
             context.EnqueueLog("call", 0, "Run", interactionId: 7);
             context.OpenScope("scope", 1, "Run", 4);
             bool observed = false;
+
             recordingSession.State.AfterScopeMerge = () =>
             {
                 var logs = context.GetLogs().ToArray();
@@ -285,6 +331,7 @@ namespace BlackThunder.BlackboxSystem.Tests
                 Assert.That(logs[1].InteractionId, Is.EqualTo(7));
                 observed = true;
             };
+
             Assert.That(context.TryMergeScope(7), Is.True);
             Assert.That(observed, Is.True);
             Assert.That(context.GetLogs().Single().ScopeType, Is.EqualTo(ScopeType.Open));
@@ -303,7 +350,9 @@ namespace BlackThunder.BlackboxSystem.Tests
             var exerts = Enumerable.Range(0, 16).Select(_ => handle.Exert(owner, "call")).ToArray();
             RunThreads(4, () => { foreach (var h in scopes) h.Dispose(); foreach (var h in exerts) h.Dispose(); });
             Assert.That(warnings.Count(s => s.Contains("different thread")), Is.EqualTo(1));
-            Assert.That(BlackboxSessionRegistry.GetBlackbox(owner).GetLogs().Count(l => l.ScopeType == ScopeType.Close), Is.EqualTo(16));
+            Assert.That(
+                BlackboxSessionRegistry.GetBlackbox(owner).GetLogs().Count(l => l.ScopeType == ScopeType.Close),
+                Is.EqualTo(16));
         }
 
         [Test]
@@ -326,13 +375,17 @@ namespace BlackThunder.BlackboxSystem.Tests
             using var outer = BlackboxHandle.BeginSession();
             var live = BlackboxHandle.Of(new object()).Scope("outer");
             int before = HandleManager<ScopeHandle>.LiveCountForTests;
+
             for (int round = 0; round < 30; round++)
             {
                 using var inner = BlackboxHandle.BeginSession();
                 var handle = BlackboxHandle.Of(new object());
+
                 for (int i = 0; i < 70; i++) handle.Scope("abandoned");
+
                 inner.Dispose();
             }
+
             Assert.That(live.IsAlive, Is.True);
             Assert.That(HandleManager<ScopeHandle>.LiveCountForTests, Is.EqualTo(before));
             live.Dispose();
@@ -400,9 +453,13 @@ namespace BlackThunder.BlackboxSystem.Tests
             var owner = new object();
             var box = recordingSession.Subjects.GetOrAdd(owner);
             var tracker = recordingSession.GetScopeTracker(ThreadToken.Current);
+
             for (int i = 0; i < 10000; i++) { recordingSession.Subjects.GetOrAdd(owner); tracker.Register(recordingSession.State).Release(); }
+
             long before = GC.GetAllocatedBytesForCurrentThread();
+
             for (int i = 0; i < 1000; i++) { recordingSession.Subjects.GetOrAdd(owner); tracker.Register(recordingSession.State).Release(); }
+
             Assert.That(GC.GetAllocatedBytesForCurrentThread() - before, Is.Zero);
             GC.KeepAlive(box);
             GC.KeepAlive(owner);
@@ -419,9 +476,11 @@ namespace BlackThunder.BlackboxSystem.Tests
             var handle = BlackboxHandle.Of(owner);
             var box = BlackboxSessionRegistry.GetBlackbox(owner);
             using var start = new ManualResetEventSlim();
+
             var writer = Task.Run(() =>
             {
                 Assert.That(start.Wait(10000), Is.True);
+
                 Parallel.For(0, 4, _ =>
                 {
                     for (int i = 0; i < 1000; i++)
@@ -431,18 +490,25 @@ namespace BlackThunder.BlackboxSystem.Tests
                     }
                 });
             });
+
             start.Set();
+
             do
             {
                 var graph = Tools.BuildExportGraph(box, 2, true, box.State.CurrentSequence);
+
                 foreach (var node in graph)
                 {
                     Assert.That(node.Logs.Select(log => log.Sequence), Is.Ordered);
                     Assert.That(node.Logs.All(log => log.ScopeDepth >= 0), Is.True);
-                    foreach (var log in node.Logs) Assert.DoesNotThrow(() => LogFormatter.RenderTextLine(log, log.ScopeDepth));
+
+                    foreach (var log in node.Logs) Assert.DoesNotThrow(
+                        () => LogFormatter.RenderTextLine(log, log.ScopeDepth));
                 }
+
                 await Task.Yield();
             } while (!writer.IsCompleted);
+
             await writer;
             GC.KeepAlive(owner);
             GC.KeepAlive(target);
@@ -475,14 +541,19 @@ namespace BlackThunder.BlackboxSystem.Tests
         {
             using var start = new ManualResetEventSlim();
             var errors = new ConcurrentQueue<Exception>();
+
             var threads = Enumerable.Range(0, count).Select(_ => new Thread(() =>
             {
                 try { if (!start.Wait(10000)) throw new TimeoutException(); action(); }
                 catch (Exception e) { errors.Enqueue(e); }
             }) { IsBackground = true }).ToArray();
+
             foreach (var thread in threads) thread.Start();
+
             start.Set();
+
             foreach (var thread in threads) Assert.That(thread.Join(15000), Is.True);
+
             Assert.That(errors, Is.Empty);
         }
     }

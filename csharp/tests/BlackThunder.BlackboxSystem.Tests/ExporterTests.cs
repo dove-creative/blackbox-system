@@ -116,8 +116,14 @@ namespace BlackThunder.BlackboxSystem.Tests
             var html = File.ReadAllText(BlackboxTestDoubles.GetFiles(directory, "Blackbox*.html").Single());
             Assert.That(html, Does.Contain("uses &#39;target (BlackboxTestDoubles.NamedOwner #1)&#39;"));
             Assert.That(html, Does.Contain(".interaction.tag-interaction { color: #f6a04d;"));
-            Assert.That(html, Does.Contain("href='#log_1_1' class='interaction tag-interaction' title='Tag #1: #1: target (BlackboxTestDoubles.NamedOwner #1)'>[1]</a>"));
-            Assert.That(html, Does.Contain("href='#log_0_1' class='interaction tag-interaction' title='Tag #1: #0: source (BlackboxTestDoubles.NamedOwner #0)'>[1]</a>"));
+            Assert.That(
+                html,
+                Does.Contain(
+                    "href='#log_1_1' class='interaction tag-interaction' title='Tag #1: #1: target (BlackboxTestDoubles.NamedOwner #1)'>[1]</a>"));
+            Assert.That(
+                html,
+                Does.Contain(
+                    "href='#log_0_1' class='interaction tag-interaction' title='Tag #1: #0: source (BlackboxTestDoubles.NamedOwner #0)'>[1]</a>"));
             Assert.That(html, Does.Contain("<span id='log_0_1'></span>"));
             Assert.That(html, Does.Contain("function resolveHighlightTarget(el)"));
             Assert.That(html, Does.Contain("const highlightTarget = resolveHighlightTarget(targetElement);"));
@@ -153,7 +159,9 @@ namespace BlackThunder.BlackboxSystem.Tests
                 HtmlExporter.OpenLogProcess = startInfo => Process.Start(startInfo);
             }
 
-            Assert.That(BlackboxTestDoubles.WarningLogs.Any(log => log.Contains("Failed to open the file automatically")), Is.True);
+            Assert.That(
+                BlackboxTestDoubles.WarningLogs.Any(log => log.Contains("Failed to open the file automatically")),
+                Is.True);
             Assert.That(BlackboxTestDoubles.WarningLogs.Any(log => log.Contains("blocked txt open")), Is.True);
             Assert.That(BlackboxTestDoubles.WarningLogs.Any(log => log.Contains("blocked html open")), Is.True);
         }

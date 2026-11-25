@@ -17,11 +17,16 @@ namespace BlackThunder.BlackboxSystem.Tests
         public void CopySampleApplication()
         {
             var sourceDirectory = Path.Combine(TestContext.CurrentContext.TestDirectory, "SampleApp");
-            Assert.That(File.Exists(Path.Combine(sourceDirectory, SampleAssemblyName)), Is.True,
+            Assert.That(
+                File.Exists(Path.Combine(sourceDirectory, SampleAssemblyName)),
+                Is.True,
                 "Build the test project so its SampleApp output is available.");
 
-            _applicationDirectory = Path.Combine(Path.GetTempPath(), TemporaryDirectoryPrefix + Guid.NewGuid().ToString("N"));
+            _applicationDirectory = Path.Combine(
+                Path.GetTempPath(),
+                TemporaryDirectoryPrefix + Guid.NewGuid().ToString("N"));
             Directory.CreateDirectory(_applicationDirectory);
+
             foreach (var sourcePath in Directory.GetFiles(sourceDirectory))
                 File.Copy(sourcePath, Path.Combine(_applicationDirectory, Path.GetFileName(sourcePath)));
         }
@@ -34,6 +39,7 @@ namespace BlackThunder.BlackboxSystem.Tests
             var applicationPath = Path.GetFullPath(_applicationDirectory);
             var temporaryRoot = Path.GetFullPath(Path.GetTempPath()).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)
                 + Path.DirectorySeparatorChar;
+
             if (!applicationPath.StartsWith(temporaryRoot, StringComparison.OrdinalIgnoreCase)
                 || !Path.GetFileName(applicationPath).StartsWith(TemporaryDirectoryPrefix, StringComparison.Ordinal))
                 throw new InvalidOperationException("The sample cleanup path is outside its temporary directory.");
@@ -54,6 +60,7 @@ namespace BlackThunder.BlackboxSystem.Tests
             Assert.That(result.Error, Is.Empty);
             Assert.That(result.Output, Does.Not.Contain("sample>"));
             Assert.That(Directory.Exists(Path.Combine(_applicationDirectory, "SampleOutput")), Is.False);
+
             if (command == "help") Assert.That(result.Output, Does.Contain("write").And.Contain("exception"));
         }
 
@@ -73,13 +80,16 @@ namespace BlackThunder.BlackboxSystem.Tests
             var outputDirectory = Path.Combine(_applicationDirectory, "SampleOutput", scenarioName);
 
             Assert.That(result.ExitCode, Is.Zero, result.Error);
-            Assert.That(result.Output, Does.Not.Contain("sample>").And.Not.Contain("[HtmlExporter]").And.Not.Contain("HP Change"));
+            Assert.That(
+                result.Output,
+                Does.Not.Contain("sample>").And.Not.Contain("[HtmlExporter]").And.Not.Contain("HP Change"));
             Assert.That(result.Output, Does.Contain("Completed").And.Contain(outputDirectory));
             Assert.That(Directory.Exists(outputDirectory), Is.True);
 
             var files = Directory.GetFiles(outputDirectory, "*.html");
             Assert.That(files, Has.Length.EqualTo(1));
             Assert.That(File.ReadAllText(files[0]), Does.Contain("<html"));
+
             if (scenarioName == "Exception")
             {
                 Assert.That(result.Output, Does.Contain("Expected exception: Potion cannot be null."));
@@ -157,12 +167,15 @@ namespace BlackThunder.BlackboxSystem.Tests
                 RedirectStandardOutput = true,
                 RedirectStandardError = true
             };
+
             startInfo.ArgumentList.Add(Path.Combine(_applicationDirectory, SampleAssemblyName));
+
             foreach (var argument in args) startInfo.ArgumentList.Add(argument);
 
             using var process = Process.Start(startInfo);
             var outputTask = process.StandardOutput.ReadToEndAsync();
             var errorTask = process.StandardError.ReadToEndAsync();
+
             try
             {
                 if (interactiveInput != null)
@@ -173,7 +186,10 @@ namespace BlackThunder.BlackboxSystem.Tests
 
                 // Do not close stdin: one-shot commands must terminate without waiting for EOF.
                 Assert.That(process.WaitForExit(15000), Is.True, "The sample did not exit while stdin remained open.");
-                return new ProcessResult(process.ExitCode, outputTask.GetAwaiter().GetResult(), errorTask.GetAwaiter().GetResult());
+                return new ProcessResult(
+                    process.ExitCode,
+                    outputTask.GetAwaiter().GetResult(),
+                    errorTask.GetAwaiter().GetResult());
             }
             finally
             {
@@ -188,10 +204,12 @@ namespace BlackThunder.BlackboxSystem.Tests
         private static string FindDotnetHost()
         {
             var configuredHost = Environment.GetEnvironmentVariable("DOTNET_HOST_PATH");
+
             if (!string.IsNullOrEmpty(configuredHost) && File.Exists(configuredHost)) return configuredHost;
 
             var processPath = Environment.ProcessPath;
             var executableName = OperatingSystem.IsWindows() ? "dotnet.exe" : "dotnet";
+
             if (!string.IsNullOrEmpty(processPath)
                 && string.Equals(Path.GetFileName(processPath), executableName, StringComparison.OrdinalIgnoreCase))
                 return processPath;
@@ -199,6 +217,7 @@ namespace BlackThunder.BlackboxSystem.Tests
             // Resolve the host that owns the current .NET 10 runtime, including a portable SDK installation.
             var runtimeDirectory = Path.GetDirectoryName(typeof(object).Assembly.Location);
             var runtimeHost = Path.GetFullPath(Path.Combine(runtimeDirectory, "..", "..", "..", executableName));
+
             if (File.Exists(runtimeHost)) return runtimeHost;
 
             throw new InvalidOperationException("Cannot locate the .NET host used by the current test runtime.");

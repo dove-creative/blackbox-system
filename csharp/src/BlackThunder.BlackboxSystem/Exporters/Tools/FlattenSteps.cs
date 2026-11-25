@@ -25,6 +25,7 @@ namespace BlackThunder.BlackboxSystem.Exporters
             for (var i = 0; i < source.Count; i++)
             {
                 var log = source[i];
+
                 if (TryFindEmptyScopeCloseIndex(source, i, out var close))
                 {
                     log.Message = CombineMessages(log.Message, close.Message);

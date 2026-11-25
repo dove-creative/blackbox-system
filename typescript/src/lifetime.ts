@@ -1,8 +1,10 @@
 /** @internal Runs cleanup after a synchronous result or after a returned thenable settles. */
 export function finish<T>(callback: () => T, cleanup: () => void): T {
     let result: T;
+
     try {
         result = callback();
+
         if (isThenable(result)) {
             return Promise.resolve(result).then(
                 value => { cleanup(); return value; },
@@ -11,8 +13,10 @@ export function finish<T>(callback: () => T, cleanup: () => void): T {
         }
     } catch (error) {
         try { cleanup(); } catch { /* Preserve the callback failure. */ }
+
         throw error;
     }
+
     cleanup();
     return result;
 }

@@ -47,7 +47,10 @@ namespace BlackThunder.BlackboxSystem.Tests
                 BlackboxTestDoubles.HandleFor(targetOwner).Write("inside", "Receive");
             }
 
-            source.Export(format: ExportFormat.Txt, fullExportOption: FullExportOption.Full, openLogOption: OpenLogOption.Never);
+            source.Export(
+                format: ExportFormat.Txt,
+                fullExportOption: FullExportOption.Full,
+                openLogOption: OpenLogOption.Never);
 
             var text = File.ReadAllText(BlackboxTestDoubles.GetFiles(directory, "*.txt").Single());
             Assert.That(text, Does.Contain("source"));
@@ -67,6 +70,7 @@ namespace BlackThunder.BlackboxSystem.Tests
 
             // Table 7 / TagTargetFlow x Run
             source.Write("hello %0", "Run").With(targetOwner, TargetTypes.Full);
+
             using (source.Scope("scope %0", "Run").With(targetOwner, TargetTypes.Name))
             {
             }
@@ -117,7 +121,9 @@ namespace BlackThunder.BlackboxSystem.Tests
             second.Write("second", "Run");
 
             Assert.That(second.Id, Is.EqualTo(0));
-            Assert.That(BlackboxTestDoubles.Logs(BlackboxTestDoubles.BlackboxFor(owner)).Single().Message, Is.EqualTo("second"));
+            Assert.That(
+                BlackboxTestDoubles.Logs(BlackboxTestDoubles.BlackboxFor(owner)).Single().Message,
+                Is.EqualTo("second"));
         }
 
         [Test]

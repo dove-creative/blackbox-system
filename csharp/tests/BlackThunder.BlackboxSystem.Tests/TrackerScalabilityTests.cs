@@ -28,6 +28,7 @@ namespace BlackThunder.BlackboxSystem.Tests
             BlackboxHandle.MaxLogCount = 1;
             var recordingSession = BlackboxSessionRegistry.Current;
             var seen = new ConcurrentDictionary<object, byte>();
+
             RunThreads(48, () =>
             {
                 var owner = new object();
@@ -37,6 +38,7 @@ namespace BlackThunder.BlackboxSystem.Tests
                 seen.TryAdd(recordingSession.GetExertTracker(ThreadToken.Current), 0);
                 GC.KeepAlive(owner);
             });
+
             Assert.That(seen.Count, Is.InRange(2, 32));
         }
 
@@ -50,6 +52,7 @@ namespace BlackThunder.BlackboxSystem.Tests
             var retained = new long[3];
             WriteAndForget(2048);
             long baseline = CollectAndMeasure(recordingSession);
+
             for (int batch = 0; batch < retained.Length; batch++)
             {
                 WriteAndForget(20000);
@@ -59,10 +62,12 @@ namespace BlackThunder.BlackboxSystem.Tests
             // 60,000 discarded objects retained roughly 42 MB in that implementation.
             foreach (long bytes in retained)
                 Assert.That(bytes - baseline, Is.LessThan(2 * 1024 * 1024));
+
             Assert.That(retained[2] - retained[0], Is.LessThan(1024 * 1024));
             Assert.That(BlackboxSessionRegistry.Current, Is.SameAs(recordingSession));
             Assert.That(recordingSession.Subjects.Count(), Is.Zero);
-            TestContext.WriteLine($"Retained heap after 20k/40k/60k objects: {retained[0] - baseline}, {retained[1] - baseline}, {retained[2] - baseline} bytes");
+            TestContext.WriteLine(
+                $"Retained heap after 20k/40k/60k objects: {retained[0] - baseline}, {retained[1] - baseline}, {retained[2] - baseline} bytes");
             GC.KeepAlive(recordingSession);
         }
 
@@ -74,6 +79,7 @@ namespace BlackThunder.BlackboxSystem.Tests
             using var session = BlackboxHandle.BeginSession();
             var recordingSession = BlackboxSessionRegistry.Current;
             var context = new LogContext(recordingSession.Subjects.GetOrAdd(new object()), 1);
+
             if (exert) ExerciseConcurrentReuse(recordingSession.GetExertTracker(ThreadToken.Current), recordingSession);
             else ExerciseConcurrentReuse(recordingSession.GetScopeTracker(ThreadToken.Current), recordingSession);
         }
@@ -89,17 +95,28 @@ namespace BlackThunder.BlackboxSystem.Tests
             var recordingSession = BlackboxSessionRegistry.Current;
             var context = new LogContext(recordingSession.Subjects.GetOrAdd(new object()), 1);
             Action retire = () => { if (restartDefault) BlackboxHandle.RestartDefaultSession(); else session.Dispose(); };
-            if (exert) ExerciseRetirement(recordingSession.GetExertTracker(ThreadToken.Current), recordingSession, retire, s => s.GetExertTracker(ThreadToken.Current));
-            else ExerciseRetirement(recordingSession.GetScopeTracker(ThreadToken.Current), recordingSession, retire, s => s.GetScopeTracker(ThreadToken.Current));
+
+            if (exert) ExerciseRetirement(
+                recordingSession.GetExertTracker(ThreadToken.Current),
+                recordingSession,
+                retire,
+                s => s.GetExertTracker(ThreadToken.Current));
+            else ExerciseRetirement(
+                recordingSession.GetScopeTracker(ThreadToken.Current),
+                recordingSession,
+                retire,
+                s => s.GetScopeTracker(ThreadToken.Current));
         }
 
         private static void ExerciseConcurrentReuse<T>(HandleTracker<T> tracker, BlackboxSession recordingSession)
         {
             int before = HandleManager<T>.LiveCountForTests;
             var active = new ConcurrentDictionary<long, byte>();
+
             RunThreads(8, () =>
             {
                 var leases = new HandleLease<T>[40];
+
                 for (int round = 0; round < 100; round++)
                 {
                     try
@@ -107,9 +124,12 @@ namespace BlackThunder.BlackboxSystem.Tests
                         for (int i = 0; i < leases.Length; i++)
                         {
                             leases[i] = tracker.Register(recordingSession.State);
+
                             if (leases[i].Id <= 0 || !active.TryAdd(leases[i].Id, 0))
-                                throw new InvalidOperationException("Registration returned an invalid or duplicate live ID.");
+                                throw new InvalidOperationException(
+                                    "Registration returned an invalid or duplicate live ID.");
                         }
+
                         foreach (var lease in leases)
                             if (!HandleManager<T>.IsAlive(lease.Id))
                                 throw new InvalidOperationException("Another writer invalidated a live lease.");
@@ -122,8 +142,10 @@ namespace BlackThunder.BlackboxSystem.Tests
                             lease.Release();
                         }
                     }
+
                     var stale = leases[0];
                     var fresh = tracker.Register(recordingSession.State);
+
                     try
                     {
                         if (stale.Release() || !HandleManager<T>.IsAlive(fresh.Id))
@@ -132,12 +154,16 @@ namespace BlackThunder.BlackboxSystem.Tests
                     finally { fresh.Release(); }
                 }
             });
+
             Assert.That(active, Is.Empty);
             Assert.That(HandleManager<T>.LiveCountForTests, Is.EqualTo(before));
         }
 
-        private static void ExerciseRetirement<T>(HandleTracker<T> tracker, BlackboxSession recordingSession,
-            Action retire, Func<BlackboxSession, HandleTracker<T>> selectTracker)
+        private static void ExerciseRetirement<T>(
+            HandleTracker<T> tracker,
+            BlackboxSession recordingSession,
+            Action retire,
+            Func<BlackboxSession, HandleTracker<T>> selectTracker)
         {
             const int Workers = 8;
             int before = HandleManager<T>.LiveCountForTests;
@@ -145,25 +171,32 @@ namespace BlackThunder.BlackboxSystem.Tests
             using var ready = new CountdownEvent(Workers);
             using var release = new ManualResetEventSlim();
             var errors = new ConcurrentQueue<Exception>();
+
             recordingSession.State.BeforeHandleRegistration = () =>
             {
                 ready.Signal();
+
                 if (!release.Wait(10000)) throw new TimeoutException("Retirement registration gate timed out.");
             };
+
             var threads = Enumerable.Range(0, Workers).Select(_ => new Thread(() =>
             {
                 try
                 {
                     var late = tracker.Register(recordingSession.State);
+
                     try
                     {
-                        if (late.Id != 0) throw new InvalidOperationException("A retired tracker accepted a pending registration.");
+                        if (late.Id != 0) throw new InvalidOperationException(
+                            "A retired tracker accepted a pending registration.");
                     }
                     finally { late.Release(); }
                 }
                 catch (Exception error) { errors.Enqueue(error); }
             }) { IsBackground = true }).ToArray();
+
             foreach (var thread in threads) thread.Start();
+
             try
             {
                 Assert.That(ready.Wait(10000), Is.True);
@@ -175,9 +208,11 @@ namespace BlackThunder.BlackboxSystem.Tests
                 var nextContext = new LogContext(nextSession.Subjects.GetOrAdd(new object()), 1);
                 var nextTracker = selectTracker(nextSession);
                 var fresh = Enumerable.Range(0, 80).Select(_ => nextTracker.Register(nextSession.State)).ToArray();
+
                 try
                 {
                     foreach (var stale in published) Assert.That(stale.Release(), Is.False);
+
                     release.Set();
                     JoinThreads(threads, errors);
                     Assert.That(fresh.All(lease => HandleManager<T>.IsAlive(lease.Id)), Is.True);
@@ -188,10 +223,14 @@ namespace BlackThunder.BlackboxSystem.Tests
             finally
             {
                 release.Set();
+
                 foreach (var thread in threads) thread.Join(15000);
+
                 foreach (var lease in published) lease.Release();
+
                 recordingSession.State.BeforeHandleRegistration = null;
             }
+
             Assert.That(HandleManager<T>.LiveCountForTests, Is.EqualTo(before));
         }
 
@@ -199,6 +238,7 @@ namespace BlackThunder.BlackboxSystem.Tests
         private static int CountTrackersUsedByContexts(int count)
         {
             var seen = new HashSet<object>();
+
             for (int i = 0; i < count; i++)
             {
                 var owner = new object();
@@ -209,6 +249,7 @@ namespace BlackThunder.BlackboxSystem.Tests
                 seen.Add(BlackboxSessionRegistry.Current.GetExertTracker(ThreadToken.Current));
                 GC.KeepAlive(owner);
             }
+
             return seen.Count;
         }
 
@@ -237,16 +278,20 @@ namespace BlackThunder.BlackboxSystem.Tests
         {
             using var start = new ManualResetEventSlim();
             var errors = new ConcurrentQueue<Exception>();
+
             var threads = Enumerable.Range(0, count).Select(_ => new Thread(() =>
             {
                 try
                 {
                     if (!start.Wait(10000)) throw new TimeoutException();
+
                     action();
                 }
                 catch (Exception error) { errors.Enqueue(error); }
             }) { IsBackground = true }).ToArray();
+
             foreach (var thread in threads) thread.Start();
+
             start.Set();
             JoinThreads(threads, errors);
         }
@@ -254,6 +299,7 @@ namespace BlackThunder.BlackboxSystem.Tests
         private static void JoinThreads(Thread[] threads, ConcurrentQueue<Exception> errors)
         {
             foreach (var thread in threads) Assert.That(thread.Join(15000), Is.True);
+
             Assert.That(errors, Is.Empty);
         }
     }

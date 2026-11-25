@@ -21,13 +21,16 @@ namespace BlackThunder.BlackboxSystem.Tests
             using var session = BlackboxHandle.BeginSession();
             var owner = new object();
             var handle = state == "default" ? default : BlackboxHandle.Of(owner);
+
             if (state == "disabled") BlackboxHandle.UseBlackbox = false;
             if (state == "disposed") session.Dispose();
+
             if (state == "frozen")
             {
                 BlackboxHandle.LogDirectory = BlackboxTestDoubles.CreateTempDirectory();
                 handle.CrashExport("freeze", openLog: OpenLogOption.Never);
             }
+
             var sequence = session.State.CurrentSequence;
             var calls = 0;
 
@@ -69,7 +72,9 @@ namespace BlackThunder.BlackboxSystem.Tests
             Assert.That(handle.ExertMessage<object>(null, "call"), Is.EqualTo("call"));
             Assert.That(handle.Exert(peer, "call").IsDisposed, Is.True);
             Assert.That(handle.WriteError(null, ("peer", peer)), Is.EqualTo("null"));
-            Assert.That(handle.WriteError("crash", ("peer", peer), ExceptionHandlingOption.CrashExport), Is.EqualTo("crash"));
+            Assert.That(
+                handle.WriteError("crash", ("peer", peer), ExceptionHandlingOption.CrashExport),
+                Is.EqualTo("crash"));
             Assert.That(handle.CrashExport(null, ("peer", peer)), Is.EqualTo("null"));
             Assert.That(session.Subjects.Count(), Is.EqualTo(1));
             Assert.That(session.State.CurrentSequence, Is.EqualTo(-1));
@@ -94,8 +99,16 @@ namespace BlackThunder.BlackboxSystem.Tests
         {
             var messages = new List<string>();
             Action<string> logger = messages.Add;
-            BlackboxHandle.Configure("first", logger, true, ExportFormat.Txt, FullExportOption.Focused,
-                OpenLogOption.Never, ExceptionHandlingOption.CrashExport, TargetTypes.Message, UseBlackboxOption.DoNotUse);
+            BlackboxHandle.Configure(
+                "first",
+                logger,
+                true,
+                ExportFormat.Txt,
+                FullExportOption.Focused,
+                OpenLogOption.Never,
+                ExceptionHandlingOption.CrashExport,
+                TargetTypes.Message,
+                UseBlackboxOption.DoNotUse);
             BlackboxHandle.MaxLogCount = 7;
             BlackboxHandle.DefaultRecursionDepth = 2;
 
@@ -112,7 +125,9 @@ namespace BlackThunder.BlackboxSystem.Tests
             Assert.That(BlackboxHandle.TagTargetTypes, Is.EqualTo(TargetTypes.Message));
             Assert.That(BlackboxHandle.MaxLogCount, Is.EqualTo(7));
             Assert.That(BlackboxHandle.DefaultRecursionDepth, Is.EqualTo(2));
-            Assert.That(BlackboxSessionRegistry.Current.State.Settings.ExceptionHandlingOption, Is.EqualTo(ExceptionHandlingOption.CrashExport));
+            Assert.That(
+                BlackboxSessionRegistry.Current.State.Settings.ExceptionHandlingOption,
+                Is.EqualTo(ExceptionHandlingOption.CrashExport));
             Assert.That(Infrastructure.Log("normal"), Is.True);
             Assert.That(Infrastructure.Log("warning", LogLevel.Warning), Is.True);
             Assert.That(messages, Is.EqualTo(new[] { "normal", "warning" }));
@@ -150,9 +165,13 @@ namespace BlackThunder.BlackboxSystem.Tests
             var handle = BlackboxHandle.Of(owner);
             BlackboxHandle.Of(peer, label: "peer");
 
-            // Table 5-1 / Valid x WriteError.ErrorTargetsPresent: tuple conversion and unnamed targets preserve identities.
+            // Table 5-1 / Valid x WriteError.ErrorTargetsPresent: tuple conversion and unnamed targets preserve
+            // identities.
             handle.WriteError("tuple", (context, peer), ExceptionHandlingOption.None);
-            handle.WriteError("many", new BlackboxHandle.ErrorContainer((context, null), ("named", peer)), ExceptionHandlingOption.None);
+            handle.WriteError(
+                "many",
+                new BlackboxHandle.ErrorContainer((context, null), ("named", peer)),
+                ExceptionHandlingOption.None);
             var logs = BlackboxSessionRegistry.GetBlackbox(owner).GetLogs().ToArray();
             Assert.That(logs[0].Message, Is.EqualTo("[Error] tuple (target: %0)"));
             Assert.That(logs[0].Tags.Single().Target.Owner, Is.SameAs(peer));
@@ -163,7 +182,9 @@ namespace BlackThunder.BlackboxSystem.Tests
             Assert.That(logs[1].ToString(), Does.Contain("target: null").And.Contain("named: 'peer"));
             var peerLogs = BlackboxSessionRegistry.GetBlackbox(peer).GetLogs().ToArray();
             Assert.That(peerLogs.Length, Is.EqualTo(2));
-            Assert.That(peerLogs.All(log => log.TagTargetTypes == (TargetTypes.Name | TargetTypes.InteractionId)), Is.True);
+            Assert.That(
+                peerLogs.All(log => log.TagTargetTypes == (TargetTypes.Name | TargetTypes.InteractionId)),
+                Is.True);
         }
 
         [RunWithUniTest]
@@ -186,8 +207,12 @@ namespace BlackThunder.BlackboxSystem.Tests
             handle.Export(format: ExportFormat.Txt, openLogOption: OpenLogOption.Never);
             var files = Directory.GetFiles(directory, "*.txt");
             Assert.That(files.Length, Is.EqualTo(2));
+
             foreach (var path in files)
-                Assert.That(File.ReadAllText(path), Does.Contain("before freeze").And.Not.Contain("ignored label").And.Not.Contain("ignored subject"));
+                Assert.That(
+                    File.ReadAllText(path),
+                    Does.Contain("before freeze").And.Not.Contain("ignored label").And.Not.Contain("ignored subject"));
+
             GC.KeepAlive(owner);
         }
 
@@ -202,25 +227,38 @@ namespace BlackThunder.BlackboxSystem.Tests
 
             // Table 5-1 / Valid x Construct/Write/Scope/Exert/WriteError: omitted names bind to the consumer method.
             using (handle.Construct()) { }
+
             using (handle.Construct(out var cached))
                 Assert.That(cached.Owner, Is.SameAs(owner));
+
             using (handle.Construct(message: "message")) { }
+
             handle.Write("write");
+
             using (handle.Scope("scope")) { }
+
             handle.ExertMessage(peer, "message");
+
             using (handle.Exert(peer, "call")) { }
+
             handle.WriteError("error");
             handle.Dispose("disposed");
             var logs = BlackboxSessionRegistry.GetBlackbox(owner).GetLogs().ToArray();
             Assert.That(logs.Length, Is.GreaterThan(10));
-            Assert.That(logs.All(log => log.MethodName == nameof(OptionalCallerNamesAndConstructForwardersPreserveTheCallingMethod)), Is.True);
+            Assert.That(
+                logs.All(
+                    log => log.MethodName == nameof(OptionalCallerNamesAndConstructForwardersPreserveTheCallingMethod)),
+                Is.True);
             Assert.That(logs.Count(log => log.Message?.StartsWith("[Ctor:") == true), Is.EqualTo(3));
 
             // The one-string overload names the method; a construction message must use its named argument.
             using (handle.Construct("explicit constructor")) { }
+
             var explicitConstructor = BlackboxSessionRegistry.GetBlackbox(owner).GetLogs().ToArray();
             Assert.That(explicitConstructor[logs.Length].MethodName, Is.EqualTo("explicit constructor"));
-            Assert.That(explicitConstructor[logs.Length].Message, Does.StartWith("[Ctor:").And.Not.Contain("explicit constructor"));
+            Assert.That(
+                explicitConstructor[logs.Length].Message,
+                Does.StartWith("[Ctor:").And.Not.Contain("explicit constructor"));
 
             // The parameterless Dispose helper deliberately records its own fixed name.
             handle.Dispose();

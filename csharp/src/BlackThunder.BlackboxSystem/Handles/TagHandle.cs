@@ -63,8 +63,10 @@ namespace BlackThunder.BlackboxSystem
             _session = session;
         }
 
-        internal static TagHandle FromMessage(string message) => new TagHandle(null, -1, message);
-        internal TagHandle Bind(BlackboxSession session) => new TagHandle(_context, _logIndex, _fallbackMessage, session);
+        internal static TagHandle FromMessage(string message) =>
+            new TagHandle(null, -1, message);
+        internal TagHandle Bind(BlackboxSession session) =>
+            new TagHandle(_context, _logIndex, _fallbackMessage, session);
 
         /// <summary>
         /// Attaches related targets to the written log.
@@ -77,6 +79,7 @@ namespace BlackThunder.BlackboxSystem
         {
             if (_context == null || !_context.State.CheckWrite())
                 return _fallbackMessage ?? string.Empty;
+
             if (_session == null)
                 return (string)this;
 
@@ -84,6 +87,7 @@ namespace BlackThunder.BlackboxSystem
 
             var targetTypes = TargetTypes.BasedOnSettings;
             var tagCount = tags.Length;
+
             if (tagCount > 0 && tags[tagCount - 1] is TargetTypes types)
             {
                 targetTypes = types;
@@ -91,17 +95,16 @@ namespace BlackThunder.BlackboxSystem
             }
 
             var targets = new Blackbox[tagCount];
+
             for (int i = 0; i < tagCount; i++)
             {
                 var tag = tags[i];
+
                 if (tag != null)
                     targets[i] = _session.Subjects.GetOrAdd(tag);
             }
 
-            _context.ResolveWith(
-                _logIndex,
-                targets,
-                targetTypes);
+            _context.ResolveWith(_logIndex, targets, targetTypes);
 
             return (string)this;
         }

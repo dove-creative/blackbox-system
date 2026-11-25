@@ -20,13 +20,20 @@ namespace BlackThunder.BlackboxSystem.Tests
 
 
         // Content
-        public BlackboxTableProject(string name, bool continuous, int continuousSeed, IReadOnlyList<TableScenario> scenarios)
+        public BlackboxTableProject(
+            string name,
+            bool continuous,
+            int continuousSeed,
+            IReadOnlyList<TableScenario> scenarios)
             : base(ExecutionMode.Inline)
         {
             if (scenarios == null)
                 throw new ArgumentNullException(nameof(scenarios));
-            if (scenarios.Count == 0 || scenarios.Any(scenario => scenario == null || string.IsNullOrWhiteSpace(scenario.Id)))
+
+            if (scenarios.Count == 0 || scenarios.Any(
+                scenario => scenario == null || string.IsNullOrWhiteSpace(scenario.Id)))
                 throw new ArgumentException("Table projects require named scenarios.", nameof(scenarios));
+
             if (scenarios.Select(scenario => scenario.Id).Distinct(StringComparer.Ordinal).Count() != scenarios.Count)
                 throw new ArgumentException("Table scenario IDs must be unique within a project.", nameof(scenarios));
 
@@ -49,11 +56,14 @@ namespace BlackThunder.BlackboxSystem.Tests
             if (_continuous)
             {
                 var available = _scenarios.Where(scenario => scenario.CanRun(model)).ToList();
+
                 if (available.Count == 0)
                     return labs;
 
-                // ExecuteContinuously normally receives every candidate lab, but it prepares all returned labs before selecting the next node.
-                // Blackbox runtime/logger state is global, so this test keeps one deterministic random candidate per step instead.
+                // ExecuteContinuously normally receives every candidate lab, but it prepares all returned labs before
+                // selecting the next node.
+                // Blackbox runtime/logger state is global, so this test keeps one deterministic random candidate per
+                // step instead.
                 var randomIndex = model.GetDeterministicRandom(available.Count, _continuousSeed);
                 labs.Add(CreateLab(available[randomIndex]));
                 return labs;
@@ -63,6 +73,7 @@ namespace BlackThunder.BlackboxSystem.Tests
             // Every scenario arranges the state it exercises from a fresh recording lifetime.
             if (model.ExecutedScenarioIds.Count < _scenarios.Count)
                 labs.Add(CreateLab(_scenarios[model.ExecutedScenarioIds.Count]));
+
             return labs;
         }
 
@@ -74,8 +85,10 @@ namespace BlackThunder.BlackboxSystem.Tests
                 {
                     if (!_continuous)
                         model.ResetRecordingState();
+
                     if (!scenario.CanRun(model))
-                        throw new InvalidOperationException("The registered table scenario cannot run: " + Name + "/" + scenario.Id);
+                        throw new InvalidOperationException(
+                            "The registered table scenario cannot run: " + Name + "/" + scenario.Id);
 
                     scenario.Execute(model);
                     model.ExecutedScenarioIds.Add(scenario.Id);

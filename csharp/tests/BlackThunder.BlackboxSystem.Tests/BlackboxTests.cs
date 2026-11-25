@@ -43,7 +43,9 @@ namespace BlackThunder.BlackboxSystem.Tests
             var blackbox = BlackboxTestDoubles.Blackbox("owner");
 
             // Table 4-2 / Ready x ExertMessage.OtherNull
-            Assert.That(() => blackbox.ExertMessage(null, "call", "Run"), Throws.TypeOf<System.ArgumentNullException>());
+            Assert.That(
+                () => blackbox.ExertMessage(null, "call", "Run"),
+                Throws.TypeOf<System.ArgumentNullException>());
         }
 
         [Test]
@@ -134,7 +136,9 @@ namespace BlackThunder.BlackboxSystem.Tests
             var logs = blackbox.GetLogs();
 
             Assert.That(logs.Select(log => log.Sequence).ToArray(), Is.Ordered);
-            Assert.That(logs.Select(log => log.Message).ToList(), Is.EquivalentTo(new List<string> { "main", "worker" }));
+            Assert.That(
+                logs.Select(log => log.Message).ToList(),
+                Is.EquivalentTo(new List<string> { "main", "worker" }));
         }
 
         [Test]

@@ -7,7 +7,8 @@ namespace BlackThunder.BlackboxSystem
         private readonly long _scopeId;
         private readonly TagHandle _tagHandle;
 
-        public bool IsAlive => _context != null && _context.State.IsActive && HandleManager<ScopeHandle>.IsAlive(_lease.Id);
+        public bool IsAlive => _context != null && _context.State.IsActive && HandleManager<ScopeHandle>.IsAlive(
+            _lease.Id);
         public bool IsDisposed => !IsAlive;
         public long ScopeId => IsAlive ? _scopeId : -1;
 
@@ -23,6 +24,7 @@ namespace BlackThunder.BlackboxSystem
         public ScopeHandle With(params object[] tags)
         {
             if (!IsAlive) return this;
+
             _tagHandle.With(tags);
             return this;
         }
@@ -30,8 +32,11 @@ namespace BlackThunder.BlackboxSystem
         public void Dispose()
         {
             if (_context == null) return;
+
             var released = _lease.Release();
+
             if (!_context.State.CheckWrite() || !released) return;
+
             _context.CloseScope(_scopeId);
         }
     }

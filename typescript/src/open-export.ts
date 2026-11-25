@@ -11,6 +11,7 @@ export function openExport(
     platform: NodeJS.Platform = process.platform, launch: LaunchViewer = spawn,
 ): void {
     const warn = (error: unknown) => warningLogger?.(`[Blackbox] Could not open export: ${String(error)}`);
+
     try {
         // Argument arrays avoid treating file names as shell commands.
         const command = platform === "win32" ? "explorer.exe" : platform === "darwin" ? "open" : "xdg-open";
@@ -20,6 +21,7 @@ export function openExport(
         // explorer.exe returns exit code 1 even after it opens the file, so only other viewers report it.
         if (platform !== "win32")
             child.once("exit", code => { if (code) warn(`exit code ${code}`); });
+
         child.unref();
     } catch (error) {
         warn(error);

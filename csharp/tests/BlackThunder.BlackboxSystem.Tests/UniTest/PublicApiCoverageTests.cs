@@ -20,25 +20,37 @@ namespace BlackThunder.BlackboxSystem.Tests
                 .Select(line => line.Trim())
                 .Where(line => line.Length > 0 && !line.StartsWith("#", StringComparison.Ordinal))
                 .Select(line => line.Split('|')).ToArray();
-            Assert.That(entries.All(parts => parts.Length == 4), Is.True, "Every signature needs a test-family mapping.");
+            Assert.That(
+                entries.All(parts => parts.Length == 4),
+                Is.True,
+                "Every signature needs a test-family mapping.");
             var expected = entries.Select(parts => string.Join("|", parts.Take(3))).ToArray();
-            Assert.That(expected.Distinct().Count(), Is.EqualTo(expected.Length), "Duplicate API mappings hide omissions.");
+            Assert.That(
+                expected.Distinct().Count(),
+                Is.EqualTo(expected.Length),
+                "Duplicate API mappings hide omissions.");
 
             var actual = assembly.GetExportedTypes()
                 .Where(type => type.Namespace == typeof(BlackboxHandle).Namespace)
-                .SelectMany(type => type.GetMembers(BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static | BindingFlags.DeclaredOnly)
+                .SelectMany(type => type.GetMembers(
+                    BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static | BindingFlags.DeclaredOnly)
                     .Where(IsContractMember)
                     .Select(member => type.FullName + "|" + member.MemberType + "|" + member))
                 .ToArray();
-            Assert.That(actual, Is.EquivalentTo(expected),
+
+            Assert.That(
+                actual,
+                Is.EquivalentTo(expected),
                 "Review the added/changed public contract, add UniTest assertions, then update PublicApiCoverage.txt.");
 
             foreach (var entry in entries)
             {
                 var fixture = assembly.GetType(typeof(PublicApiCoverageTests).Namespace + "." + entry[3]);
                 Assert.That(fixture, Is.Not.Null, "Unknown test family for " + entry[2]);
-                Assert.That(fixture.GetMethods().Any(method => method.IsDefined(typeof(RunWithUniTestAttribute), true)),
-                    Is.True, "Mapped family must execute through UniTest: " + entry[3]);
+                Assert.That(
+                    fixture.GetMethods().Any(method => method.IsDefined(typeof(RunWithUniTestAttribute), true)),
+                    Is.True,
+                    "Mapped family must execute through UniTest: " + entry[3]);
             }
         }
 
@@ -46,6 +58,7 @@ namespace BlackThunder.BlackboxSystem.Tests
         {
             if (member is MethodInfo method)
                 return !method.IsSpecialName || method.Name.StartsWith("op_", StringComparison.Ordinal);
+
             return member is ConstructorInfo || member is PropertyInfo || member is FieldInfo && member.Name != "value__";
         }
     }

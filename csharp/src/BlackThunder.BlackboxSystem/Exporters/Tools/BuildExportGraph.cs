@@ -60,12 +60,15 @@ namespace BlackThunder.BlackboxSystem.Exporters
                     CaptureName(log.ExertedBy);
                     CaptureName(log.ExertingTo);
                     CaptureName(log.TaggedBy);
+
                     if (log.Tags != null)
                         foreach (var tag in log.Tags)
                             CaptureName(tag.Target);
+
                     log.DisplayNames = names;
                     logs[i] = log;
                 }
+
                 nodes.Add(parent != null
                     ? new ExportNode(current, parent, depth, logs)
                     : new ExportNode(current, depth, logs));

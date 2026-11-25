@@ -131,10 +131,7 @@ namespace BlackThunder.BlackboxSystem
 
             // Only the currently alive handle for this exact generation may dispose.
             // Already-disposed handles, stale handles, and random ids fail here.
-            if (Interlocked.CompareExchange(
-                    ref _slotStates[slot],
-                    -generation,
-                    generation) != generation)
+            if (Interlocked.CompareExchange(ref _slotStates[slot], -generation, generation) != generation)
             {
                 return false;
             }
@@ -165,6 +162,7 @@ namespace BlackThunder.BlackboxSystem
             while (true)
             {
                 int count = Volatile.Read(ref _slotCount);
+
                 if (count >= MaxSlots)
                 {
                     slot = -1;

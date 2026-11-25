@@ -78,6 +78,7 @@ namespace BlackThunder.BlackboxSystem.Tests
         public void FlattenStepsConvertsEmptyScopePair()
         {
             var owner = BlackboxTestDoubles.Blackbox("owner");
+
             var logs = new List<LogData>
             {
                 Log(owner, "open", 0, ScopeType.Open, 1),
@@ -97,6 +98,7 @@ namespace BlackThunder.BlackboxSystem.Tests
         public void FlattenStepsPreservesNonEmptyScope()
         {
             var owner = BlackboxTestDoubles.Blackbox("owner");
+
             var logs = new List<LogData>
             {
                 Log(owner, "open", 0, ScopeType.Open, 1),
@@ -117,6 +119,7 @@ namespace BlackThunder.BlackboxSystem.Tests
         public void ResolveScopeDepthsAssignsNestedDepths()
         {
             var owner = BlackboxTestDoubles.Blackbox("owner");
+
             var logs = new List<LogData>
             {
                 Log(owner, "outer", 0, ScopeType.Open, 1),
@@ -152,6 +155,20 @@ namespace BlackThunder.BlackboxSystem.Tests
         }
 
         private static LogData Log(Blackbox owner, string message, long sequence, ScopeType scopeType, long scopeId) =>
-            new LogData(owner, message, DateTime.UtcNow, sequence, "Run", scopeType, scopeId, 1, "thread", -1, null, null, null, null);
+            new LogData(
+                owner,
+                message,
+                DateTime.UtcNow,
+                sequence,
+                "Run",
+                scopeType,
+                scopeId,
+                1,
+                "thread",
+                -1,
+                null,
+                null,
+                null,
+                null);
     }
 }

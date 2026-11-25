@@ -106,7 +106,7 @@ Subject는 객체 또는 함수이며 기본적으로 약하게 보관한다. �
 
 Node 전용 검증은 AsyncLocalStorage 전파, 다른 세션 핸들의 callback 분기, 파일 충돌 방지, 플랫폼별 파일 열기 실패 보고, 출력 callback 우선순위와 크래시 실패 후 재출력을 확인한다. 브라우저 검증은 명시적 문맥 격리, 다운로드 내용과 파일명, 생성한 HTML 동작을 확인한다. npm 패키지를 별도 소비 프로젝트에 설치해 공개 import와 TypeScript 선언도 검사한다.
 
-실행 명령과 예제는 [사용 안내](../README.ko.md)를 따른다. 기존 [C# 구현 문서](../../docs/Wiki/02-Implementations.md)와 [C# 검증 기록](../../docs/Tests/03-Results.md)은 해당 런타임의 계약과 과거 결과를 설명한다.
+실행 명령과 예제는 [사용 안내](../README.ko.md)를 따른다. 기존 [C# 구현 문서](../../docs/Wiki/02.%20Implementations.md)와 [C# 검증 기록](../../docs/Tests/03.%20Results.md)은 해당 런타임의 계약과 과거 결과를 설명한다.
 
 ## 7. 소스 색인
 

@@ -4,7 +4,8 @@ import type { BlackboxOptions } from "./types.js";
 type OptionalSetting = "normalLogger" | "warningLogger" | "onExport" | "logDirectory";
 
 /** Fully resolved session settings, as exposed by BlackboxSession.settings. */
-export type Settings = Readonly<Required<Omit<BlackboxOptions, OptionalSetting>> & Pick<BlackboxOptions, OptionalSetting>>;
+export type Settings =
+    Readonly<Required<Omit<BlackboxOptions, OptionalSetting>> & Pick<BlackboxOptions, OptionalSetting>>;
 
 /** @internal */
 export const defaults: Settings = Object.freeze({
@@ -24,17 +25,24 @@ export function resolveSettings(previous: Settings, options: BlackboxOptions): S
     for (const name of ["useBlackbox", "maxLogCount", "strongReference", "defaultRecursionDepth",
         "exportFormat", "fullExport", "openLog", "exceptionHandling", "tagTargetTypes"] as const)
         if (next[name] === undefined) (next as Record<string, unknown>)[name] = previous[name];
+
     if (!Number.isInteger(next.maxLogCount) || next.maxLogCount < 1 || next.maxLogCount > maxArrayLength)
         throw new RangeError(`maxLogCount must be an integer from 1 to ${maxArrayLength}.`);
+
     if (!Number.isSafeInteger(next.defaultRecursionDepth))
         throw new RangeError("defaultRecursionDepth must be a safe integer.");
+
     if (next.exportFormat !== "html" && next.exportFormat !== "text")
         throw new TypeError("exportFormat must be html or text.");
+
     if (next.exceptionHandling !== "none" && next.exceptionHandling !== "crashExport")
         throw new TypeError("exceptionHandling must be none or crashExport.");
+
     if (!Number.isInteger(next.tagTargetTypes) || next.tagTargetTypes < 0 || next.tagTargetTypes > 15)
         throw new RangeError("tagTargetTypes must contain valid TargetTypes flags.");
+
     if ((next.tagTargetTypes & TargetTypes.BasedOnSettings) !== 0)
         next.tagTargetTypes = previous.tagTargetTypes | (next.tagTargetTypes & ~TargetTypes.BasedOnSettings);
+
     return Object.freeze(next);
 }

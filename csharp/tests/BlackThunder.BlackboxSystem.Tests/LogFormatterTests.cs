@@ -12,7 +12,21 @@ namespace BlackThunder.BlackboxSystem.Tests
             var owner = BlackboxTestDoubles.Blackbox("owner");
             var target = BlackboxTestDoubles.Blackbox("target");
             var tags = new[] { new LogData.Tag(8, target) };
-            var log = new LogData(owner, "hello %0", DateTime.UtcNow, 0, "Run", ScopeType.None, -1, 1, "thread", -1, null, null, tags, null);
+            var log = new LogData(
+                owner,
+                "hello %0",
+                DateTime.UtcNow,
+                0,
+                "Run",
+                ScopeType.None,
+                -1,
+                1,
+                "thread",
+                -1,
+                null,
+                null,
+                tags,
+                null);
 
             // Table 1-2 / Ready x RenderMessage
             var rendered = LogFormatter.RenderMessage(log);
@@ -29,7 +43,21 @@ namespace BlackThunder.BlackboxSystem.Tests
             var owner = BlackboxTestDoubles.Blackbox("owner");
             var target = BlackboxTestDoubles.Blackbox("target");
             var tags = new[] { new LogData.Tag(3, target) };
-            var log = new LogData(owner, "hello", DateTime.UtcNow, 0, "Run", ScopeType.None, -1, 1, "thread", -1, null, null, tags, null);
+            var log = new LogData(
+                owner,
+                "hello",
+                DateTime.UtcNow,
+                0,
+                "Run",
+                ScopeType.None,
+                -1,
+                1,
+                "thread",
+                -1,
+                null,
+                null,
+                tags,
+                null);
 
             // Table 1-2 / Ready x TagRef
             var rendered = LogFormatter.RenderMessage(log);
@@ -46,9 +74,54 @@ namespace BlackThunder.BlackboxSystem.Tests
             var source = BlackboxTestDoubles.Blackbox("source");
 
             // Table 1-2 / Ready x RenderMessage
-            var nameOnly = new LogData(owner, "message", DateTime.UtcNow, 0, "Tag", ScopeType.None, -1, 1, "thread", 5, null, null, null, source, TargetTypes.Name);
-            var full = new LogData(owner, "message", DateTime.UtcNow, 0, "Tag", ScopeType.None, -1, 1, "thread", 5, null, null, null, source, TargetTypes.Full);
-            var none = new LogData(owner, "message", DateTime.UtcNow, 0, "Tag", ScopeType.None, -1, 1, "thread", 5, null, null, null, source, TargetTypes.None);
+            var nameOnly = new LogData(
+                owner,
+                "message",
+                DateTime.UtcNow,
+                0,
+                "Tag",
+                ScopeType.None,
+                -1,
+                1,
+                "thread",
+                5,
+                null,
+                null,
+                null,
+                source,
+                TargetTypes.Name);
+            var full = new LogData(
+                owner,
+                "message",
+                DateTime.UtcNow,
+                0,
+                "Tag",
+                ScopeType.None,
+                -1,
+                1,
+                "thread",
+                5,
+                null,
+                null,
+                null,
+                source,
+                TargetTypes.Full);
+            var none = new LogData(
+                owner,
+                "message",
+                DateTime.UtcNow,
+                0,
+                "Tag",
+                ScopeType.None,
+                -1,
+                1,
+                "thread",
+                5,
+                null,
+                null,
+                null,
+                source,
+                TargetTypes.None);
 
             var fullMessage = LogFormatter.RenderMessage(full);
 
@@ -63,7 +136,21 @@ namespace BlackThunder.BlackboxSystem.Tests
         {
             var owner = BlackboxTestDoubles.Blackbox("owner");
             var target = BlackboxTestDoubles.Blackbox("target");
-            var log = new LogData(owner, "call", DateTime.UtcNow, 14, "Run", ScopeType.Open, 6, 8, "worker", 2, target, null, null, null);
+            var log = new LogData(
+                owner,
+                "call",
+                DateTime.UtcNow,
+                14,
+                "Run",
+                ScopeType.Open,
+                6,
+                8,
+                "worker",
+                2,
+                target,
+                null,
+                null,
+                null);
 
             // Table 1-2 / Ready x RenderTextLine
             var rendered = LogFormatter.RenderTextLine(log, 1);
@@ -91,7 +178,21 @@ namespace BlackThunder.BlackboxSystem.Tests
 
             LogData Log(string methodName, ScopeType scopeType)
             {
-                return new LogData(owner, "message", DateTime.UtcNow, 0, methodName, scopeType, 1, 1, "thread", -1, null, null, null, null);
+                return new LogData(
+                    owner,
+                    "message",
+                    DateTime.UtcNow,
+                    0,
+                    methodName,
+                    scopeType,
+                    1,
+                    1,
+                    "thread",
+                    -1,
+                    null,
+                    null,
+                    null,
+                    null);
             }
         }
 

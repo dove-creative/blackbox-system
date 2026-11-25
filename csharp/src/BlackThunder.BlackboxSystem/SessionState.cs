@@ -37,11 +37,13 @@ namespace BlackThunder.BlackboxSystem
         internal bool TryUpdateSettings(Action<SessionSettings> update)
         {
             if (!IsActive) return false;
+
             while (true)
             {
                 var old = Settings;
                 var next = old.Copy();
                 update(next);
+
                 if (ReferenceEquals(Interlocked.CompareExchange(ref _settings, next, old), old)) return true;
             }
         }
@@ -50,15 +52,18 @@ namespace BlackThunder.BlackboxSystem
         internal bool TryMarkWarned(SessionWarning reason)
         {
             int bit = (int)reason;
+
             while (true)
             {
                 var old = Volatile.Read(ref _warnings);
+
                 if ((old & bit) != 0) return false;
                 if (Interlocked.CompareExchange(ref _warnings, old | bit, old) == old) return true;
             }
         }
 
-        internal bool TryFreeze(CrashInfo crash) => IsActive && Interlocked.CompareExchange(ref _crash, crash, null) == null;
+        internal bool TryFreeze(CrashInfo crash) =>
+            IsActive && Interlocked.CompareExchange(ref _crash, crash, null) == null;
         // True only for the call that ended the session.
         internal bool TryDeactivate() => Interlocked.Exchange(ref _active, 0) != 0;
     }
@@ -74,6 +79,7 @@ namespace BlackThunder.BlackboxSystem
                 state.WarnOnce(SessionWarning.Disposed, "[Blackbox] Session has been disposed; recording rejected.");
                 return false;
             }
+
             return state.Crash == null && state.Settings.UseBlackbox == UseBlackboxOption.Use;
         }
 

@@ -22,12 +22,14 @@ namespace BlackThunder.BlackboxSystem.Tests
         public void BeginExposesItsKeyWithoutChangingDefaultKey()
         {
             var defaultKey = BlackboxHandle.DefaultSessionKey;
+
             using (var session = BlackboxHandle.BeginSession())
             {
                 Assert.That(BlackboxHandle.CurrentSessionKey, Is.EqualTo(session.SessionKey));
                 Assert.That(session.SessionKey, Is.Not.EqualTo(defaultKey));
                 Assert.That(BlackboxHandle.DefaultSessionKey, Is.EqualTo(defaultKey));
             }
+
             Assert.That(BlackboxHandle.CurrentSessionKey, Is.EqualTo(defaultKey));
         }
 
@@ -53,12 +55,14 @@ namespace BlackThunder.BlackboxSystem.Tests
         {
             using var ready = new ManualResetEventSlim();
             using var release = new ManualResetEventSlim();
+
             var pending = Task.Run(() =>
             {
                 ready.Set();
                 Assert.That(release.Wait(10000), Is.True);
                 return BlackboxHandle.CurrentSessionKey;
             });
+
             try
             {
                 Assert.That(ready.Wait(10000), Is.True);
@@ -77,12 +81,16 @@ namespace BlackThunder.BlackboxSystem.Tests
             using var ready = new ManualResetEventSlim();
             using var release = new ManualResetEventSlim();
             Guid threadKey = Guid.Empty;
+
             var thread = new Thread(() =>
             {
                 ready.Set();
+
                 if (release.Wait(10000)) threadKey = BlackboxHandle.CurrentSessionKey;
             });
+
             thread.Start();
+
             try
             {
                 Assert.That(ready.Wait(10000), Is.True);
@@ -100,11 +108,13 @@ namespace BlackThunder.BlackboxSystem.Tests
         public void DisposingNestedSessionRestoresOuterKey()
         {
             using var outer = BlackboxHandle.BeginSession();
+
             using (var inner = BlackboxHandle.BeginSession())
             {
                 Assert.That(BlackboxHandle.CurrentSessionKey, Is.EqualTo(inner.SessionKey));
                 Assert.That(inner.SessionKey, Is.Not.EqualTo(outer.SessionKey));
             }
+
             Assert.That(BlackboxHandle.CurrentSessionKey, Is.EqualTo(outer.SessionKey));
         }
 
@@ -139,13 +149,16 @@ namespace BlackThunder.BlackboxSystem.Tests
             var owner = new object();
             var handle = BlackboxHandle.Of(owner);
             Assert.That(handle.SessionKey, Is.EqualTo(BlackboxHandle.CurrentSessionKey));
+
             switch (reason)
             {
                 case "restartDefault": BlackboxHandle.RestartDefaultSession(); break;
                 case "dispose": session.Dispose(); break;
                 case "disabled": BlackboxHandle.UseBlackbox = false; break;
-                case "frozen": BlackboxSessionRegistry.Current.State.TryFreeze(new CrashInfo("test", string.Empty)); break;
+                case "frozen": BlackboxSessionRegistry.Current.State.TryFreeze(
+                    new CrashInfo("test", string.Empty)); break;
             }
+
             var warnings = BlackboxTestDoubles.WarningLogs.Count;
             Assert.That(handle.IsValid, Is.False);
             Assert.That(handle.SessionKey, Is.EqualTo(Guid.Empty));
@@ -182,6 +195,7 @@ namespace BlackThunder.BlackboxSystem.Tests
                 Assert.That(property.PropertyType, Is.EqualTo(typeof(Guid)));
                 Assert.That(property.CanWrite, Is.False);
             }
+
             var handleKey = typeof(BlackboxHandle).GetProperty("SessionKey");
             Assert.That(handleKey.PropertyType, Is.EqualTo(typeof(Guid)));
             Assert.That(handleKey.CanWrite, Is.False);
@@ -201,7 +215,9 @@ namespace BlackThunder.BlackboxSystem.Tests
             ReadKeys();
             var warnings = BlackboxTestDoubles.WarningLogs.Count;
             var allocated = GC.GetAllocatedBytesForCurrentThread();
+
             for (int i = 0; i < 10000; i++) ReadKeys();
+
             allocated = GC.GetAllocatedBytesForCurrentThread() - allocated;
             Assert.That(allocated, Is.Zero);
             Assert.That(BlackboxTestDoubles.WarningLogs.Count, Is.EqualTo(warnings));

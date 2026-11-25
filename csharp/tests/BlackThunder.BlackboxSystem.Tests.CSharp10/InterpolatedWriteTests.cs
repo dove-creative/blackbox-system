@@ -32,9 +32,11 @@ namespace BlackThunder.BlackboxSystem.Tests.CSharp10
             BlackboxHandle.DisposeActiveSessions();
             BlackboxHandle.RestartDefaultSession();
             var path = Path.GetFullPath(_directory);
+
             if (Path.GetDirectoryName(path) != Path.GetFullPath(Path.GetTempPath()).TrimEnd(Path.DirectorySeparatorChar)
                 || !Path.GetFileName(path).StartsWith("BlackboxCSharp10_", StringComparison.Ordinal))
                 throw new InvalidOperationException("Unexpected C# 10 test output directory.");
+
             Directory.Delete(path, true);
         }
 
@@ -58,21 +60,35 @@ namespace BlackThunder.BlackboxSystem.Tests.CSharp10
         {
             BlackboxHandle.UseBlackbox = true;
             using var session = BlackboxHandle.BeginSession();
-            BlackboxHandle.Configure(_directory, null, null, false, ExportFormat.Txt, FullExportOption.Full,
-                OpenLogOption.Never, ExceptionHandlingOption.None, TargetTypes.Full, UseBlackboxOption.Use);
+            BlackboxHandle.Configure(
+                _directory,
+                null,
+                null,
+                false,
+                ExportFormat.Txt,
+                FullExportOption.Full,
+                OpenLogOption.Never,
+                ExceptionHandlingOption.None,
+                TargetTypes.Full,
+                UseBlackboxOption.Use);
             var owner = new object();
             var peer = new object();
+
             if (state == "disabledLookup") BlackboxHandle.UseBlackbox = false;
+
             var handle = state == "default" ? default : BlackboxHandle.Of(owner, label: "owner");
+
             if (state == "disabledRetained") BlackboxHandle.UseBlackbox = false;
             if (state == "disposed") session.Dispose();
             if (state == "frozen") handle.CrashExport("freeze", openLog: OpenLogOption.Never);
+
             var active = state == "active";
 
             switch (operation)
             {
                 case "write":
-                    Assert.That((string)handle.Write($"value {FormatValue()}", "Run"),
+                    Assert.That(
+                        (string)handle.Write($"value {FormatValue()}", "Run"),
                         Is.EqualTo(active ? "value formatted" : string.Empty));
                     break;
                 case "construct":
@@ -84,6 +100,7 @@ namespace BlackThunder.BlackboxSystem.Tests.CSharp10
                     {
                         Assert.That(scope.IsAlive, Is.EqualTo(active));
                         Assert.That(cached.IsValid, Is.EqualTo(active));
+
                         if (active) Assert.That(cached.Owner, Is.SameAs(owner));
                     }
                     break;
@@ -95,7 +112,8 @@ namespace BlackThunder.BlackboxSystem.Tests.CSharp10
                         Assert.That(scope.IsAlive, Is.EqualTo(active));
                     break;
                 case "exertMessage":
-                    Assert.That(handle.ExertMessage(peer, $"value {FormatValue()}", "Run"),
+                    Assert.That(
+                        handle.ExertMessage(peer, $"value {FormatValue()}", "Run"),
                         Is.EqualTo(active ? "value formatted" : string.Empty));
                     break;
                 case "exert":
@@ -106,7 +124,9 @@ namespace BlackThunder.BlackboxSystem.Tests.CSharp10
             }
 
             Assert.That(_formatCalls, Is.EqualTo(active ? 1 : 0));
+
             if (handle.Owner != null) handle.Export(openLogOption: OpenLogOption.Never);
+
             var reports = string.Join("\n", Directory.GetFiles(_directory).Select(File.ReadAllText));
             Assert.That(reports.Contains("value formatted"), Is.EqualTo(active));
             GC.KeepAlive(owner);

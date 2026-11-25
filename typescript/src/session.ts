@@ -47,6 +47,7 @@ export class BlackboxSession {
 
     configure(options: BlackboxOptions): void {
         if (!this._active) { this.checkWrite(); return; }
+
         this._settings = resolveSettings(this._settings, options);
     }
 
@@ -60,11 +61,13 @@ export class BlackboxSession {
     /** @internal */
     checkWrite(): boolean {
         if (!this._active) this.warnOnce("disposed", "[Blackbox] Session has been disposed; recording rejected.");
+
         return this.canWrite;
     }
     /** @internal */
     warnOnce(reason: string, message: string): void {
         if (this._warnings.has(reason)) return;
+
         this._warnings.add(reason);
         this._settings.warningLogger?.(message);
     }
@@ -81,18 +84,23 @@ export class BlackboxSession {
     getBox(subject: Subject): Box | undefined {
         if (!this.checkWrite()) return undefined;
         if (!isSubject(subject)) throw new TypeError("subject must be an object or function.");
+
         let box = this._subjects.get(subject);
+
         if (!box) {
             box = new Box(subject, this);
             this._subjects.set(subject, box);
+
             if (this._settings.strongReference) this._strongBoxes.add(box);
         }
+
         return box;
     }
 
     /** @internal */
     freeze(message: string, stack: string): boolean {
         if (!this.canWrite) return false;
+
         this._crash = { message, stack };
         return true;
     }
@@ -102,24 +110,33 @@ export class BlackboxSession {
     snapshot(box: Box, options: ExportOptions): ExportSnapshot {
         const maxSequence = this._sequence;
         const recursionDepth = options.recursionDepth ?? this._settings.defaultRecursionDepth;
+
         if (!Number.isSafeInteger(recursionDepth)) throw new RangeError("recursionDepth must be a safe integer.");
+
         const full = options.fullExport ?? this._settings.fullExport;
         const nodes: ExportNode[] = [];
         const names: Record<number, string> = Object.create(null) as Record<number, string>;
         const visited = new Set<Box>();
         const pending: { box: Box; parentId: number | null; depth: number }[] = [{ box, parentId: null, depth: 0 }];
+
         while (pending.length > 0) {
             const item = pending.pop()!;
+
             if (visited.has(item.box)) continue;
+
             visited.add(item.box);
             names[item.box.id] ??= item.box.displayName;
             const logs = item.box.logs(maxSequence);
+
             nodes.push({
                 id: item.box.id, name: names[item.box.id], parentId: item.parentId,
                 depth: item.depth, logs: logs.map(log => logSnapshot(log, names)),
             });
+
             if (recursionDepth >= 0 && item.depth >= recursionDepth) continue;
+
             const peers: Box[] = [];
+
             for (const log of logs) {
                 if (log.exertedBy) peers.push(log.exertedBy);
                 if (full && log.exertingTo) peers.push(log.exertingTo);
@@ -128,6 +145,7 @@ export class BlackboxSession {
             for (let index = peers.length - 1; index >= 0; index--)
                 pending.push({ box: peers[index], parentId: item.box.id, depth: item.depth + 1 });
         }
+
         return {
             sessionKey: this.sessionKey, rootId: box.id, maxSequence, nodes, names,
             ...(this._crash ? { crash: { ...this._crash } } : {}),
@@ -138,15 +156,20 @@ export class BlackboxSession {
     export(box: Box, options: ExportOptions = {}, crash = false): ExportArtifact {
         const settings = this._settings;
         const format = options.format ?? settings.exportFormat;
+
         if (format !== "html" && format !== "text") throw new TypeError("format must be html or text.");
+
         const snapshot = this.snapshot(box, options);
+
         const artifact: ExportArtifact = {
             content: renderExport(snapshot, format),
             fileName: this.exportFileName(box, format, crash),
             mimeType: format === "html" ? "text/html;charset=utf-8" : "text/plain;charset=utf-8",
         };
+
         if (settings.onExport) settings.onExport(artifact);
         else exportArtifact?.(artifact, settings, options);
+
         return artifact;
     }
 
@@ -161,6 +184,7 @@ export class BlackboxSession {
     // Disposal
     dispose(): void {
         if (!this._active) return;
+
         this._active = false;
         activeSessions.delete(this);
     }

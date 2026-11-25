@@ -40,7 +40,9 @@ namespace BlackThunder.BlackboxSystem
         internal static BlackboxSession Begin(int buckets = ExplicitBuckets)
         {
             var session = new BlackboxSession(Current.State.Settings, _ambient.Value, buckets);
+
             lock (_activeSessionsLock) _activeSessions.Add(session);
+
             _ambient.Value = session;
             return session;
         }
@@ -60,8 +62,10 @@ namespace BlackThunder.BlackboxSystem
             lock (_activeSessionsLock)
             {
                 var keys = new Guid[_activeSessions.Count];
+
                 for (int i = 0; i < keys.Length; i++)
                     keys[i] = _activeSessions[i].SessionKey;
+
                 return keys;
             }
         }
@@ -70,6 +74,7 @@ namespace BlackThunder.BlackboxSystem
         internal static void DisposeActiveSessions()
         {
             BlackboxSession[] sessions;
+
             lock (_activeSessionsLock) sessions = _activeSessions.ToArray();
             // Unwind nested bindings from inner to outer, without holding the list lock during disposal.
             for (int i = sessions.Length - 1; i >= 0; i--)

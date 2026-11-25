@@ -32,13 +32,16 @@ namespace BlackThunder.BlackboxSystem.Tests
                 var invocationCount = 0;
                 // Lab IDs cannot contain the execution-path separator. The full NUnit name remains metadata.
                 var id = context.CurrentTest.FullName.Replace(Model.Separator, "∕");
+
                 var node = new Node<Model>(new Lab<Model>(id, actor: (model, _) =>
                 {
                     model.Subject = context.CurrentTest.FullName;
                     invocationCount++;
+
                     try
                     {
                         context.CurrentResult = innerCommand.Execute(context);
+
                         if (context.CurrentResult.ResultState.Status == TestStatus.Failed)
                             throw new AssertionException(context.CurrentResult.Message);
                     }
@@ -57,6 +60,7 @@ namespace BlackThunder.BlackboxSystem.Tests
                 node.Execute();
                 context.CurrentTest.Properties.Set("UniTest.ExecutionCount", node.Model.ExecutionCount);
                 context.CurrentTest.Properties.Set("UniTest.Status", node.Status.ToString());
+
                 if (node.Status != Node<Model>.NodeStatus.Success)
                 {
                     context.OutWriter.WriteLine(node.GetFailedReports().ToJson());
@@ -66,6 +70,7 @@ namespace BlackThunder.BlackboxSystem.Tests
 
                 if (invocationCount != 1 || node.Model.ExecutionCount != 1)
                     throw new AssertionException("Each NUnit case must execute exactly once through UniTest.");
+
                 return context.CurrentResult;
             }
         }
@@ -78,13 +83,15 @@ namespace BlackThunder.BlackboxSystem.Tests
         public void EveryDiscoveredTestMethodUsesUniTest()
         {
             var missing = GetType().Assembly.GetTypes()
-                .SelectMany(type => type.GetMethods(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static)
+                .SelectMany(type => type.GetMethods(
+                    BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static)
                     .Where(method => method.DeclaringType == type))
                 .Where(method => method.GetCustomAttributes(true)
                     .Any(attribute => attribute is ITestBuilder || attribute is ISimpleTestBuilder))
                 .Where(method => !method.IsDefined(typeof(RunWithUniTestAttribute), true))
                 .Select(method => method.DeclaringType.FullName + "." + method.Name)
                 .OrderBy(name => name).ToArray();
+
             Assert.That(missing, Is.Empty, "Add RunWithUniTest so new regression cases cannot bypass UniTest.");
         }
 
@@ -93,11 +100,13 @@ namespace BlackThunder.BlackboxSystem.Tests
         {
             var count = 0;
             var thread = Environment.CurrentManagedThreadId;
+
             var command = new ProbeCommand(() =>
             {
                 count++;
                 Assert.That(Environment.CurrentManagedThreadId, Is.EqualTo(thread));
             });
+
             using (new TestExecutionContext.IsolatedContext())
             {
                 var context = TestExecutionContext.CurrentContext;
@@ -105,6 +114,7 @@ namespace BlackThunder.BlackboxSystem.Tests
                 Assert.That(context.CurrentTest.Properties.Get("UniTest.Status"), Is.EqualTo("Success"));
                 Assert.That(context.CurrentTest.Properties.Get("UniTest.ExecutionCount"), Is.EqualTo(1));
             }
+
             Assert.That(count, Is.EqualTo(1));
         }
 
@@ -112,6 +122,7 @@ namespace BlackThunder.BlackboxSystem.Tests
         public void BridgePreservesFailuresAndProducesUniTestDiagnostics()
         {
             var expected = new InvalidOperationException("bridge failure marker");
+
             using (new TestExecutionContext.IsolatedContext())
             {
                 var context = TestExecutionContext.CurrentContext;
@@ -128,11 +139,14 @@ namespace BlackThunder.BlackboxSystem.Tests
             var invocations = 0;
             var outerResult = TestExecutionContext.CurrentContext.CurrentResult;
             var outerState = outerResult.ResultState;
+
             using (new TestExecutionContext.IsolatedContext())
             {
                 var context = TestExecutionContext.CurrentContext;
                 var command = new RunWithUniTestAttribute().Wrap(new ProbeCommand(
-                    () => invocations++, ResultState.Failure, "returned failure marker"));
+                    () => invocations++,
+                    ResultState.Failure,
+                    "returned failure marker"));
 
                 var failure = Assert.Throws<AssertionException>(() => command.Execute(context));
                 Assert.That(failure.Message, Does.Contain("returned failure marker"));
@@ -150,9 +164,11 @@ namespace BlackThunder.BlackboxSystem.Tests
         public void BridgeAwaitsNUnitAsyncMethodAndPropagatesItsFailureOnce()
         {
             var fixture = new AsyncFailureProbe();
-            var method = new TestMethod(new MethodWrapper(typeof(AsyncFailureProbe), nameof(AsyncFailureProbe.Execute)));
+            var method = new TestMethod(
+                new MethodWrapper(typeof(AsyncFailureProbe), nameof(AsyncFailureProbe.Execute)));
             var outerTest = TestExecutionContext.CurrentContext.CurrentTest;
             var outerResult = TestExecutionContext.CurrentContext.CurrentResult;
+
             using (new TestExecutionContext.IsolatedContext())
             {
                 var context = TestExecutionContext.CurrentContext;

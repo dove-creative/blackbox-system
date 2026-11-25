@@ -68,13 +68,16 @@ export class Box {
         this.session = session;
         this.id = session.nextBoxId();
         this.typeName = typeName(subject);
+
         if (session.settings.strongReference) this._strongOwner = subject;
         else this._weakOwner = new WeakRef(subject);
+
         this._buffer = new Array<Log | undefined>(session.settings.maxLogCount);
     }
 
     setLabel(label: string | undefined): void {
         if (!label?.trim() || !this.session.checkWrite()) return;
+
         if (this.label === undefined) this.label = label;
         else if (this.label !== label)
             this.session.warnOnce("label", "[Blackbox] Label was already assigned; keeping the first label.");
@@ -83,21 +86,29 @@ export class Box {
     nextScopeId(): number { return this._scopeId++; }
 
     // Ring buffer
-    append(context: BlackboxContext, message: string, options: RecordOptions = {}, fields: Partial<Log> = {}): Log | undefined {
+    append(
+        context: BlackboxContext,
+        message: string,
+        options: RecordOptions = {},
+        fields: Partial<Log> = {}): Log | undefined {
         if (!this.session.checkWrite()) return undefined;
+
         const index = this._nextIndex++;
+
         const log: Log = {
             index, valid: true, sequence: this.session.nextSequence(), time: new Date().toISOString(),
             context, message, methodName: options.methodName ?? "", scopeType: "none", scopeId: -1,
             parentScopeId: context.head(this)?.id ?? null, interactionId: -1,
             tagTargetTypes: TargetTypes.Full, tags: [], ...fields,
         };
+
         this._buffer[index % this._buffer.length] = log;
         return log;
     }
 
     read(index: number): Log | undefined {
         if (index < Math.max(0, this._nextIndex - this._buffer.length) || index >= this._nextIndex) return undefined;
+
         const log = this._buffer[index % this._buffer.length];
         return log?.index === index && log.valid ? log : undefined;
     }
@@ -108,31 +119,41 @@ export class Box {
 
     logs(maxSequence = Number.MAX_SAFE_INTEGER): Log[] {
         const logs: Log[] = [];
+
         for (let index = Math.max(0, this._nextIndex - this._buffer.length); index < this._nextIndex; index++) {
             const log = this.read(index);
+
             if (log && log.sequence <= maxSequence) logs.push(log);
         }
+
         return logs;
     }
 
     // Interaction merge
     merge(interactionIndex: number, context: BlackboxContext): void {
         if (!this.session.checkWrite()) return;
+
         const from = this.read(interactionIndex);
+
         if (!from || from.scopeType !== "none" || from.interactionId < 0) return;
+
         const into = this.logs().find(log => log.index > from.index
             && (log.context === context || log.context.scopeParent === context));
+
         if (!into || into.scopeType !== "open") return;
+
         this.replace(into, {
             message: mergeMessage(into.message, from.message), interactionId: from.interactionId,
             exertedBy: from.exertedBy ?? into.exertedBy, exertingTo: from.exertingTo ?? into.exertingTo,
         });
+
         this.replace(from, { valid: false });
     }
 }
 
 function typeName(subject: Subject): string {
     if (typeof subject === "function") return "Function";
+
     const prototype: object | null = Object.getPrototypeOf(subject);
     const constructor = prototype && Object.getOwnPropertyDescriptor(prototype, "constructor")?.value;
     const name: unknown = typeof constructor === "function"
@@ -143,6 +164,7 @@ function typeName(subject: Subject): string {
 function mergeMessage(scope: string, interaction: string): string {
     if (!interaction) return scope;
     if (!scope || scope === interaction) return interaction;
+
     return `${scope} (from: ${interaction})`;
 }
 
@@ -150,13 +172,16 @@ function mergeMessage(scope: string, interaction: string): string {
 export function logSnapshot(log: Log, names: Record<number, string>): ExportLog {
     const remember = (box: Box | undefined): number | undefined => {
         if (!box) return undefined;
+
         names[box.id] ??= box.displayName;
         return box.id;
     };
+
     const tags: ExportTag[] = log.tags.map(tag => {
         const id = remember(tag.target ?? undefined);
         return { id: tag.id, targetId: id ?? null, targetName: id === undefined ? "null" : names[id] };
     });
+
     return {
         sequence: log.sequence, time: log.time, contextId: log.context.id, message: log.message,
         methodName: log.methodName, scopeType: log.scopeType, scopeId: log.scopeId,

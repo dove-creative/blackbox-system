@@ -38,10 +38,10 @@ C#과 TypeScript의 패키지 버전과 배포는 독립적으로 관리한다. 
 
 ## 문서
 
-- [C# 개요](docs/Wiki/01-Overview.md): 목적과 주요 기록 구조
-- [C# 사용법](docs/Wiki/04-Usage.md): 설정과 대표 사용 흐름
-- [C# 세션과 기록 계약](docs/Wiki/05-Sessions.md): 수명, 비동기 문맥과 출력
-- [C# 검증 기록](docs/Tests/03-Results.md): 기존 구현 단계별 검증 결과
+- [C# 개요](docs/Wiki/01.%20Overview.md): 목적과 주요 기록 구조
+- [C# 사용법](docs/Wiki/04.%20Usage.md): 설정과 대표 사용 흐름
+- [C# 세션과 기록 계약](docs/Wiki/05.%20Sessions.md): 수명, 비동기 문맥과 출력
+- [C# 검증 기록](docs/Tests/03.%20Results.md): 기존 구현 단계별 검증 결과
 - [TypeScript 안내](typescript/README.ko.md): Node.js·브라우저 사용법과 검증
 - [TypeScript 초기 검증 기록](typescript/docs/verification.md): 플랫폼별 결과와 확인 범위
 

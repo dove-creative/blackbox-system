@@ -12,18 +12,24 @@ namespace BlackThunder.BlackboxSystem.Samples
                 return RunCommand(args, false);
 
             PrintUsage(Console.Out);
+
             while (true)
             {
                 Console.Write("sample> ");
                 var input = Console.ReadLine();
+
                 if (input == null)
                     return 0;
 
                 var commandArgs = input.Split((char[])null, StringSplitOptions.RemoveEmptyEntries);
+
                 if (commandArgs.Length == 0)
                     continue;
 
-                if (commandArgs.Length == 1 && string.Equals(commandArgs[0], "exit", StringComparison.OrdinalIgnoreCase))
+                if (commandArgs.Length == 1 && string.Equals(
+                    commandArgs[0],
+                    "exit",
+                    StringComparison.OrdinalIgnoreCase))
                     return 0;
 
                 RunCommand(commandArgs, true);
@@ -54,9 +60,11 @@ namespace BlackThunder.BlackboxSystem.Samples
                 PrintUsage(Console.Out);
                 return 0;
             }
+
             if (command == "exit") return 0;
 
             string scenarioName;
+
             switch (command)
             {
                 case "write": scenarioName = "Write"; break;

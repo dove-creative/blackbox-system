@@ -32,6 +32,7 @@ namespace BlackThunder.BlackboxSystem
             set
             {
                 if (value < 1) throw new ArgumentOutOfRangeException(nameof(value));
+
                 Update(s => s.MaxLogCount = value);
             }
         }
@@ -118,6 +119,7 @@ namespace BlackThunder.BlackboxSystem
             option == OpenLogOption.BasedOnSettings ? OpenLogOption : option;
         public static ExceptionHandlingOption Resolve(this ExceptionHandlingOption option) =>
             option == ExceptionHandlingOption.BasedOnSettings ? ExceptionHandlingOption : option;
-        public static TargetTypes Resolve(this TargetTypes option) => Settings.Resolve(option);
+        public static TargetTypes Resolve(this TargetTypes option) =>
+            Settings.Resolve(option);
     }
 }

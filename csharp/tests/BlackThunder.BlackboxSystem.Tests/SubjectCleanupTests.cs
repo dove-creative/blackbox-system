@@ -31,15 +31,22 @@ namespace BlackThunder.BlackboxSystem.Tests
             Assert.That(Alive(discarded), Is.EqualTo(discarded.Length));
 
             _cursor.SetValue(store, start);
+
             for (int i = 0; i < 100; i++) Assert.That(store.GetOrAdd(living), Is.SameAs(canonical));
+
             Assert.That(_cursor.GetValue(store), Is.EqualTo(start), "Hits must not advance maintenance.");
             BlackboxTestDoubles.ForceFullCollection();
             Assert.That(Alive(discarded), Is.EqualTo(discarded.Length));
 
             var fresh = new object[Math.Max(1, capacity / 16)];
+
             for (int i = 0; i < fresh.Length; i++) store.GetOrAdd(fresh[i] = new object());
+
             BlackboxTestDoubles.ForceFullCollection();
-            Assert.That(Alive(discarded), Is.Zero, "A completed uncontended lap must remove collected owners' entries.");
+            Assert.That(
+                Alive(discarded),
+                Is.Zero,
+                "A completed uncontended lap must remove collected owners' entries.");
             Assert.That(store.GetOrAdd(living), Is.SameAs(canonical));
             Assert.That(canonical.GetLogs().Single().Message, Is.EqualTo("keep this log"));
             Assert.That(store.Count(), Is.EqualTo(fresh.Length + 1));
@@ -55,16 +62,22 @@ namespace BlackThunder.BlackboxSystem.Tests
             var store = BlackboxSessionRegistry.Current.Subjects;
             var owners = Enumerable.Range(0, 64).Select(_ => new object()).ToArray();
             using var start = new Barrier(8);
+
             var workers = Enumerable.Range(0, 8).Select(_ => Task.Factory.StartNew(() =>
             {
                 Assert.That(start.SignalAndWait(10000), Is.True);
                 var boxes = new Blackbox[owners.Length];
+
                 for (int i = 0; i < owners.Length; i++) boxes[i] = store.GetOrAdd(owners[i]);
+
                 return boxes;
             }, CancellationToken.None, TaskCreationOptions.LongRunning, TaskScheduler.Default)).ToArray();
+
             var results = await Task.WhenAll(workers);
+
             foreach (var result in results)
                 for (int i = 0; i < owners.Length; i++) Assert.That(result[i], Is.SameAs(results[0][i]));
+
             Assert.That(store.Count(), Is.EqualTo(owners.Length));
             Assert.That(_cursor.GetValue(store), Is.EqualTo(owners.Length * 16));
             GC.KeepAlive(owners);
@@ -86,21 +99,26 @@ namespace BlackThunder.BlackboxSystem.Tests
             using var proceed = new ManualResetEventSlim();
             int attempts = 0;
             _cursor.SetValue(store, 0);
+
             store.BeforeCleanupPublish = bucket =>
             {
                 if (bucket != 0) return;
+
                 Interlocked.Increment(ref attempts);
                 ready.Set();
                 Assert.That(proceed.Wait(10000), Is.True);
             };
+
             var sweeping = Task.Run(() => store.GetOrAdd(trigger));
             Blackbox added = null;
+
             try
             {
                 Assert.That(ready.Wait(10000), Is.True);
                 added = store.GetOrAdd(concurrent);
             }
             finally { proceed.Set(); }
+
             await sweeping;
             Assert.That(attempts, Is.EqualTo(1), "A losing maintenance CAS must not retry.");
             Assert.That(store.GetOrAdd(concurrent), Is.SameAs(added));
@@ -126,16 +144,21 @@ namespace BlackThunder.BlackboxSystem.Tests
             using var ready = new ManualResetEventSlim();
             using var proceed = new ManualResetEventSlim();
             _cursor.SetValue(store, 0);
+
             store.BeforeCleanupPublish = _ =>
             {
                 ready.Set();
                 Assert.That(proceed.Wait(10000), Is.True);
             };
+
             var sweeping = Task.Run(() => store.GetOrAdd(owner));
+
             try
             {
                 Assert.That(ready.Wait(10000), Is.True);
+
                 if (restartDefault) BlackboxHandle.RestartDefaultSession(); else session.Dispose();
+
                 var current = BlackboxSessionRegistry.Current.Subjects;
                 var currentBox = current.GetOrAdd(owner);
                 currentBox.Write("new session", "Test");
@@ -147,6 +170,7 @@ namespace BlackThunder.BlackboxSystem.Tests
                 Assert.That(currentBox.GetLogs().Single().Message, Is.EqualTo("new session"));
             }
             finally { proceed.Set(); await sweeping; }
+
             GC.KeepAlive(owner);
         }
 
@@ -155,6 +179,7 @@ namespace BlackThunder.BlackboxSystem.Tests
         {
             var owners = new object[64];
             var boxes = new WeakReference[owners.Length];
+
             for (int i = 0; i < owners.Length; i++)
             {
                 owners[i] = bucket < 0 ? new object() : OwnerInBucket(bucket, capacity);
@@ -162,6 +187,7 @@ namespace BlackThunder.BlackboxSystem.Tests
                 box.Write("discarded", "Test");
                 boxes[i] = new WeakReference(box);
             }
+
             GC.KeepAlive(owners);
             return boxes;
         }
@@ -171,8 +197,10 @@ namespace BlackThunder.BlackboxSystem.Tests
             for (int i = 0; i < 1_000_000; i++)
             {
                 var owner = new object();
+
                 if ((RuntimeHelpers.GetHashCode(owner) & (capacity - 1)) == bucket) return owner;
             }
+
             throw new InvalidOperationException("Could not find an owner for the collision test.");
         }
 
@@ -180,7 +208,9 @@ namespace BlackThunder.BlackboxSystem.Tests
         private static int Alive(WeakReference[] boxes)
         {
             int count = 0;
+
             foreach (var box in boxes) if (box.IsAlive) count++;
+
             return count;
         }
     }

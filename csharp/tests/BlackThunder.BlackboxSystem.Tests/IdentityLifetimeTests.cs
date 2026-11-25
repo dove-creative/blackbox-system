@@ -28,6 +28,7 @@ namespace BlackThunder.BlackboxSystem.Tests
             BlackboxHandle.LogDirectory = BlackboxTestDoubles.CreateTempDirectory();
             var owner = new ExplosiveOwner();
             var target = new ExplosiveOwner();
+
             using (BlackboxHandle.Of(owner, label: "Forest").Construct(out var handle))
             {
                 handle.Write("uses %0").With(target);
@@ -36,8 +37,10 @@ namespace BlackThunder.BlackboxSystem.Tests
                 handle.Export(format: ExportFormat.Txt, openLogOption: OpenLogOption.Never);
                 handle.Export(format: ExportFormat.Html, openLogOption: OpenLogOption.Never);
             }
+
             Assert.That(owner.Calls + target.Calls, Is.Zero);
-            Assert.That(File.ReadAllText(Directory.GetFiles(BlackboxHandle.LogDirectory, "*.txt").Single()),
+            Assert.That(
+                File.ReadAllText(Directory.GetFiles(BlackboxHandle.LogDirectory, "*.txt").Single()),
                 Does.Contain("Forest (IdentityLifetimeTests.ExplosiveOwner #0)"));
         }
 
@@ -80,15 +83,18 @@ namespace BlackThunder.BlackboxSystem.Tests
             Assert.That(labeled.SessionKey, Is.EqualTo(original.SessionKey));
             Assert.That(original.OwnerString, Is.EqualTo("Forest"));
             Assert.That(BlackboxHandle.Of(owner).OwnerString, Is.EqualTo("Forest"));
+
             foreach (var label in new[] { null, "", " ", "Forest" })
             {
                 var repeated = BlackboxHandle.Of(owner, label: label);
                 Assert.That(repeated.Id, Is.EqualTo(original.Id));
                 Assert.That(repeated.OwnerString, Is.EqualTo("Forest"));
             }
+
             Assert.That(warnings, Is.Empty);
             Assert.That(BlackboxSessionRegistry.Count(), Is.EqualTo(1));
-            Assert.That(BlackboxSessionRegistry.GetBlackbox(owner).GetLogs().Select(log => log.Message),
+            Assert.That(
+                BlackboxSessionRegistry.GetBlackbox(owner).GetLogs().Select(log => log.Message),
                 Is.EqualTo(new[] { "before label", "after label" }));
         }
 
@@ -99,6 +105,7 @@ namespace BlackThunder.BlackboxSystem.Tests
             using var outer = BlackboxHandle.BeginSession();
             var owner = new object();
             var outerHandle = BlackboxHandle.Of(owner, label: "Outer");
+
             using (BlackboxHandle.BeginSession())
             {
                 var innerHandle = BlackboxHandle.Of(owner, label: "Inner");
@@ -106,6 +113,7 @@ namespace BlackThunder.BlackboxSystem.Tests
                 Assert.That(innerHandle.OwnerString, Is.EqualTo("Inner"));
                 Assert.That(outerHandle.OwnerString, Is.EqualTo("Outer"));
             }
+
             Assert.That(BlackboxHandle.Of(owner).OwnerString, Is.EqualTo("Outer"));
         }
 
@@ -150,7 +158,8 @@ namespace BlackThunder.BlackboxSystem.Tests
         public void TypeNamesAndHtmlEscapingArePredictable()
         {
             Assert.That(TypeDisplayName.Format(typeof(List<int>)), Is.EqualTo("List<Int32>"));
-            Assert.That(TypeDisplayName.Format(typeof(Outer<int>.Inner<string>)),
+            Assert.That(
+                TypeDisplayName.Format(typeof(Outer<int>.Inner<string>)),
                 Is.EqualTo("IdentityLifetimeTests.Outer<Int32>.Inner<String>"));
             int capture = 3;
             Action closure = () => GC.KeepAlive(capture);
@@ -261,11 +270,14 @@ namespace BlackThunder.BlackboxSystem.Tests
             var box = BlackboxSessionRegistry.GetBlackbox(owner);
             var tag = BlackboxHandle.Of(owner).Write("uses %0");
             var targets = Enumerable.Range(0, 8).Select(_ => new object()).ToArray();
+
             Parallel.For(0, 200, i =>
             {
                 tag.With(targets[i % targets.Length]);
+
                 foreach (var log in box.GetLogs()) if (log.Tags != null) log.Tags[0] = default;
             });
+
             var result = box.GetLogs().Single();
             Assert.That(result.Tags.Single().Target, Is.Not.Null);
             GC.KeepAlive(targets);
@@ -281,8 +293,10 @@ namespace BlackThunder.BlackboxSystem.Tests
             using var b = BlackboxHandle.BeginSession();
             var targetHandle = BlackboxHandle.Of(target);
             var targetBox = BlackboxSessionRegistry.GetBlackbox(target);
+
             using (source.Exert(target, "from a"))
             using (targetHandle.Scope("in b")) { }
+
             Assert.That(targetBox.GetLogs().All(log => log.InteractionId == -1), Is.True);
         }
 

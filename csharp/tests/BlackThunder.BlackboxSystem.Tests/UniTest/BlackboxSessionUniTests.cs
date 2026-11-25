@@ -27,6 +27,7 @@ namespace BlackThunder.BlackboxSystem.Tests
         public async Task SessionTransitionsExecuteEveryStep(string scenario)
         {
             var project = new SessionTransitionProject(CreateTransitions(scenario));
+
             try
             {
                 var result = await project.Execute(project.StepIds.Length);
@@ -34,6 +35,7 @@ namespace BlackThunder.BlackboxSystem.Tests
                 Assert.That(cancelled, Is.False);
 
                 var leaf = result;
+
                 while (leaf.Afters.Count > 0)
                 {
                     Assert.That(leaf.Afters.Count, Is.EqualTo(1), "A session transition chain must not branch.");
@@ -87,7 +89,10 @@ namespace BlackThunder.BlackboxSystem.Tests
                     transitions.AddRange(ParallelTransitions());
                     break;
                 default:
-                    throw new ArgumentOutOfRangeException(nameof(scenario), scenario, "Unknown session transition chain.");
+                    throw new ArgumentOutOfRangeException(
+                        nameof(scenario),
+                        scenario,
+                        "Unknown session transition chain.");
             }
 
             transitions.Add(Step("Complete", m =>
@@ -102,6 +107,7 @@ namespace BlackThunder.BlackboxSystem.Tests
                 Assert.That(BlackboxHandle.GetActiveSessionKeys(), Is.Empty);
                 Assert.That(BlackboxHandle.CurrentSessionKey, Is.EqualTo(BlackboxHandle.DefaultSessionKey));
             }));
+
             return transitions.ToArray();
         }
 
@@ -138,13 +144,16 @@ namespace BlackThunder.BlackboxSystem.Tests
             Assert.That(m.InnerHandle.OwnerString, Is.EqualTo("inner"));
             Assert.That(m.OuterHandle.OwnerString, Is.EqualTo("outer"));
             Assert.That(m.OuterHandle.SessionKey, Is.EqualTo(m.Outer.SessionKey));
-            Assert.That(BlackboxHandle.GetActiveSessionKeys(), Is.EqualTo(new[] { m.Outer.SessionKey, m.Inner.SessionKey }));
+            Assert.That(
+                BlackboxHandle.GetActiveSessionKeys(),
+                Is.EqualTo(new[] { m.Outer.SessionKey, m.Inner.SessionKey }));
         });
 
         private static IEnumerable<Transition> NestedTransitions(bool disposeOuterFirst)
         {
             // Sessions / Nested lifetime x Dispose: restore the exact previous binding, including a disposed parent.
             yield return BeginInner();
+
             if (disposeOuterFirst)
             {
                 yield return Step("DisposeOuterBeforeInner", m => m.Outer.Dispose(), m =>
@@ -165,6 +174,7 @@ namespace BlackThunder.BlackboxSystem.Tests
                 Assert.That(BlackboxHandle.Of(m.Owner).IsValid, Is.EqualTo(!disposeOuterFirst));
                 Assert.That(BlackboxHandle.CurrentSessionKey, Is.Not.EqualTo(m.DefaultKey));
             });
+
             yield return Step("DisposeParentAndRestoreDefault", m =>
             {
                 m.Inner.Dispose();
@@ -187,8 +197,10 @@ namespace BlackThunder.BlackboxSystem.Tests
 
         private static IEnumerable<Transition> DefaultRestartTransitions()
         {
-            // Sessions / Explicit lifetime x RestartDefaultSession: preserve explicit settings, retire only the old default.
+            // Sessions / Explicit lifetime x RestartDefaultSession: preserve explicit settings, retire only the old
+            // default.
             yield return BeginInner();
+
             yield return Step("RestartDefaultInsideNestedSession", m =>
             {
                 BlackboxHandle.RestartDefaultSession();
@@ -205,6 +217,7 @@ namespace BlackThunder.BlackboxSystem.Tests
                 Assert.That(m.OuterHandle.IsValid && m.InnerHandle.IsValid, Is.True);
                 Assert.That(BlackboxHandle.ActiveSessionCount, Is.EqualTo(2));
             });
+
             yield return Step("RestoreReplacementDefault", m =>
             {
                 m.Inner.Dispose();
@@ -219,21 +232,26 @@ namespace BlackThunder.BlackboxSystem.Tests
                 Assert.That(m.FreshHandle.OwnerString, Is.EqualTo("replacement"));
                 Assert.That(m.ReadExport(m.DefaultHandle), Does.Contain("DEFAULT_RECORD")
                     .And.Not.Contain("NEW_DEFAULT_RECORD").And.Not.Contain("REJECTED"));
-                Assert.That(m.ReadExport(m.FreshHandle), Does.Contain("NEW_DEFAULT_RECORD").And.Not.Contain("OUTER_RECORD"));
+                Assert.That(
+                    m.ReadExport(m.FreshHandle),
+                    Does.Contain("NEW_DEFAULT_RECORD").And.Not.Contain("OUTER_RECORD"));
                 Assert.That(m.ReadExport(m.InnerHandle), Does.Contain("INNER_AFTER_RESTART"));
             });
         }
 
         private static IEnumerable<Transition> ActiveRegistryTransitions()
         {
-            // Sessions / Active registry x Snapshot and BulkDispose: preserve snapshots and reclaim outstanding handles.
+            // Sessions / Active registry x Snapshot and BulkDispose: preserve snapshots and reclaim outstanding
+            // handles.
             yield return Step("CaptureActiveSnapshot", m =>
             {
                 m.Snapshot = BlackboxHandle.GetActiveSessionKeys();
                 m.OuterScope = m.OuterHandle.Scope("outer open scope");
                 m.OuterExert = m.OuterHandle.Exert(m.Peer, "outer interaction");
             }, m => Assert.That(m.Snapshot, Is.EqualTo(new[] { m.Outer.SessionKey })));
+
             yield return BeginInner();
+
             yield return Step("SnapshotRemainsIndependent", m =>
             {
                 Assert.That(m.Snapshot, Is.EqualTo(new[] { m.Outer.SessionKey }));
@@ -242,9 +260,14 @@ namespace BlackThunder.BlackboxSystem.Tests
                 m.InnerExert = m.InnerHandle.Exert(m.Peer, "inner interaction");
             }, m =>
             {
-                Assert.That(BlackboxHandle.GetActiveSessionKeys(), Is.EqualTo(new[] { m.Outer.SessionKey, m.Inner.SessionKey }));
-                Assert.That(m.OuterScope.IsAlive && m.InnerScope.IsAlive && m.OuterExert.IsAlive && m.InnerExert.IsAlive, Is.True);
+                Assert.That(
+                    BlackboxHandle.GetActiveSessionKeys(),
+                    Is.EqualTo(new[] { m.Outer.SessionKey, m.Inner.SessionKey }));
+                Assert.That(
+                    m.OuterScope.IsAlive && m.InnerScope.IsAlive && m.OuterExert.IsAlive && m.InnerExert.IsAlive,
+                    Is.True);
             });
+
             yield return Step("BulkDisposeExplicitSessions", m =>
             {
                 m.Snapshot = BlackboxHandle.GetActiveSessionKeys();
@@ -257,9 +280,12 @@ namespace BlackThunder.BlackboxSystem.Tests
                 Assert.That(BlackboxHandle.GetActiveSessionKeys(), Is.Empty);
                 Assert.That(BlackboxHandle.CurrentSessionKey, Is.EqualTo(m.DefaultKey));
                 Assert.That(m.OuterHandle.IsValid || m.InnerHandle.IsValid, Is.False);
-                Assert.That(m.OuterScope.IsAlive || m.InnerScope.IsAlive || m.OuterExert.IsAlive || m.InnerExert.IsAlive, Is.False);
+                Assert.That(
+                    m.OuterScope.IsAlive || m.InnerScope.IsAlive || m.OuterExert.IsAlive || m.InnerExert.IsAlive,
+                    Is.False);
                 Assert.That(m.DefaultHandle.IsValid, Is.True);
             });
+
             yield return Step("RepeatCleanupAndStartNewLifetime", m =>
             {
                 BlackboxHandle.DisposeActiveSessions();
@@ -295,15 +321,18 @@ namespace BlackThunder.BlackboxSystem.Tests
                 Assert.That(m.ReadExport(m.OuterHandle), Does.Contain("AFTER_FIRST_EXPORT"));
                 Assert.That(Directory.GetFiles(m.Directory).Length, Is.EqualTo(2));
             });
+
             yield return Step("OrdinaryExportFailureKeepsRecording", m =>
             {
                 BlackboxHandle.LogDirectory = null;
                 Assert.Throws<InvalidOperationException>(() => m.OuterHandle.Export());
                 m.OuterHandle.Write("AFTER_FAILED_EXPORT");
             }, m => Assert.That(m.OuterHandle.IsValid, Is.True));
+
             yield return Step("CrashOutputFailureStillFreezes", m =>
             {
-                Assert.Throws<InvalidOperationException>(() => m.OuterHandle.CrashExport("FIRST_CRASH", openLog: OpenLogOption.Never));
+                Assert.Throws<InvalidOperationException>(
+                    () => m.OuterHandle.CrashExport("FIRST_CRASH", openLog: OpenLogOption.Never));
                 m.OuterHandle.Write("REJECTED_AFTER_CRASH");
             }, m =>
             {
@@ -313,6 +342,7 @@ namespace BlackThunder.BlackboxSystem.Tests
                 Assert.That(BlackboxHandle.ActiveSessionCount, Is.EqualTo(1));
                 Assert.That(m.DefaultHandle.IsValid, Is.True);
             });
+
             yield return Step("RetryFrozenSnapshotWithOrdinaryExport", m =>
             {
                 BlackboxHandle.LogDirectory = m.Directory;
@@ -327,6 +357,7 @@ namespace BlackThunder.BlackboxSystem.Tests
                 Assert.That(m.ReadExport(m.OuterHandle), Does.Contain("FIRST_CRASH").And.Not.Contain("SECOND_CRASH"));
                 Assert.That(m.OuterHandle.IsValid, Is.False);
             });
+
             yield return Step("DisposeFrozenSessionAndStartFresh", m =>
             {
                 m.Outer.Dispose();
@@ -358,6 +389,7 @@ namespace BlackThunder.BlackboxSystem.Tests
                 Assert.That(m.ReadExport(m.Workers[1].Handle), Does.Contain("WORKER_ONE")
                     .And.Not.Contain("WORKER_ZERO").And.Not.Contain("CHILD_CRASH"));
             });
+
             yield return Step("ParentRemainsWritable", m =>
             {
                 m.OuterHandle.Write("PARENT_AFTER_CHILDREN");
@@ -408,9 +440,11 @@ namespace BlackThunder.BlackboxSystem.Tests
                     return Array.Empty<ILab<SessionModel>>();
 
                 var step = _steps[model.ExecutionCount];
+
                 return new[]
                 {
-                    new Lab<SessionModel>(step.Id,
+                    new Lab<SessionModel>(
+                        step.Id,
                         actor: (current, _) => current.InContext(step.Actor),
                         asserter: (current, _) => current.InContext(step.Asserter))
                 };
@@ -451,6 +485,7 @@ namespace BlackThunder.BlackboxSystem.Tests
             {
                 // UniTest replays ancestors and schedules each Lab separately. Preserve this model's logical flow.
                 var context = _context ?? ExecutionContext.Capture();
+
                 ExecutionContext.Run(context, _ =>
                 {
                     try { action(this); }
@@ -465,8 +500,12 @@ namespace BlackThunder.BlackboxSystem.Tests
                 BlackboxTestDoubles.CleanupTempDirectories();
                 BlackboxTestDoubles.Reset();
                 Directory = BlackboxTestDoubles.CreateTempDirectory();
-                BlackboxHandle.Configure(Directory, _ => { }, Warnings.Enqueue,
-                    exportFormat: ExportFormat.Txt, openLogOption: OpenLogOption.Never);
+                BlackboxHandle.Configure(
+                    Directory,
+                    _ => { },
+                    Warnings.Enqueue,
+                    exportFormat: ExportFormat.Txt,
+                    openLogOption: OpenLogOption.Never);
                 BlackboxHandle.MaxLogCount = 23;
                 DefaultKey = BlackboxHandle.DefaultSessionKey;
                 DefaultHandle = BlackboxHandle.Of(Owner, label: "default");
@@ -503,6 +542,7 @@ namespace BlackThunder.BlackboxSystem.Tests
                 {
                     failure = failure == null ? exception : new AggregateException(failure, exception);
                 }
+
                 if (failure != null) ExceptionDispatchInfo.Capture(failure).Throw();
 
                 Task<WorkerResult> RunWorker(int index) => Task.Run(async () =>
@@ -511,14 +551,18 @@ namespace BlackThunder.BlackboxSystem.Tests
                     Assert.That(BlackboxHandle.MaxLogCount, Is.EqualTo(17));
                     BlackboxHandle.MaxLogCount = index == 0 ? 5 : 8;
                     var handle = BlackboxHandle.Of(Owner, label: "worker-" + index);
+
                     if (Interlocked.Increment(ref entered) == 2) ready.TrySetResult(true);
+
                     await release.Task.ConfigureAwait(false);
                     await Task.Yield();
                     Assert.That(BlackboxHandle.CurrentSessionKey, Is.EqualTo(session.SessionKey));
                     Assert.That(BlackboxHandle.MaxLogCount, Is.EqualTo(index == 0 ? 5 : 8));
                     handle.Write(index == 0 ? "WORKER_ZERO" : "WORKER_ONE");
+
                     if (index == 0)
                         handle.CrashExport("CHILD_CRASH", format: ExportFormat.Txt, openLog: OpenLogOption.Never);
+
                     return new WorkerResult(session.SessionKey, handle, handle.IsValid);
                 });
             }

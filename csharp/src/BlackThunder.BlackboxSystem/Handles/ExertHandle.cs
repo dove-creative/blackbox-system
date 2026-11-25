@@ -6,8 +6,11 @@ namespace BlackThunder.BlackboxSystem
         private readonly LogContext _targetContext;
         private readonly long _interactionId;
 
-        public bool IsAlive => _targetContext != null && _targetContext.State.IsActive && HandleManager<ExertHandle>.IsAlive(_lease.Id);
-        public bool IsDisposed => !IsAlive;
+        public bool IsAlive =>
+            _targetContext != null && _targetContext.State.IsActive && HandleManager<ExertHandle>.IsAlive(
+            _lease.Id);
+        public bool IsDisposed =>
+            !IsAlive;
 
 
         internal ExertHandle(LogContext targetContext, long interactionId, HandleLease<ExertHandle> lease)
@@ -20,8 +23,11 @@ namespace BlackThunder.BlackboxSystem
         public void Dispose()
         {
             if (_targetContext == null) return;
+
             var released = _lease.Release();
+
             if (!_targetContext.State.CheckWrite() || !released) return;
+
             _targetContext.WarnThreadMismatch();
             _targetContext.TryMergeScope(_interactionId);
         }

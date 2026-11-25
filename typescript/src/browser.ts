@@ -9,6 +9,7 @@ export function downloadExport(artifact: ExportArtifact): void {
     anchor.href = url;
     anchor.download = artifact.fileName;
     anchor.hidden = true;
+
     try {
         document.body.append(anchor);
         anchor.click();

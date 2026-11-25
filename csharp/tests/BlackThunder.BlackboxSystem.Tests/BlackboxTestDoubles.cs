@@ -20,7 +20,9 @@ namespace BlackThunder.BlackboxSystem.Tests
         {
             try
             {
-                Assert.That(BlackboxHandle.ActiveSessionCount, Is.Zero,
+                Assert.That(
+                    BlackboxHandle.ActiveSessionCount,
+                    Is.Zero,
                     "Undisposed Blackbox sessions: " + string.Join(", ", BlackboxHandle.GetActiveSessionKeys()));
             }
             finally
@@ -90,23 +92,29 @@ namespace BlackThunder.BlackboxSystem.Tests
         public static Blackbox BlackboxFor(object owner)
         {
             var box = BlackboxSessionRegistry.GetBlackbox(owner);
+
             if (box != null && box.State.CanWrite) box.SetLabel(NameOf(owner));
+
             return box;
         }
 
-        public static BlackboxHandle HandleFor<T>(T owner) where T : class => BlackboxHandle.Of(owner, label: NameOf(owner));
+        public static BlackboxHandle HandleFor<T>(T owner) where T : class =>
+            BlackboxHandle.Of(owner, label: NameOf(owner));
         // Front-side scope, exert and tag binding for Blackboxes owned by the current session.
         public static ScopeHandle Scope(Blackbox box, string message, string methodName) =>
             BlackboxSessionRegistry.Current.OpenScope(box, message, methodName);
         public static ExertHandle Exert(Blackbox source, Blackbox target, string message, string methodName) =>
             BlackboxSessionRegistry.Current.Exert(source, target, message, methodName);
-        public static TagHandle Bind(TagHandle tag) => tag.Bind(BlackboxSessionRegistry.Current);
-        private static string NameOf(object owner) => owner is NamedOwner named ? named.Name :
+        public static TagHandle Bind(TagHandle tag) =>
+            tag.Bind(BlackboxSessionRegistry.Current);
+        private static string NameOf(object owner) =>
+            owner is NamedOwner named ? named.Name :
             owner is global::BlackThunder.BlackboxSystem.Tests.NamedOwner table ? table.Name : null;
 
         public static List<LogData> Logs(Blackbox blackbox) => blackbox.GetLogs().ToList();
 
-        public static List<string> Lines(Blackbox blackbox) => blackbox.GetLogs().Select(log => log.ToString()).ToList();
+        public static List<string> Lines(Blackbox blackbox) =>
+            blackbox.GetLogs().Select(log => log.ToString()).ToList();
 
         public static string CreateTempDirectory()
         {

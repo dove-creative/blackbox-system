@@ -13,7 +13,21 @@ namespace BlackThunder.BlackboxSystem.Tests
             var time = new DateTime(2026, 5, 18, 1, 2, 3, DateTimeKind.Utc);
 
             // Table 1-1 / Value x Create
-            var log = new LogData(owner, "hello", time, 3, "Run", ScopeType.None, -1, 7, "worker", -1, null, null, null, null);
+            var log = new LogData(
+                owner,
+                "hello",
+                time,
+                3,
+                "Run",
+                ScopeType.None,
+                -1,
+                7,
+                "worker",
+                -1,
+                null,
+                null,
+                null,
+                null);
 
             Assert.That(log.Owner, Is.SameAs(owner));
             Assert.That(log.Message, Is.EqualTo("hello"));
@@ -37,7 +51,22 @@ namespace BlackThunder.BlackboxSystem.Tests
             var tags = new[] { new LogData.Tag(4, target) };
 
             // Table 1-1 / Tagged x Create
-            var log = new LogData(owner, "tagged", DateTime.UtcNow, 1, "Tag", ScopeType.None, -1, 1, "thread", 4, null, null, tags, taggedBy, TargetTypes.Name);
+            var log = new LogData(
+                owner,
+                "tagged",
+                DateTime.UtcNow,
+                1,
+                "Tag",
+                ScopeType.None,
+                -1,
+                1,
+                "thread",
+                4,
+                null,
+                null,
+                tags,
+                taggedBy,
+                TargetTypes.Name);
 
             Assert.That(log.IsTagged, Is.True);
             Assert.That(log.TaggedBy, Is.SameAs(taggedBy));
@@ -56,7 +85,21 @@ namespace BlackThunder.BlackboxSystem.Tests
             var exertedBy = BlackboxTestDoubles.Blackbox("source");
 
             // Table 1-1 / Interaction x Create
-            var log = new LogData(owner, "call", DateTime.UtcNow, 2, "Call", ScopeType.None, -1, 1, "thread", 9, exertingTo, exertedBy, null, null);
+            var log = new LogData(
+                owner,
+                "call",
+                DateTime.UtcNow,
+                2,
+                "Call",
+                ScopeType.None,
+                -1,
+                1,
+                "thread",
+                9,
+                exertingTo,
+                exertedBy,
+                null,
+                null);
 
             Assert.That(log.InteractionId, Is.EqualTo(9));
             Assert.That(log.ExertingTo, Is.SameAs(exertingTo));
@@ -70,7 +113,21 @@ namespace BlackThunder.BlackboxSystem.Tests
             var owner = BlackboxTestDoubles.Blackbox("owner");
             var peer = BlackboxTestDoubles.Blackbox("peer");
 
-            var log = new LogData(owner, "before", DateTime.UtcNow, 2, "Run", ScopeType.Open, 5, 1, "thread", -1, null, null, null, null);
+            var log = new LogData(
+                owner,
+                "before",
+                DateTime.UtcNow,
+                2,
+                "Run",
+                ScopeType.Open,
+                5,
+                1,
+                "thread",
+                -1,
+                null,
+                null,
+                null,
+                null);
 
             // Table 1-1 / Value x MutateForExport
             log.ScopeDepth = 2;
@@ -93,7 +150,21 @@ namespace BlackThunder.BlackboxSystem.Tests
         public void ToStringUsesFormatter()
         {
             var owner = BlackboxTestDoubles.Blackbox("owner");
-            var log = new LogData(owner, "hello", DateTime.UtcNow, 11, "Run", ScopeType.None, -1, 7, "worker", -1, null, null, null, null);
+            var log = new LogData(
+                owner,
+                "hello",
+                DateTime.UtcNow,
+                11,
+                "Run",
+                ScopeType.None,
+                -1,
+                7,
+                "worker",
+                -1,
+                null,
+                null,
+                null,
+                null);
 
             // Table 1-1 / Value x ToString
             var rendered = log.ToString();
